@@ -350,7 +350,7 @@ _SQL_TOKEN = re.compile(
       | (?P<string>'(?:[^']|'')*')
       | (?P<quoted>"[^"]*")
       | (?P<word>[A-Za-z_][A-Za-z0-9_]*)
-      | (?P<number>[0-9][0-9A-Za-z_.]*)
+      | (?P<number>[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)
       | (?P<mark>.)""",
     re.VERBOSE | re.DOTALL,
 )
@@ -375,8 +375,10 @@ def _sql_tokens(sql: str) -> list[tuple[str, str]] | None:
         if kind is None:  # whitespace
             continue
         text = match.group(kind)
-        if kind == "mark" and text in _SQL_REFUSED:
+        if kind == "mark" and (text in _SQL_REFUSED or not text.isascii()):
             return None  # includes a quote that opens nothing: an unterminated string
+        if kind == "number" and sql[match.end() : match.end() + 1].isidentifier():
+            return None  # `1from x`: where the number ends is the engine's call, not ours
         if kind == "quoted":
             text = text[1:-1]
             if _SQL_NAME.fullmatch(text) is None:
@@ -403,6 +405,8 @@ def sql_streams(sql: str) -> set[str] | None:
     from_at: set[int] = set()  # paren depths at which a from clause is open
     for index, (kind, text) in enumerate(tokens):
         following = tokens[index + 1] if index + 1 < len(tokens) else ("end", "")
+        if kind == "word" and index and tokens[index - 1] == ("mark", "."):
+            continue  # `t.where`, `t.from`: a column, whatever it is called
         if kind == "mark" and text == "(":
             depth += 1
         elif kind == "mark" and text == ")":
@@ -482,7 +486,8 @@ def openobserve_tools(
                 answer["result"] = {"rows": rows[:50], "count": len(rows[:50])}
         else:
             answer["not_run"] = (
-                "this alert is a set of conditions, not a query; use search_logs on its stream"
+                "this alert has no query to re-run (conditions, or a burn rate on an SLO);"
+                " use search_logs or query_metrics on what it watches"
             )
         return answer
 

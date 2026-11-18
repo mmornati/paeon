@@ -56,7 +56,7 @@ class AlertDefinition:
     description: str = ""
     stream: str = ""
     stream_type: str = "logs"
-    kind: str = "custom"  # sql, promql or custom (conditions built in the UI)
+    kind: str = "custom"  # sql, promql, slo, or custom (conditions built in the UI)
     sql: str = ""
     promql: str = ""
     conditions: Any = None
@@ -106,7 +106,8 @@ def parse_definition(raw: Any) -> AlertDefinition | None:
     alert_id = raw.get("id") or raw.get("alert_id") or name
     if not isinstance(name, str) or not name or not isinstance(alert_id, str):
         return None
-    query = raw.get("query_condition")
+    # The alert itself calls it `query_condition`; an entry of the v2 list calls it `condition`.
+    query = raw.get("query_condition") or raw.get("condition")
     query = query if isinstance(query, dict) else {}
     trigger = raw.get("trigger_condition")
     trigger = trigger if isinstance(trigger, dict) else {}
@@ -124,7 +125,11 @@ def parse_definition(raw: Any) -> AlertDefinition | None:
         kind=kind,
         sql=sql,
         promql=promql,
-        conditions=query.get("conditions"),
+        # One of the three says what is watched when there is no query to show: conditions
+        # built in the UI, a burn rate on an SLO, or the comparison applied to a PromQL value.
+        conditions=query.get("conditions")
+        or query.get("slo_condition")
+        or query.get("promql_condition"),
         period_minutes=period if isinstance(period, int) and not isinstance(period, bool) else None,
         operator=str(trigger.get("operator") or ""),
         threshold=float(threshold)
@@ -178,9 +183,15 @@ class HttpSearchClient:
         return response.json().get("data")
 
     def _alert_list(self) -> list[dict[str, Any]]:
-        """Every alert, by the v2 API and, where that does not exist, by the older one."""
+        """Every alert, by the v2 API and, where that does not exist, by the older one.
+
+        Checked against OpenObserve 1.1: `GET /api/v2/{org}/alerts` answers `{"list": [...]}`,
+        each entry with its `alert_id`, name, description, stream, `condition` (the query) and
+        `trigger_condition`, so one request is enough. An entry's `level` is the alert's
+        state at that moment (`ok`, `critical`), not a severity the owner chose: it is not used.
+        """
         for path in (f"/api/v2/{self._org}/alerts", f"/api/{self._org}/alerts"):
-            response = self._http.get(path)
+            response = self._http.get(path, params={"page_size": 1000})
             if response.status_code == 404:
                 continue
             response.raise_for_status()
@@ -195,8 +206,9 @@ class HttpSearchClient:
             self._definitions = {}
             for entry in self._alert_list():
                 alert_id = entry.get("alert_id") or entry.get("id")
-                if isinstance(alert_id, str) and "query_condition" not in entry:
-                    # The v2 list is a summary: the query is in the alert itself.
+                summary = "query_condition" not in entry and "condition" not in entry
+                if isinstance(alert_id, str) and summary:
+                    # A list that carries no query: it is in the alert itself.
                     response = self._http.get(f"/api/v2/{self._org}/alerts/{alert_id}")
                     if response.status_code < 400:
                         entry = {**response.json(), "id": alert_id}

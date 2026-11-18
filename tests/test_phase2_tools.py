@@ -83,7 +83,47 @@ def client_for(handler: Any) -> HttpSearchClient:
     )
 
 
-def test_definitions_are_read_by_the_v2_api_and_cached() -> None:
+# One entry of `GET /api/v2/{org}/alerts`, with the keys an OpenObserve 1.1 instance returns.
+LISTED = {
+    "alert_id": ALERT_ID,
+    "folder_id": "default",
+    "name": V2["name"],
+    "owner": "admin@example.org",
+    "description": V2["description"],
+    "alert_type": "scheduled",
+    "stream_name": "traefik",
+    "stream_type": "logs",
+    "condition": {**V2["query_condition"], "conditions": None, "promql": None},  # type: ignore[dict-item]
+    "trigger_condition": V2["trigger_condition"],
+    "enabled": True,
+    "last_outcome": "firing",
+    "level": "critical",
+}
+
+
+def test_definitions_come_from_one_request_to_the_v2_list() -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(f"{request.url.path}?{request.url.query.decode()}")
+        return httpx.Response(200, json={"list": [LISTED]})
+
+    client = client_for(handler)
+    try:
+        by_id = client.alert_definition(ALERT_ID)
+        assert by_id is not None
+        assert (by_id.stream, by_id.kind, by_id.threshold) == ("traefik", "sql", 5.0)
+        assert by_id.sql.startswith("SELECT count")
+        # `level` is the alert's state right now, not a severity someone chose.
+        assert by_id.severity is Severity.UNKNOWN
+        assert client.alert_definition(V2["name"]) == by_id  # type: ignore[arg-type]
+        assert client.alert_definition("unknown") is None
+        assert seen == ["/api/v2/default/alerts?page_size=1000"]  # listed once, cached
+    finally:
+        client.close()
+
+
+def test_a_list_without_queries_is_completed_alert_by_alert() -> None:
     seen: list[str] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -95,14 +135,53 @@ def test_definitions_are_read_by_the_v2_api_and_cached() -> None:
 
     client = client_for(handler)
     try:
-        by_id = client.alert_definition(ALERT_ID)
-        assert by_id is not None
-        assert by_id.stream == "traefik"
-        assert client.alert_definition(V2["name"]) == by_id  # type: ignore[arg-type]
-        assert client.alert_definition("unknown") is None
-        assert len(seen) == 2  # listed once, read once
+        found = client.alert_definition(ALERT_ID)
+        assert found is not None
+        assert found.stream == "traefik"
+        assert len(seen) == 2
     finally:
         client.close()
+
+
+def test_slo_and_promql_alerts_say_what_they_watch() -> None:
+    slo = parse_definition(
+        {
+            "alert_id": "s1",
+            "name": "slo_fast_burn",
+            "condition": {
+                "type": "slo",
+                "slo_condition": {
+                    "slo_id": "7",
+                    "kind": "burn_rate",
+                    "operator": ">",
+                    "critical": 14.4,
+                },
+            },
+        }
+    )
+    assert slo is not None
+    assert (slo.kind, slo.query) == ("slo", None)
+    assert slo.as_dict()["conditions"]["kind"] == "burn_rate"
+    metric = parse_definition(
+        {
+            "alert_id": "m1",
+            "name": "health",
+            "condition": {
+                "type": "promql",
+                "promql": "sum(up)",
+                "promql_condition": {"column": "value", "operator": ">", "value": 0},
+            },
+        }
+    )
+    assert metric is not None
+    assert metric.as_dict()["conditions"] == {"column": "value", "operator": ">", "value": 0}
+    toolbox, telemetry = alert_query(
+        {"name": "slo", "condition": {"type": "slo", "slo_condition": {"kind": "burn_rate"}}},
+        OpenObserveTools(streams=("traefik",), metrics=("up",)),
+    )
+    result, _ = toolbox.call("alert_query", {"alert": "slo"})
+    assert "no query to re-run" in result["not_run"]
+    assert (telemetry.sql, telemetry.promql) == ([], [])
 
 
 def test_definitions_fall_back_to_the_older_api() -> None:
@@ -205,7 +284,7 @@ def test_alert_query_on_metrics_conditions_and_errors() -> None:
         assert telemetry.promql == []
     custom = {"name": "disk", "stream_name": "traefik", "query_condition": {"conditions": []}}
     result, _ = alert_query(custom, allowed)[0].call("alert_query", {"alert": "disk"})
-    assert "use search_logs" in result["not_run"]
+    assert "no query to re-run" in result["not_run"]
 
     toolbox, _ = alert_query(V2, allowed)
     assert toolbox.call("alert_query", {"alert": "unknown"}) == (
@@ -475,6 +554,12 @@ def test_the_knowledge_index_follows_the_files(tmp_path: Path) -> None:
         "SELECT * FROM traefik)",
         "SELECT * FROM (SELECT * FROM traefik",
         "SELECT * FROM traefik WHERE x IN (SELECT y FROM finance)",
+        "SELECT 1FROM finance",  # a number that runs into a keyword
+        "SELECT * FROM traefik WHERE x = 1e5JOIN finance ON 1 = 1",
+        "SELECT * FROM traefik t JOIN traefik u ON t.where = 1, finance",  # a column named where
+        "SELECT * FROM traefik t JOIN traefik u ON t.limit = u.order, finance f",
+        "SELECT * FROM traefik\u00a0JOIN finance ON 1 = 1",  # not a space to this reader
+        "SELECT * FROM tr\u00e6fik",
     ],
 )
 def test_sql_that_cannot_be_accounted_for_is_never_rerun(sql: str) -> None:
@@ -494,4 +579,5 @@ def test_sql_streams_reads_plain_queries() -> None:
     assert sql_streams("SELECT * FROM (SELECT x FROM inner_one) AS t") == {"inner_one"}
     assert sql_streams("SELECT a, b FROM traefik t WHERE f(a, 1) > 2 GROUP BY a, b") == {"traefik"}
     assert sql_streams("SELECT a FROM x UNION SELECT a, b FROM y ORDER BY a, b") == {"x", "y"}
+    assert sql_streams("SELECT t.from, 1.5e3 FROM traefik t WHERE t.limit > 10") == {"traefik"}
     assert sql_streams('select "a" from "traefik" as t where "m" = \'x, y\'') == {"traefik"}
