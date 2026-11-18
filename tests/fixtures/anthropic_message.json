@@ -1,0 +1,20 @@
+{
+  "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-haiku-5-5",
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"verdict\": \"noise\", \"confidence\": 0.91, \"severity\": \"info\", \"reason\": \"The alert fired 14 times in 30 days and each firing recovered within ten minutes; an update run started 6 minutes before.\", \"matched_postmortem\": null}"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 812,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 300,
+    "output_tokens": 64
+  }
+}

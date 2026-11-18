@@ -1,0 +1,45 @@
+# Example deployment. Paeon has only a bearer token on its endpoints: keep it on an internal
+# network, next to the tools that post to it, and do not publish the port.
+services:
+  paeon:
+    image: ghcr.io/mmornati/paeon:edge
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      PAEON_INGEST_TOKEN_FILE: /run/secrets/paeon_ingest_token
+      PAEON_CONFIG: /config/paeon.yaml
+      # OpenObserve pull adapter (optional): an account that can only read `triggers`.
+      PAEON_OPENOBSERVE_URL: http://openobserve:5080
+      PAEON_OPENOBSERVE_USER: paeon@example.org
+      PAEON_OPENOBSERVE_PASSWORD_FILE: /run/secrets/paeon_openobserve_password
+      # Named by `api_key_env` and `token_env` in paeon.yaml; both accept NAME_FILE.
+      PAEON_TRIAGE_API_KEY_FILE: /run/secrets/paeon_triage_api_key
+      PAEON_NTFY_TOKEN_FILE: /run/secrets/paeon_ntfy_token
+    volumes:
+      - paeon-data:/data
+      - ./paeon.yaml:/config/paeon.yaml:ro
+    secrets:
+      - paeon_ingest_token
+      - paeon_openobserve_password
+      - paeon_triage_api_key
+      - paeon_ntfy_token
+    networks: [monitoring]
+
+volumes:
+  paeon-data:
+
+networks:
+  monitoring:
+    external: true
+
+secrets:
+  paeon_ingest_token:
+    file: ./secrets/ingest_token
+  paeon_openobserve_password:
+    file: ./secrets/openobserve_password
+  paeon_triage_api_key:
+    file: ./secrets/triage_api_key
+  paeon_ntfy_token:
+    file: ./secrets/ntfy_token

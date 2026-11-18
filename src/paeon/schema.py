@@ -56,3 +56,68 @@ def from_micros(micros: int) -> datetime:
 
 def to_micros(moment: datetime) -> int:
     return int(moment.timestamp() * 1_000_000)
+
+
+SEVERITY_RANK = {Severity.UNKNOWN: 0, Severity.INFO: 1, Severity.WARNING: 2, Severity.CRITICAL: 3}
+
+
+class IncidentStatus(StrEnum):
+    OPEN = "open"
+    RESOLVED = "resolved"
+
+
+class TriageState(StrEnum):
+    OFF = "off"  # triage was not enabled when the incident opened
+    PENDING = "pending"
+    DONE = "done"
+    SKIPPED = "skipped"
+
+
+class IncidentAlert(BaseModel):
+    """One alert attached to an incident, with its last known status."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    source: str
+    fingerprint: str
+    title: str
+    status: Status
+
+
+class Incident(BaseModel):
+    """A group of correlated alerts: the unit that is triaged, investigated and reviewed.
+
+    The row is a projection kept for queries; the record is the incident's events in the log.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: int
+    status: IncidentStatus
+    title: str
+    severity: Severity
+    host: str | None = None
+    opened_at: AwareDatetime
+    last_activity_at: AwareDatetime
+    resolved_at: AwareDatetime | None = None
+    flapping: bool = False
+    maintenance: str | None = Field(
+        default=None, description="Name of the maintenance window it opened in, if any."
+    )
+    triage: TriageState = TriageState.OFF
+    alerts: tuple[IncidentAlert, ...] = ()
+
+
+class Change(BaseModel):
+    """One entry of the change calendar: something that was done to the system on purpose."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: str = Field(min_length=1, max_length=64, description="deploy, update, backup, restart…")
+    title: str = Field(min_length=1, max_length=300)
+    host: str | None = Field(default=None, max_length=200)
+    labels: dict[str, str] = Field(default_factory=dict)
+    started_at: AwareDatetime | None = Field(
+        default=None, description="Defaults to the time the change is recorded."
+    )
+    ended_at: AwareDatetime | None = None

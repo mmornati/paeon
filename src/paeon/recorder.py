@@ -8,8 +8,10 @@ moves `last_seen`. This is what makes 90 "firing" rows from one OpenObserve aler
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime, timedelta
 
+from paeon.correlation import Correlator
 from paeon.schema import Alert, Severity, Status
 from paeon.store import Store
 
@@ -19,11 +21,18 @@ INTERNAL_SOURCE = "paeon"
 
 
 class Recorder:
-    def __init__(self, store: Store) -> None:
+    def __init__(self, store: Store, correlator: Correlator | None = None) -> None:
         self._store = store
+        self._correlator = correlator
+        # Correlation reads and writes several rows across sources: one observation at a time.
+        self._lock = threading.Lock()
 
     def observe(self, alert: Alert) -> int | None:
         """Record one observation. Returns the event id if it was a state change, else None."""
+        with self._lock:
+            return self._observe(alert)
+
+    def _observe(self, alert: Alert) -> int | None:
         state = self._store.alert_state(alert.source, alert.fingerprint)
         if state is not None and alert.observed_at <= state.last_seen:
             return None  # already seen (poll overlap, duplicate row) or older than what we know
@@ -48,12 +57,16 @@ class Recorder:
         payload = alert.model_dump(mode="json")
         if alert.status is Status.RESOLVED and state is not None:
             payload["fired_at"] = state.since.isoformat()
+        incident_id = None if self._correlator is None else self._correlator.assign(alert)
         event_id = self._store.append(
             f"alert.{alert.status.value}",
             payload,
             source=alert.source,
             fingerprint=alert.fingerprint,
+            incident_id=incident_id,
         )
+        if self._correlator is not None:
+            self._correlator.settle(alert, incident_id)
         log.info("%s %s/%s (%s)", alert.status.value, alert.source, alert.fingerprint, alert.title)
         return event_id
 
