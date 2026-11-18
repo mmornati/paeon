@@ -249,22 +249,36 @@ _PROMQL_WORDS = frozenset(
 )  # fmt: skip
 
 
+_PROMQL_SELECTOR = re.compile(r"([A-Za-z_:][\w:]*)?\s*\{([^{}]*)\}")
+_STRING_MARK = "\x00"
+
+
 def metric_names(promql: str) -> set[str]:
     """Every metric a PromQL expression reads. Raises ToolError when that cannot be told.
 
-    Strings, label matchers, durations and grouping clauses are removed; of what is left, a word
-    followed by `(` is a function and anything else is a metric. An expression that selects by
-    `__name__`, or that does not reduce cleanly, is refused rather than guessed at.
+    This is not a PromQL parser, so it refuses whatever it cannot account for instead of
+    guessing: comments and line breaks, a selector by `__name__`, a label matcher that is not
+    attached to a metric name (`{job="x"}` alone selects every metric), a quoted metric name
+    inside braces. Strings, matchers, durations and grouping clauses are then removed; of what
+    is left, a word followed by `(` is a function and anything else is a metric.
     """
+    if "\n" in promql or "\r" in promql or _STRING_MARK in promql:
+        raise ToolError("the query must be on one line")
     if "__name__" in promql:
         raise ToolError("selecting by __name__ is not allowed; name the metric")
-    text = _PROMQL_STRING.sub(" ", promql)
+    text = _PROMQL_STRING.sub(_STRING_MARK, promql)
     if any(quote in text for quote in "\"'`"):
         raise ToolError("the query has an unterminated string")
-    previous = None
-    while previous != text:  # matchers and ranges do not nest, but strip until stable
-        previous = text
-        text = re.sub(r"\{[^{}]*\}|\[[^\[\]]*\]", " ", text)
+    if "#" in text:
+        raise ToolError("comments are not allowed in the query")
+    for selector in _PROMQL_SELECTOR.finditer(text):
+        name, matchers = selector.group(1), selector.group(2)
+        if name is None or name.lower() in _PROMQL_WORDS:
+            raise ToolError("every {...} matcher must follow a metric name")
+        if matchers.strip().startswith(_STRING_MARK):
+            raise ToolError("name the metric before the braces, not inside them")
+    text = _PROMQL_SELECTOR.sub(lambda m: f" {m.group(1)} ", text)
+    text = re.sub(r"\[[^\[\]]*\]", " ", text).replace(_STRING_MARK, " ")
     if any(bracket in text for bracket in "{}[]"):
         raise ToolError("the query has unbalanced braces or brackets")
     text = _PROMQL_GROUPING.sub(" ", text)

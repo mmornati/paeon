@@ -221,6 +221,8 @@ def test_query_metrics_reads_only_listed_metrics() -> None:
         'sum by (name) (rate(container_cpu_usage_seconds_total{name="api"}[5m]))',
         "container_memory_usage_bytes / on (name) group_left container_spec_memory_limit_bytes",
         'max_over_time(up{job="x and node_secret"}[1h] offset 5m) > bool 0',
+        'up{job="a#b", path=~"/x{1,2}"} == 1',
+        "container_memory_usage_bytes {name='api'}",
     ]
     for promql in allowed:
         result, is_error = toolbox.call("query_metrics", {"promql": promql, "since_minutes": 120})
@@ -237,6 +239,15 @@ def test_query_metrics_reads_only_listed_metrics() -> None:
         "sum(rate(finance_transactions_total[5m]))",
         'up or {__name__=~"finance.*"}',
         '{job="bank"}',
+        'up or {job="bank"}',
+        'up + sum({job="bank"})',
+        'up or {"finance_balance"}',
+        'up{"finance_balance", job="x"}',
+        'up or on () {job="bank"}',
+        "up # } or finance_balance{",
+        'up{job="a"} # x\nor finance_balance',
+        "up\nor finance_balance",
+        'sum(up) by (job) {job="bank"}',
         'up{job="x',
         "up[5m",
         "42",

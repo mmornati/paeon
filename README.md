@@ -55,8 +55,8 @@ What exists:
   supports it; a claim that cites no real call is marked), the hypotheses it rejected, and a plan
   for a person to carry out. Every tool call is recorded with its full redacted result.
 - **Tools**: Paeon's own record (open and past incidents, the change calendar, keyword search in
-  runbooks and postmortems), OpenObserve (log search on an allow-list of streams, PromQL if you
-  allow-list metric names), Docker through a socket proxy (list, inspect without the environment, logs for an
+  runbooks and postmortems), OpenObserve (log search on an allow-list of streams, PromQL on an
+  allow-list of metric names), Docker through a socket proxy (list, inspect without the environment, logs for an
   allow-list of containers).
 - **Postmortem drafts** (`paeon.postmortem`): markdown with YAML front matter, written to a
   directory when an investigated incident has stayed resolved. The front matter, the timeline and
