@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paeon · incident response where nothing runs until you say Go</title>
+<meta name="description" content="Paeon sits next to your alerting: a cheap model triages, a strong model investigates with tools that can only read, you say Go on your phone, and plain code acts from a closed catalog. Self-hosted, Apache-2.0, alpha.">
+<meta name="theme-color" content="#0b1626">
+<meta property="og:title" content="Paeon · nothing leaves the pad until you say Go">
+<meta property="og:description" content="Alert triage, read-only investigation and approved remediation for your self-hosted server, with a hard line between what a model may think and what code may do.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/site.css">
+<script src="js/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="loop">
+  <a class="mark" href="./" aria-label="Paeon, home"><span class="mark-lamp" aria-hidden="true"></span>Paeon</a>
+  <nav class="loop-nav" aria-label="Site">
+    <a class="nav-in" href="#poll">How it works</a>
+    <a class="nav-in" href="#rules">Flight rules</a>
+    <a class="nav-in" href="#levels">Levels</a>
+    <a class="nav-in" href="#videos">Videos</a>
+    <a class="nav-in" href="#console">Console</a>
+    <a href="#quickstart">Quickstart</a>
+    <a href="docs/">Docs</a>
+    <a href="https://github.com/mmornati/paeon">GitHub</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section class="hero" aria-labelledby="h-hero">
+  <div class="hero-copy">
+    <h1 id="h-hero">Nothing leaves the pad until you say <span class="go-word">Go</span>.</h1>
+    <p class="lede">Paeon sits next to your alerting. A cheap model triages, a strong model investigates with tools that can only read, and then it asks you. Plain code does the rest, from a closed catalog of actions.</p>
+    <p class="actions">
+      <a class="btn btn-amber" href="#quickstart">Quickstart</a>
+      <a class="btn" href="#videos">Watch the flow</a>
+    </p>
+    <p class="fine">Self-hosted · Apache-2.0 · alpha. Out of the box it takes no action on your server.</p>
+  </div>
+
+  <div class="board hero-board" data-poll aria-labelledby="h-board">
+    <div class="board-head">
+      <h2 id="h-board">Incident #3 · slo_traefik_5xx · server-1</h2>
+      <span class="tag-sim">Simulated</span>
+      <span class="clock" data-clock aria-hidden="true">T+00:00</span>
+    </div>
+    <ol class="rows">
+      <li class="row" data-station="record" data-voice="code"><span class="st">Record</span><span class="note">two alerts, as they came</span><span class="lamp" data-state="go">Go</span></li>
+      <li class="row" data-station="correlate" data-voice="code"><span class="st">Correlate</span><span class="note">same host, seconds apart: one incident</span><span class="lamp" data-state="go">Go</span></li>
+      <li class="row" data-station="triage" data-voice="model"><span class="st">Triage</span><span class="note">real, 86% sure</span><span class="lamp" data-state="go">Go</span></li>
+      <li class="row" data-station="investigate" data-voice="model"><span class="st">Investigate</span><span class="note">media-server lost its database connections</span><span class="lamp" data-state="go">Go</span></li>
+      <li class="row" data-station="plan" data-voice="code"><span class="st">Plan</span><span class="note"><code>restart_container(media-server)</code></span><span class="lamp" data-state="go">Go</span></li>
+      <li class="row row-you" data-station="you" data-voice="you"><span class="st">You</span><span class="note" data-you-note>waiting for your answer</span><span class="lamp" data-state="hold" data-you-lamp>Hold</span>
+        <div class="guard" data-guard>
+        <button class="guard-cover" type="button" data-lift aria-expanded="false" aria-controls="go-controls">Lift the guard</button>
+        <div class="guard-controls" id="go-controls">
+          <button class="key key-go" type="button" data-go disabled>Go</button>
+          <button class="key key-nogo" type="button" data-nogo disabled>No-go</button>
+        </div>
+      </div>
+      </li>
+      <li class="row" data-station="executor" data-voice="code"><span class="st">Executor</span><span class="note" data-exec-note>nothing runs without Go</span><span class="lamp" data-state="standby" data-exec-lamp>Standby</span></li>
+    </ol>
+    <div class="console-desk">
+      <p class="desk-say" data-say role="status">The poll holds on you. Lift the guard, then answer.</p>
+      <button class="again" type="button" data-again hidden>Run the poll again</button>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="poll" aria-labelledby="h-poll">
+  <div class="band-head">
+    <h2 id="h-poll">The poll, station by station</h2>
+    <p>An incident is called through these stations. Each one has a single voice: code that records, a model that only thinks, or you.</p>
+  </div>
+  <div class="stations" role="table" aria-label="Stations of the pipeline">
+    <div class="station" role="row"><h3 role="cell">Record</h3><span class="voice voice-code" role="cell">Code</span><p role="cell">OpenObserve, uptime-kuma and anything that speaks the Alertmanager webhook. Every observation becomes one event in an append-only SQLite log. Paeon gets a copy: it is never in the path of your alerts.</p></div>
+    <div class="station" role="row"><h3 role="cell">Correlate</h3><span class="voice voice-code" role="cell">Code</span><p role="cell">The same alert firing again is the same incident. Alerts on the same host within minutes join it. Flapping and maintenance windows are flags, and nothing is dropped.</p></div>
+    <div class="station" role="row"><h3 role="cell">Triage</h3><span class="voice voice-model" role="cell">Model</span><p role="cell">One call to a cheap model, with no tools: noise, transient, known issue or real. Recorded in shadow mode, so nothing acts on it. A model that is down, unsure or over budget means the incident is treated as real.</p></div>
+    <div class="station" role="row"><h3 role="cell">Investigate</h3><span class="voice voice-model" role="cell">Model</span><p role="cell">A strong model with tools that can only read, each behind an allow-list you wrote: logs and metrics in OpenObserve, container state and logs through a Docker proxy, your runbooks and past postmortems. It hands in a root cause, and every claim is tied to the tool call behind it.</p></div>
+    <div class="station" role="row"><h3 role="cell">Runbook</h3><span class="voice voice-code" role="cell">Code</span><p role="cell">A known alert with a known fix skips both models and goes straight to the executor: fast, free and deterministic. If its steps do not fix it, the investigator gets the incident.</p></div>
+    <div class="station" role="row"><h3 role="cell">Plan</h3><span class="voice voice-code" role="cell">Code</span><p role="cell">A plan is a list of actions from the closed catalog, proposed from the analysis or from a runbook. Anything in the analysis that is not a catalog action stays a sentence for you.</p></div>
+    <div class="station station-you" role="row"><h3 role="cell">You</h3><span class="voice voice-you" role="cell">You</span><p role="cell">Go or No-go, on your phone. The button is a signed link from the executor: it works once, for thirty minutes, for that exact plan. Opening it never applies anything. No answer means nothing happens.</p></div>
+    <div class="station" role="row"><h3 role="cell">Executor</h3><span class="voice voice-code" role="cell">Code</span><p role="cell">A second process with its own credentials. It checks the plan against its own copy of the rules, takes a lock, applies the step, waits for the container to be running and healthy, and rolls back where there is an inverse.</p></div>
+    <div class="station" role="row"><h3 role="cell">Postmortem</h3><span class="voice voice-model" role="cell">Model</span><p role="cell">Once the incident has stayed resolved, a markdown draft: the timeline comes from the event log, a model writes the prose, and the file says <code>status: draft</code> until you review it.</p></div>
+  </div>
+  <p class="band-foot"><a class="arrow" href="docs/how-it-works/">How it works, in full</a></p>
+</section>
+
+<section class="band band-rules" id="rules" aria-labelledby="h-rules">
+  <div class="band-head">
+    <h2 id="h-rules">Flight rules</h2>
+    <p>Paeon assumes that alert text and log lines are written by an attacker, and that the model will eventually be wrong. These rules hold either way.</p>
+  </div>
+  <dl class="rules">
+    <div><dt>The model proposes. Code disposes.</dt><dd>No shell, no free-form command and no write credential for a model, in any stage. The only part of its output that code can ever run is a step that names one catalog action on one allowed container.</dd></div>
+    <div><dt>Two processes. Two sets of keys.</dt><dd>The core reads untrusted text and talks to models, so it holds nothing that can act. The executor holds the one write credential, and believes only its own rules and a link you tapped.</dd></div>
+    <div><dt>Tools only read.</dt><dd>A log stream, a metric or a container you did not list cannot be read. What is read is bounded, scrubbed of secret-shaped strings and recorded in full.</dd></div>
+    <div><dt>Triage fails open.</dt><dd>A spent budget never hides an alert. Budgets per incident and per day, a storm guard per hour, limits on tool calls and time.</dd></div>
+    <div><dt>Never in the path.</dt><dd>Your existing notifications stay exactly as they are. Run Paeon next to your alerting, never instead of it.</dd></div>
+    <div><dt>Everything is an event.</dt><dd>Every alert, decision, model call with its cost, and tool result is one line of the log. Incidents, the digest, the console and postmortems are read from it.</dd></div>
+  </dl>
+  <p class="band-foot"><a class="arrow" href="docs/privacy-and-safety/">What leaves your server</a> <a class="arrow" href="docs/threat-model/">The threat model</a></p>
+</section>
+
+<section class="band" id="levels" aria-labelledby="h-levels">
+  <div class="band-head">
+    <h2 id="h-levels">Four levels, and you set the dial</h2>
+    <p>Acting is off until you add the executor on purpose. Then each alert, action and container gets a level, in your rules file. Turn the dial to see what each one does.</p>
+  </div>
+  <div class="dial" data-dial>
+    <div class="dial-keys" role="radiogroup" aria-label="Autonomy level">
+      <button type="button" role="radio" aria-checked="false" data-level="observe">Observe</button>
+      <button type="button" role="radio" aria-checked="true" data-level="suggest">Suggest<small>default</small></button>
+      <button type="button" role="radio" aria-checked="false" data-level="approve">Approve</button>
+      <button type="button" role="radio" aria-checked="false" data-level="auto">Auto</button>
+    </div>
+    <div class="dial-out">
+      <div class="dial-text" data-dial-text aria-live="polite">
+        <h3>Suggest</h3>
+        <p>Paeon tells you what it would do, with no button. The plan is in the analysis; running it is up to you.</p>
+        <p class="dial-ran">What runs: <strong>nothing</strong></p>
+      </div>
+      <div class="phone" aria-hidden="true">
+        <div class="phone-clock">21:08</div>
+        <div class="notif" data-dial-notif>
+          <p class="notif-app"><span class="mark-lamp"></span>Paeon<span>now</span></p>
+          <p class="notif-title">Incident #3: slo_traefik_5xx</p>
+          <p class="notif-body">Suggested: restart the container (media-server). No button: this one is yours.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="earned">
+    <h3>Auto is earned, one action at a time</h3>
+    <div class="earned-run" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+    <p>After five approved, verified runs in a row of the same action on the same container for the same alert, Paeon shows the policy line that would let it run alone. Adding it is your commit. One failure, one Undo or one “This was wrong” takes it back, and a kill switch drops everything to observe.</p>
+    <p class="hold-note"><span class="lamp" data-state="hold">Hold</span> Built and covered by tests, not yet proven in long use on a real server.</p>
+  </div>
+  <p class="band-foot"><a class="arrow" href="docs/acting/">Acting: approvals, runbooks and earned autonomy</a></p>
+</section>
+
+<section class="band band-catalog" id="catalog" aria-labelledby="h-catalog">
+  <div class="band-head">
+    <h2 id="h-catalog">The catalog is closed</h2>
+    <p>Six actions exist. Your rules file switches them on for the targets you name; it cannot add one. Anything else in a plan stays a sentence for you.</p>
+  </div>
+  <div class="board bank">
+    <div class="board-head"><h3>Action catalog · six positions</h3></div>
+    <ol class="rows">
+      <li class="row"><code class="st">restart_container</code><span class="note">Restart one container you listed.</span><span class="lamp" data-state="go">In catalog</span></li>
+      <li class="row"><code class="st">start_container</code><span class="note">Start one that stopped.</span><span class="lamp" data-state="go">In catalog</span></li>
+      <li class="row"><code class="st">unpause_container</code><span class="note">Unpause one that was paused.</span><span class="lamp" data-state="go">In catalog</span></li>
+      <li class="row"><code class="st">reattach_network_alias</code><span class="note">Put a container back on its network alias.</span><span class="lamp" data-state="go">In catalog</span></li>
+      <li class="row"><code class="st">coolify_restart</code><span class="note">Restart a Coolify resource you named.</span><span class="lamp" data-state="go">In catalog</span></li>
+      <li class="row"><code class="st">config_change</code><span class="note">Never applied: one existing value of one YAML file becomes a pull request. Merging it is the approval.</span><span class="lamp" data-state="hold">Proposed</span></li>
+      <li class="row row-blank"><span class="st">Position seven</span><span class="note">There is no seventh switch, and no way to wire one from a prompt.</span><span class="lamp" data-state="standby">Blanked</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="band band-videos" id="videos" aria-labelledby="h-videos">
+  <div class="band-head">
+    <h2 id="h-videos">Watch one incident, from the alert to the fix</h2>
+    <p>Three short videos, drawn in your browser frame by frame over a synthetic voice, with subtitles and chapters. Every incident in them is fictional.</p>
+  </div>
+  <div class="theatre" data-theatre>
+    <div class="screen">
+      <iframe data-screen src="videos/the-flow/?embed=1&amp;lang=en" title="One incident, from alert to fix" loading="lazy" allow="fullscreen; autoplay" allowfullscreen></iframe>
+      <p class="screen-tip">On a phone, use Fullscreen and turn it sideways.</p>
+    </div>
+    <div class="reel" role="tablist" aria-label="Videos">
+      <button type="button" role="tab" aria-selected="true" data-video="the-flow" data-title="One incident, from alert to fix"><strong>One incident, from alert to fix</strong><span>Two alerts, one incident, triage, the investigation, your phone, Go, the fix.</span></button>
+      <button type="button" role="tab" aria-selected="false" data-video="paeon-explained" data-title="Paeon in two minutes"><strong>Paeon in two minutes</strong><span>What it is, and the line between a model that thinks and code that acts.</span></button>
+      <button type="button" role="tab" aria-selected="false" data-video="earning-autonomy" data-title="Earning autonomy"><strong>Earning autonomy</strong><span>From asking every time to running alone, and what takes that back.</span></button>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="console" aria-labelledby="h-console">
+  <div class="band-head">
+    <h2 id="h-console">The record, rendered</h2>
+    <p>The console is the event log made readable: what was taken into account, which model or tool was called and why, what it cost, and what was sent or done. It can stop automation. It cannot approve a plan.</p>
+  </div>
+  <div class="monitor" data-monitor>
+    <div class="monitor-tabs" role="tablist" aria-label="Console pages">
+      <button type="button" role="tab" aria-selected="true" data-shot="board" data-alt="The incidents board: a count per stage, then incidents grouped by the stage they wait for">Incidents</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="investigation" data-alt="An investigation: a root cause, evidence tied to tool calls, a suggested plan">Investigation</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="plan-waiting" data-alt="A plan waiting for Go: the console cannot approve it">Waiting for Go</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="plan-verified" data-alt="The same plan after Go: it ran and the result was verified">After Go</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="ledger" data-alt="The ledger: what model calls cost, by day, stage and model">Ledger</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="board-dark" data-alt="The incidents board in dark mode">Dark</button>
+    </div>
+    <figure class="monitor-screen">
+      <img data-monitor-img src="docs/assets/console/board.webp" width="1920" height="1200" alt="The incidents board: a count per stage, then incidents grouped by the stage they wait for" loading="lazy">
+      <figcaption>The real console, on synthetic data. No real server, alert or model answer is shown.</figcaption>
+    </figure>
+  </div>
+  <p class="band-foot"><a class="arrow" href="docs/console/">A tour of the console</a></p>
+</section>
+
+<section class="band band-quick" id="quickstart" aria-labelledby="h-quick">
+  <div class="band-head">
+    <h2 id="h-quick">Count down to a first incident</h2>
+    <p>Six steps on one machine, with Python 3.12 and <a href="https://docs.astral.sh/uv/">uv</a>. No account, no model key. Nothing leaves your machine: without a rules file that enables a stage, Paeon calls no model.</p>
+  </div>
+  <ol class="countdown">
+    <li><span class="tminus">T-5</span><div><h3>Get it</h3><pre><code>git clone https://github.com/mmornati/paeon.git &amp;&amp; cd paeon &amp;&amp; uv sync</code></pre></div></li>
+    <li><span class="tminus">T-4</span><div><h3>One secret, and the console on</h3><pre><code>echo "PAEON_INGEST_TOKEN=$(python3 -c \
+  'import secrets; print(secrets.token_urlsafe(32))')" &gt; .env</code></pre><pre><code>printf 'ui:\n  enabled: true\n' &gt; paeon.yaml &amp;&amp; echo "PAEON_CONFIG=paeon.yaml" &gt;&gt; .env</code></pre></div></li>
+    <li><span class="tminus">T-3</span><div><h3>Start it</h3><pre><code>set -a &amp;&amp; . ./.env &amp;&amp; set +a &amp;&amp; uv run paeon serve</code></pre></div></li>
+    <li><span class="tminus">T-2</span><div><h3>Send a first alert, from a second terminal</h3><pre><code>set -a &amp;&amp; . ./.env &amp;&amp; set +a</code></pre><pre><code>curl -X POST http://127.0.0.1:8080/ingest/alertmanager \
+  -H "Authorization: Bearer $PAEON_INGEST_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"alerts": [{"status": "firing", "fingerprint": "demo-disk-full",
+       "labels": {"alertname": "DiskFull", "severity": "warning", "instance": "server-1"},
+       "annotations": {"summary": "/ is 95 % full"}}]}'</code></pre></div></li>
+    <li><span class="tminus">T-1</span><div><h3>Read what it recorded</h3><pre><code>uv run paeon incidents</code></pre></div></li>
+    <li class="liftoff"><span class="tminus">T-0</span><div><h3>Open the console</h3><p>The incident is waiting at <code>http://127.0.0.1:8080/ui</code>.</p></div></li>
+  </ol>
+  <p class="band-foot"><a class="arrow" href="docs/quickstart/">The quickstart, step by step</a> <a class="arrow" href="docs/quickstart-prometheus/">With Prometheus, Alertmanager and Docker</a></p>
+</section>
+
+<section class="band band-holds" id="holds" aria-labelledby="h-holds">
+  <div class="band-head">
+    <h2 id="h-holds">Hold points</h2>
+    <p>What is not there yet, said plainly.</p>
+  </div>
+  <ul class="holds">
+    <li><span class="lamp" data-state="hold">Hold</span><p><strong>Alpha.</strong> Everything on this page is written and covered by tests. The acting part has not yet run on a real server for long.</p></li>
+    <li><span class="lamp" data-state="hold">Hold</span><p><strong>One Docker host.</strong> Actions reach one Docker host, the Coolify instance and the deployment repository you configure. Nothing on another host, on the network or on Kubernetes.</p></li>
+    <li><span class="lamp" data-state="hold">Hold</span><p><strong>One channel.</strong> Notifications go to ntfy and nowhere else.</p></li>
+    <li><span class="lamp" data-state="hold">Hold</span><p><strong>No login.</strong> The console is off by default and belongs behind a reverse proxy that authenticates.</p></li>
+    <li><span class="lamp" data-state="hold">Hold</span><p><strong>A model can be confidently wrong.</strong> Read the evidence, not only the conclusion, and set the budgets before you point Paeon at a noisy source.</p></li>
+  </ul>
+  <p class="band-foot"><a class="arrow" href="docs/roadmap/">Roadmap and limits as built</a></p>
+</section>
+
+<section class="final" aria-labelledby="h-final">
+  <h2 id="h-final">Go for quickstart?</h2>
+  <p class="final-keys">
+    <a class="key key-go" href="docs/quickstart/">Go</a>
+    <a class="key key-nogo" href="docs/threat-model/">No-go: show me the threat model</a>
+  </p>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p><a class="mark" href="./"><span class="mark-lamp" aria-hidden="true"></span>Paeon</a> The healer of the gods in Homer. Apache-2.0.</p>
+  <p>Every incident, host and finding on this site is fictional. Paeon is an independent project, not affiliated with or endorsed by OpenObserve, uptime-kuma, Prometheus, Docker, ntfy, Anthropic or OpenAI.</p>
+  <p class="foot-links"><a href="docs/">Docs</a><a href="https://github.com/mmornati/paeon">GitHub</a><a href="https://github.com/mmornati/paeon/blob/main/SECURITY.md">Security</a><a href="https://github.com/mmornati/paeon/blob/main/CHANGELOG.md">Changelog</a></p>
+</footer>
+</body>
+</html>

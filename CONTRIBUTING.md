@@ -65,3 +65,20 @@ to submit it. There is no separate contributor agreement.
 ## Security
 
 Do not report vulnerabilities in an issue or a pull request. See [SECURITY.md](SECURITY.md).
+
+## The site
+
+The landing page is `website/`, the documentation is `docs/` (MkDocs), and the videos are
+`website/videos/` (each a folder with a `script.json` and a `scenes.js`; the narration is generated
+with [canvas-video-skill](https://github.com/mmornati/canvas-video-skill)). To build it all into
+`site/` and look at it:
+
+```bash
+uv run --with-requirements requirements-docs.txt bash scripts/build-site.sh
+```
+
+```bash
+python3 -m http.server -d site 8000
+```
+
+Every example on the site is fictional, and the console screenshots come from `tests/ui_data.py`.

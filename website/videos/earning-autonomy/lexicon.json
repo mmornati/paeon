@@ -1,0 +1,9 @@
+{
+  "_doc": "Pronunciation fixes, applied to the spoken text only (subtitles keep the original). Keys are whole words, case-sensitive. A [[…]] value is raw IPA (Kokoro, Azure).",
+  "en": {
+    "Paeon": "[[pˈiːɑːn]]",
+    "Traefik": "traffic",
+    "uptime-kuma": "uptime kooma",
+    "OpenObserve": "Open Observe"
+  }
+}

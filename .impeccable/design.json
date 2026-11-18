@@ -1,1026 +1,1801 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-18T12:38:23+00:00",
+  "generatedAt": "2026-11-18T20:17:06+00:00",
   "title": "Design System: Paeon",
   "extensions": {
+    "worlds": [
+      {
+        "name": "console",
+        "tokenPrefix": "",
+        "paths": [
+          "src/paeon/ui/"
+        ],
+        "source": "src/paeon/ui/static/console.css",
+        "mode": "Operate"
+      },
+      {
+        "name": "site",
+        "tokenPrefix": "site-, docs-",
+        "paths": [
+          "website/",
+          "docs/stylesheets/extra.css",
+          "website/videos/"
+        ],
+        "source": "website/css/site.css",
+        "mode": "Persuade (landing page), Read (docs)"
+      }
+    ],
     "colorMeta": {
-      "rack": {
+      "bg": {
         "role": "neutral",
-        "displayName": "Rack",
+        "displayName": "Page",
+        "world": "console",
         "scheme": "light",
-        "cssVariable": "--rack",
-        "canonical": "#c5cfcb",
-        "oklch": "oklch(84.6% 0.012 170)",
+        "cssVariable": "--bg",
+        "canonical": "#f5f6f8",
+        "oklch": "oklch(97.3% 0.003 265)",
         "tonalRamp": [
-          "oklch(15.0% 0.012 170)",
-          "oklch(27.0% 0.012 170)",
-          "oklch(39.0% 0.012 170)",
-          "oklch(51.0% 0.012 170)",
-          "oklch(63.0% 0.012 170)",
-          "oklch(75.0% 0.012 170)",
-          "oklch(87.0% 0.012 170)",
-          "oklch(95.0% 0.012 170)"
+          "oklch(15.0% 0.003 265)",
+          "oklch(27.0% 0.003 265)",
+          "oklch(39.0% 0.003 265)",
+          "oklch(51.0% 0.003 265)",
+          "oklch(63.0% 0.003 265)",
+          "oklch(75.0% 0.003 265)",
+          "oklch(87.0% 0.003 265)",
+          "oklch(95.0% 0.003 265)"
         ]
       },
-      "well": {
+      "surface": {
         "role": "neutral",
-        "displayName": "Well",
+        "displayName": "Surface",
+        "world": "console",
         "scheme": "light",
-        "cssVariable": "--well",
-        "canonical": "#b4bfbb",
-        "oklch": "oklch(79.5% 0.013 172)",
+        "cssVariable": "--surface",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 0)",
         "tonalRamp": [
-          "oklch(15.0% 0.013 172)",
-          "oklch(27.0% 0.013 172)",
-          "oklch(39.0% 0.013 172)",
-          "oklch(51.0% 0.013 172)",
-          "oklch(63.0% 0.013 172)",
-          "oklch(75.0% 0.013 172)",
-          "oklch(87.0% 0.013 172)",
-          "oklch(95.0% 0.013 172)"
+          "oklch(15.0% 0.000 0)",
+          "oklch(27.0% 0.000 0)",
+          "oklch(39.0% 0.000 0)",
+          "oklch(51.0% 0.000 0)",
+          "oklch(63.0% 0.000 0)",
+          "oklch(75.0% 0.000 0)",
+          "oklch(87.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
         ]
       },
-      "strip": {
+      "surface-2": {
         "role": "neutral",
-        "displayName": "Strip",
+        "displayName": "Surface 2",
+        "world": "console",
         "scheme": "light",
-        "cssVariable": "--strip",
-        "canonical": "#f4f6f2",
-        "oklch": "oklch(97.1% 0.006 129)",
+        "cssVariable": "--surface-2",
+        "canonical": "#f0f2f5",
+        "oklch": "oklch(96.0% 0.005 258)",
         "tonalRamp": [
-          "oklch(15.0% 0.006 129)",
-          "oklch(27.0% 0.006 129)",
-          "oklch(39.0% 0.006 129)",
-          "oklch(51.0% 0.006 129)",
-          "oklch(63.0% 0.006 129)",
-          "oklch(75.0% 0.006 129)",
-          "oklch(87.0% 0.006 129)",
-          "oklch(95.0% 0.006 129)"
+          "oklch(15.0% 0.005 258)",
+          "oklch(27.0% 0.005 258)",
+          "oklch(39.0% 0.005 258)",
+          "oklch(51.0% 0.005 258)",
+          "oklch(63.0% 0.005 258)",
+          "oklch(75.0% 0.005 258)",
+          "oklch(87.0% 0.005 258)",
+          "oklch(95.0% 0.005 258)"
         ]
       },
-      "edge": {
+      "border": {
         "role": "neutral",
-        "displayName": "Edge",
+        "displayName": "Border",
+        "world": "console",
         "scheme": "light",
-        "cssVariable": "--edge",
-        "canonical": "#8a9793",
-        "oklch": "oklch(66.5% 0.016 175)",
+        "cssVariable": "--border",
+        "canonical": "#e2e5ea",
+        "oklch": "oklch(92.1% 0.008 261)",
         "tonalRamp": [
-          "oklch(15.0% 0.016 175)",
-          "oklch(27.0% 0.016 175)",
-          "oklch(39.0% 0.016 175)",
-          "oklch(51.0% 0.016 175)",
-          "oklch(63.0% 0.016 175)",
-          "oklch(75.0% 0.016 175)",
-          "oklch(87.0% 0.016 175)",
-          "oklch(95.0% 0.016 175)"
+          "oklch(15.0% 0.008 261)",
+          "oklch(27.0% 0.008 261)",
+          "oklch(39.0% 0.008 261)",
+          "oklch(51.0% 0.008 261)",
+          "oklch(63.0% 0.008 261)",
+          "oklch(75.0% 0.008 261)",
+          "oklch(87.0% 0.008 261)",
+          "oklch(95.0% 0.008 261)"
         ]
       },
-      "rule": {
+      "border-strong": {
         "role": "neutral",
-        "displayName": "Rule",
+        "displayName": "Strong Border",
+        "world": "console",
         "scheme": "light",
-        "cssVariable": "--rule",
-        "canonical": "#c3ccc8",
-        "oklch": "oklch(83.7% 0.011 168)",
+        "cssVariable": "--border-strong",
+        "canonical": "#c9ced7",
+        "oklch": "oklch(85.0% 0.014 262)",
         "tonalRamp": [
-          "oklch(15.0% 0.011 168)",
-          "oklch(27.0% 0.011 168)",
-          "oklch(39.0% 0.011 168)",
-          "oklch(51.0% 0.011 168)",
-          "oklch(63.0% 0.011 168)",
-          "oklch(75.0% 0.011 168)",
-          "oklch(87.0% 0.011 168)",
-          "oklch(95.0% 0.011 168)"
+          "oklch(15.0% 0.014 262)",
+          "oklch(27.0% 0.014 262)",
+          "oklch(39.0% 0.014 262)",
+          "oklch(51.0% 0.014 262)",
+          "oklch(63.0% 0.014 262)",
+          "oklch(75.0% 0.014 262)",
+          "oklch(87.0% 0.014 262)",
+          "oklch(95.0% 0.014 262)"
         ]
       },
-      "ink": {
+      "text": {
         "role": "neutral",
-        "displayName": "Printed Ink",
+        "displayName": "Text",
+        "world": "console",
         "scheme": "light",
+        "cssVariable": "--text",
+        "canonical": "#141821",
+        "oklch": "oklch(20.9% 0.019 266)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 266)",
+          "oklch(27.0% 0.019 266)",
+          "oklch(39.0% 0.019 266)",
+          "oklch(51.0% 0.019 266)",
+          "oklch(63.0% 0.019 266)",
+          "oklch(75.0% 0.019 266)",
+          "oklch(87.0% 0.019 266)",
+          "oklch(95.0% 0.019 266)"
+        ]
+      },
+      "text-2": {
+        "role": "neutral",
+        "displayName": "Secondary Text",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--text-2",
+        "canonical": "#4f596a",
+        "oklch": "oklch(46.2% 0.030 261)",
+        "tonalRamp": [
+          "oklch(15.0% 0.030 261)",
+          "oklch(27.0% 0.030 261)",
+          "oklch(39.0% 0.030 261)",
+          "oklch(51.0% 0.030 261)",
+          "oklch(63.0% 0.030 261)",
+          "oklch(75.0% 0.030 261)",
+          "oklch(87.0% 0.030 261)",
+          "oklch(95.0% 0.030 261)"
+        ]
+      },
+      "text-3": {
+        "role": "neutral",
+        "displayName": "Label Text",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--text-3",
+        "canonical": "#667082",
+        "oklch": "oklch(54.3% 0.031 262)",
+        "tonalRamp": [
+          "oklch(15.0% 0.031 262)",
+          "oklch(27.0% 0.031 262)",
+          "oklch(39.0% 0.031 262)",
+          "oklch(51.0% 0.031 262)",
+          "oklch(63.0% 0.031 262)",
+          "oklch(75.0% 0.031 262)",
+          "oklch(87.0% 0.031 262)",
+          "oklch(95.0% 0.031 262)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--accent",
+        "canonical": "#3451d1",
+        "oklch": "oklch(49.5% 0.199 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.199 268)",
+          "oklch(27.0% 0.199 268)",
+          "oklch(39.0% 0.199 268)",
+          "oklch(51.0% 0.199 268)",
+          "oklch(63.0% 0.199 268)",
+          "oklch(75.0% 0.199 268)",
+          "oklch(87.0% 0.199 268)",
+          "oklch(95.0% 0.199 268)"
+        ]
+      },
+      "accent-bg": {
+        "role": "primary",
+        "displayName": "Accent Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--accent-bg",
+        "canonical": "#ecf0fe",
+        "oklch": "oklch(95.6% 0.019 273)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 273)",
+          "oklch(27.0% 0.019 273)",
+          "oklch(39.0% 0.019 273)",
+          "oklch(51.0% 0.019 273)",
+          "oklch(63.0% 0.019 273)",
+          "oklch(75.0% 0.019 273)",
+          "oklch(87.0% 0.019 273)",
+          "oklch(95.0% 0.019 273)"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Ink On Accent",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--accent-ink",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 0)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 0)",
+          "oklch(27.0% 0.000 0)",
+          "oklch(39.0% 0.000 0)",
+          "oklch(51.0% 0.000 0)",
+          "oklch(63.0% 0.000 0)",
+          "oklch(75.0% 0.000 0)",
+          "oklch(87.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
+        ]
+      },
+      "model": {
+        "role": "tertiary",
+        "displayName": "Model Violet",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--model",
+        "canonical": "#6a3fc0",
+        "oklch": "oklch(49.1% 0.191 293)",
+        "tonalRamp": [
+          "oklch(15.0% 0.191 293)",
+          "oklch(27.0% 0.191 293)",
+          "oklch(39.0% 0.191 293)",
+          "oklch(51.0% 0.191 293)",
+          "oklch(63.0% 0.191 293)",
+          "oklch(75.0% 0.191 293)",
+          "oklch(87.0% 0.191 293)",
+          "oklch(95.0% 0.191 293)"
+        ]
+      },
+      "model-bg": {
+        "role": "tertiary",
+        "displayName": "Model Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--model-bg",
+        "canonical": "#f2edfc",
+        "oklch": "oklch(95.4% 0.021 301)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 301)",
+          "oklch(27.0% 0.021 301)",
+          "oklch(39.0% 0.021 301)",
+          "oklch(51.0% 0.021 301)",
+          "oklch(63.0% 0.021 301)",
+          "oklch(75.0% 0.021 301)",
+          "oklch(87.0% 0.021 301)",
+          "oklch(95.0% 0.021 301)"
+        ]
+      },
+      "crit": {
+        "role": "secondary",
+        "displayName": "Critical",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--crit",
+        "canonical": "#c7253a",
+        "oklch": "oklch(54.1% 0.195 21)",
+        "tonalRamp": [
+          "oklch(15.0% 0.195 21)",
+          "oklch(27.0% 0.195 21)",
+          "oklch(39.0% 0.195 21)",
+          "oklch(51.0% 0.195 21)",
+          "oklch(63.0% 0.195 21)",
+          "oklch(75.0% 0.195 21)",
+          "oklch(87.0% 0.195 21)",
+          "oklch(95.0% 0.195 21)"
+        ]
+      },
+      "crit-bg": {
+        "role": "secondary",
+        "displayName": "Critical Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--crit-bg",
+        "canonical": "#fdecee",
+        "oklch": "oklch(95.7% 0.019 9)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 9)",
+          "oklch(27.0% 0.019 9)",
+          "oklch(39.0% 0.019 9)",
+          "oklch(51.0% 0.019 9)",
+          "oklch(63.0% 0.019 9)",
+          "oklch(75.0% 0.019 9)",
+          "oklch(87.0% 0.019 9)",
+          "oklch(95.0% 0.019 9)"
+        ]
+      },
+      "warn": {
+        "role": "secondary",
+        "displayName": "Warning",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--warn",
+        "canonical": "#a35400",
+        "oklch": "oklch(53.1% 0.130 56)",
+        "tonalRamp": [
+          "oklch(15.0% 0.130 56)",
+          "oklch(27.0% 0.130 56)",
+          "oklch(39.0% 0.130 56)",
+          "oklch(51.0% 0.130 56)",
+          "oklch(63.0% 0.130 56)",
+          "oklch(75.0% 0.130 56)",
+          "oklch(87.0% 0.130 56)",
+          "oklch(95.0% 0.130 56)"
+        ]
+      },
+      "warn-bg": {
+        "role": "secondary",
+        "displayName": "Warning Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--warn-bg",
+        "canonical": "#fdf2df",
+        "oklch": "oklch(96.5% 0.028 81)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 81)",
+          "oklch(27.0% 0.028 81)",
+          "oklch(39.0% 0.028 81)",
+          "oklch(51.0% 0.028 81)",
+          "oklch(63.0% 0.028 81)",
+          "oklch(75.0% 0.028 81)",
+          "oklch(87.0% 0.028 81)",
+          "oklch(95.0% 0.028 81)"
+        ]
+      },
+      "info": {
+        "role": "secondary",
+        "displayName": "Info",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--info",
+        "canonical": "#1565bd",
+        "oklch": "oklch(51.1% 0.156 255)",
+        "tonalRamp": [
+          "oklch(15.0% 0.156 255)",
+          "oklch(27.0% 0.156 255)",
+          "oklch(39.0% 0.156 255)",
+          "oklch(51.0% 0.156 255)",
+          "oklch(63.0% 0.156 255)",
+          "oklch(75.0% 0.156 255)",
+          "oklch(87.0% 0.156 255)",
+          "oklch(95.0% 0.156 255)"
+        ]
+      },
+      "info-bg": {
+        "role": "secondary",
+        "displayName": "Info Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--info-bg",
+        "canonical": "#e7f1fd",
+        "oklch": "oklch(95.4% 0.019 253)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 253)",
+          "oklch(27.0% 0.019 253)",
+          "oklch(39.0% 0.019 253)",
+          "oklch(51.0% 0.019 253)",
+          "oklch(63.0% 0.019 253)",
+          "oklch(75.0% 0.019 253)",
+          "oklch(87.0% 0.019 253)",
+          "oklch(95.0% 0.019 253)"
+        ]
+      },
+      "ok": {
+        "role": "secondary",
+        "displayName": "OK",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--ok",
+        "canonical": "#17754b",
+        "oklch": "oklch(49.9% 0.108 158)",
+        "tonalRamp": [
+          "oklch(15.0% 0.108 158)",
+          "oklch(27.0% 0.108 158)",
+          "oklch(39.0% 0.108 158)",
+          "oklch(51.0% 0.108 158)",
+          "oklch(63.0% 0.108 158)",
+          "oklch(75.0% 0.108 158)",
+          "oklch(87.0% 0.108 158)",
+          "oklch(95.0% 0.108 158)"
+        ]
+      },
+      "ok-bg": {
+        "role": "secondary",
+        "displayName": "OK Tint",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--ok-bg",
+        "canonical": "#e5f6ed",
+        "oklch": "oklch(95.8% 0.021 163)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 163)",
+          "oklch(27.0% 0.021 163)",
+          "oklch(39.0% 0.021 163)",
+          "oklch(51.0% 0.021 163)",
+          "oklch(63.0% 0.021 163)",
+          "oklch(75.0% 0.021 163)",
+          "oklch(87.0% 0.021 163)",
+          "oklch(95.0% 0.021 163)"
+        ]
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Page (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--bg",
+        "canonical": "#0b0d12",
+        "oklch": "oklch(15.9% 0.011 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 268)",
+          "oklch(27.0% 0.011 268)",
+          "oklch(39.0% 0.011 268)",
+          "oklch(51.0% 0.011 268)",
+          "oklch(63.0% 0.011 268)",
+          "oklch(75.0% 0.011 268)",
+          "oklch(87.0% 0.011 268)",
+          "oklch(95.0% 0.011 268)"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--surface",
+        "canonical": "#12151c",
+        "oklch": "oklch(19.6% 0.015 267)",
+        "tonalRamp": [
+          "oklch(15.0% 0.015 267)",
+          "oklch(27.0% 0.015 267)",
+          "oklch(39.0% 0.015 267)",
+          "oklch(51.0% 0.015 267)",
+          "oklch(63.0% 0.015 267)",
+          "oklch(75.0% 0.015 267)",
+          "oklch(87.0% 0.015 267)",
+          "oklch(95.0% 0.015 267)"
+        ]
+      },
+      "surface-2-dark": {
+        "role": "neutral",
+        "displayName": "Surface 2 (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--surface-2",
+        "canonical": "#191d27",
+        "oklch": "oklch(23.1% 0.020 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 268)",
+          "oklch(27.0% 0.020 268)",
+          "oklch(39.0% 0.020 268)",
+          "oklch(51.0% 0.020 268)",
+          "oklch(63.0% 0.020 268)",
+          "oklch(75.0% 0.020 268)",
+          "oklch(87.0% 0.020 268)",
+          "oklch(95.0% 0.020 268)"
+        ]
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "Border (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--border",
+        "canonical": "#232835",
+        "oklch": "oklch(27.8% 0.025 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.025 268)",
+          "oklch(27.0% 0.025 268)",
+          "oklch(39.0% 0.025 268)",
+          "oklch(51.0% 0.025 268)",
+          "oklch(63.0% 0.025 268)",
+          "oklch(75.0% 0.025 268)",
+          "oklch(87.0% 0.025 268)",
+          "oklch(95.0% 0.025 268)"
+        ]
+      },
+      "border-strong-dark": {
+        "role": "neutral",
+        "displayName": "Strong Border (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--border-strong",
+        "canonical": "#353c4d",
+        "oklch": "oklch(35.7% 0.031 267)",
+        "tonalRamp": [
+          "oklch(15.0% 0.031 267)",
+          "oklch(27.0% 0.031 267)",
+          "oklch(39.0% 0.031 267)",
+          "oklch(51.0% 0.031 267)",
+          "oklch(63.0% 0.031 267)",
+          "oklch(75.0% 0.031 267)",
+          "oklch(87.0% 0.031 267)",
+          "oklch(95.0% 0.031 267)"
+        ]
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "Text (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--text",
+        "canonical": "#e7eaf0",
+        "oklch": "oklch(93.6% 0.009 265)",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 265)",
+          "oklch(27.0% 0.009 265)",
+          "oklch(39.0% 0.009 265)",
+          "oklch(51.0% 0.009 265)",
+          "oklch(63.0% 0.009 265)",
+          "oklch(75.0% 0.009 265)",
+          "oklch(87.0% 0.009 265)",
+          "oklch(95.0% 0.009 265)"
+        ]
+      },
+      "text-2-dark": {
+        "role": "neutral",
+        "displayName": "Secondary Text (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--text-2",
+        "canonical": "#a3acbd",
+        "oklch": "oklch(74.3% 0.027 263)",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 263)",
+          "oklch(27.0% 0.027 263)",
+          "oklch(39.0% 0.027 263)",
+          "oklch(51.0% 0.027 263)",
+          "oklch(63.0% 0.027 263)",
+          "oklch(75.0% 0.027 263)",
+          "oklch(87.0% 0.027 263)",
+          "oklch(95.0% 0.027 263)"
+        ]
+      },
+      "text-3-dark": {
+        "role": "neutral",
+        "displayName": "Label Text (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--text-3",
+        "canonical": "#7f899c",
+        "oklch": "oklch(62.8% 0.031 263)",
+        "tonalRamp": [
+          "oklch(15.0% 0.031 263)",
+          "oklch(27.0% 0.031 263)",
+          "oklch(39.0% 0.031 263)",
+          "oklch(51.0% 0.031 263)",
+          "oklch(63.0% 0.031 263)",
+          "oklch(75.0% 0.031 263)",
+          "oklch(87.0% 0.031 263)",
+          "oklch(95.0% 0.031 263)"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Accent (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--accent",
+        "canonical": "#8da2ff",
+        "oklch": "oklch(73.5% 0.137 273)",
+        "tonalRamp": [
+          "oklch(15.0% 0.137 273)",
+          "oklch(27.0% 0.137 273)",
+          "oklch(39.0% 0.137 273)",
+          "oklch(51.0% 0.137 273)",
+          "oklch(63.0% 0.137 273)",
+          "oklch(75.0% 0.137 273)",
+          "oklch(87.0% 0.137 273)",
+          "oklch(95.0% 0.137 273)"
+        ]
+      },
+      "accent-bg-dark": {
+        "role": "primary",
+        "displayName": "Accent Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--accent-bg",
+        "canonical": "#1a2142",
+        "oklch": "oklch(26.0% 0.062 272)",
+        "tonalRamp": [
+          "oklch(15.0% 0.062 272)",
+          "oklch(27.0% 0.062 272)",
+          "oklch(39.0% 0.062 272)",
+          "oklch(51.0% 0.062 272)",
+          "oklch(63.0% 0.062 272)",
+          "oklch(75.0% 0.062 272)",
+          "oklch(87.0% 0.062 272)",
+          "oklch(95.0% 0.062 272)"
+        ]
+      },
+      "accent-ink-dark": {
+        "role": "primary",
+        "displayName": "Ink On Accent (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--accent-ink",
+        "canonical": "#0b0d12",
+        "oklch": "oklch(15.9% 0.011 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 268)",
+          "oklch(27.0% 0.011 268)",
+          "oklch(39.0% 0.011 268)",
+          "oklch(51.0% 0.011 268)",
+          "oklch(63.0% 0.011 268)",
+          "oklch(75.0% 0.011 268)",
+          "oklch(87.0% 0.011 268)",
+          "oklch(95.0% 0.011 268)"
+        ]
+      },
+      "model-dark": {
+        "role": "tertiary",
+        "displayName": "Model Violet (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--model",
+        "canonical": "#b9a0ff",
+        "oklch": "oklch(76.4% 0.135 295)",
+        "tonalRamp": [
+          "oklch(15.0% 0.135 295)",
+          "oklch(27.0% 0.135 295)",
+          "oklch(39.0% 0.135 295)",
+          "oklch(51.0% 0.135 295)",
+          "oklch(63.0% 0.135 295)",
+          "oklch(75.0% 0.135 295)",
+          "oklch(87.0% 0.135 295)",
+          "oklch(95.0% 0.135 295)"
+        ]
+      },
+      "model-bg-dark": {
+        "role": "tertiary",
+        "displayName": "Model Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--model-bg",
+        "canonical": "#211a3a",
+        "oklch": "oklch(24.4% 0.059 291)",
+        "tonalRamp": [
+          "oklch(15.0% 0.059 291)",
+          "oklch(27.0% 0.059 291)",
+          "oklch(39.0% 0.059 291)",
+          "oklch(51.0% 0.059 291)",
+          "oklch(63.0% 0.059 291)",
+          "oklch(75.0% 0.059 291)",
+          "oklch(87.0% 0.059 291)",
+          "oklch(95.0% 0.059 291)"
+        ]
+      },
+      "crit-dark": {
+        "role": "secondary",
+        "displayName": "Critical (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--crit",
+        "canonical": "#ff7480",
+        "oklch": "oklch(72.8% 0.169 17)",
+        "tonalRamp": [
+          "oklch(15.0% 0.169 17)",
+          "oklch(27.0% 0.169 17)",
+          "oklch(39.0% 0.169 17)",
+          "oklch(51.0% 0.169 17)",
+          "oklch(63.0% 0.169 17)",
+          "oklch(75.0% 0.169 17)",
+          "oklch(87.0% 0.169 17)",
+          "oklch(95.0% 0.169 17)"
+        ]
+      },
+      "crit-bg-dark": {
+        "role": "secondary",
+        "displayName": "Critical Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--crit-bg",
+        "canonical": "#3a171d",
+        "oklch": "oklch(25.9% 0.056 11)",
+        "tonalRamp": [
+          "oklch(15.0% 0.056 11)",
+          "oklch(27.0% 0.056 11)",
+          "oklch(39.0% 0.056 11)",
+          "oklch(51.0% 0.056 11)",
+          "oklch(63.0% 0.056 11)",
+          "oklch(75.0% 0.056 11)",
+          "oklch(87.0% 0.056 11)",
+          "oklch(95.0% 0.056 11)"
+        ]
+      },
+      "warn-dark": {
+        "role": "secondary",
+        "displayName": "Warning (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--warn",
+        "canonical": "#f3b045",
+        "oklch": "oklch(80.2% 0.143 75)",
+        "tonalRamp": [
+          "oklch(15.0% 0.143 75)",
+          "oklch(27.0% 0.143 75)",
+          "oklch(39.0% 0.143 75)",
+          "oklch(51.0% 0.143 75)",
+          "oklch(63.0% 0.143 75)",
+          "oklch(75.0% 0.143 75)",
+          "oklch(87.0% 0.143 75)",
+          "oklch(95.0% 0.143 75)"
+        ]
+      },
+      "warn-bg-dark": {
+        "role": "secondary",
+        "displayName": "Warning Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--warn-bg",
+        "canonical": "#33270e",
+        "oklch": "oklch(28.0% 0.043 84)",
+        "tonalRamp": [
+          "oklch(15.0% 0.043 84)",
+          "oklch(27.0% 0.043 84)",
+          "oklch(39.0% 0.043 84)",
+          "oklch(51.0% 0.043 84)",
+          "oklch(63.0% 0.043 84)",
+          "oklch(75.0% 0.043 84)",
+          "oklch(87.0% 0.043 84)",
+          "oklch(95.0% 0.043 84)"
+        ]
+      },
+      "info-dark": {
+        "role": "secondary",
+        "displayName": "Info (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--info",
+        "canonical": "#62adff",
+        "oklch": "oklch(73.4% 0.141 252)",
+        "tonalRamp": [
+          "oklch(15.0% 0.141 252)",
+          "oklch(27.0% 0.141 252)",
+          "oklch(39.0% 0.141 252)",
+          "oklch(51.0% 0.141 252)",
+          "oklch(63.0% 0.141 252)",
+          "oklch(75.0% 0.141 252)",
+          "oklch(87.0% 0.141 252)",
+          "oklch(95.0% 0.141 252)"
+        ]
+      },
+      "info-bg-dark": {
+        "role": "secondary",
+        "displayName": "Info Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--info-bg",
+        "canonical": "#11263e",
+        "oklch": "oklch(26.5% 0.053 253)",
+        "tonalRamp": [
+          "oklch(15.0% 0.053 253)",
+          "oklch(27.0% 0.053 253)",
+          "oklch(39.0% 0.053 253)",
+          "oklch(51.0% 0.053 253)",
+          "oklch(63.0% 0.053 253)",
+          "oklch(75.0% 0.053 253)",
+          "oklch(87.0% 0.053 253)",
+          "oklch(95.0% 0.053 253)"
+        ]
+      },
+      "ok-dark": {
+        "role": "secondary",
+        "displayName": "OK (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--ok",
+        "canonical": "#4bcb8e",
+        "oklch": "oklch(75.6% 0.144 159)",
+        "tonalRamp": [
+          "oklch(15.0% 0.144 159)",
+          "oklch(27.0% 0.144 159)",
+          "oklch(39.0% 0.144 159)",
+          "oklch(51.0% 0.144 159)",
+          "oklch(63.0% 0.144 159)",
+          "oklch(75.0% 0.144 159)",
+          "oklch(87.0% 0.144 159)",
+          "oklch(95.0% 0.144 159)"
+        ]
+      },
+      "ok-bg-dark": {
+        "role": "secondary",
+        "displayName": "OK Tint (dark)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--ok-bg",
+        "canonical": "#102a20",
+        "oklch": "oklch(26.1% 0.038 166)",
+        "tonalRamp": [
+          "oklch(15.0% 0.038 166)",
+          "oklch(27.0% 0.038 166)",
+          "oklch(39.0% 0.038 166)",
+          "oklch(51.0% 0.038 166)",
+          "oklch(63.0% 0.038 166)",
+          "oklch(75.0% 0.038 166)",
+          "oklch(87.0% 0.038 166)",
+          "oklch(95.0% 0.038 166)"
+        ]
+      },
+      "site-bg": {
+        "role": "neutral",
+        "displayName": "Board Navy",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--bg",
+        "canonical": "#0b1626",
+        "oklch": "oklch(19.9% 0.036 258)",
+        "tonalRamp": [
+          "oklch(15.0% 0.036 258)",
+          "oklch(27.0% 0.036 258)",
+          "oklch(39.0% 0.036 258)",
+          "oklch(51.0% 0.036 258)",
+          "oklch(63.0% 0.036 258)",
+          "oklch(75.0% 0.036 258)",
+          "oklch(87.0% 0.036 258)",
+          "oklch(95.0% 0.036 258)"
+        ]
+      },
+      "site-deep": {
+        "role": "neutral",
+        "displayName": "Deep Navy",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--deep",
+        "canonical": "#071020",
+        "oklch": "oklch(17.4% 0.036 261)",
+        "tonalRamp": [
+          "oklch(15.0% 0.036 261)",
+          "oklch(27.0% 0.036 261)",
+          "oklch(39.0% 0.036 261)",
+          "oklch(51.0% 0.036 261)",
+          "oklch(63.0% 0.036 261)",
+          "oklch(75.0% 0.036 261)",
+          "oklch(87.0% 0.036 261)",
+          "oklch(95.0% 0.036 261)"
+        ]
+      },
+      "site-panel": {
+        "role": "neutral",
+        "displayName": "Panel Navy",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--panel",
+        "canonical": "#12233b",
+        "oklch": "oklch(25.5% 0.051 257)",
+        "tonalRamp": [
+          "oklch(15.0% 0.051 257)",
+          "oklch(27.0% 0.051 257)",
+          "oklch(39.0% 0.051 257)",
+          "oklch(51.0% 0.051 257)",
+          "oklch(63.0% 0.051 257)",
+          "oklch(75.0% 0.051 257)",
+          "oklch(87.0% 0.051 257)",
+          "oklch(95.0% 0.051 257)"
+        ]
+      },
+      "site-panel-2": {
+        "role": "neutral",
+        "displayName": "Raised Navy",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--panel-2",
+        "canonical": "#183052",
+        "oklch": "oklch(30.9% 0.069 257)",
+        "tonalRamp": [
+          "oklch(15.0% 0.069 257)",
+          "oklch(27.0% 0.069 257)",
+          "oklch(39.0% 0.069 257)",
+          "oklch(51.0% 0.069 257)",
+          "oklch(63.0% 0.069 257)",
+          "oklch(75.0% 0.069 257)",
+          "oklch(87.0% 0.069 257)",
+          "oklch(95.0% 0.069 257)"
+        ]
+      },
+      "site-line": {
+        "role": "neutral",
+        "displayName": "Rule Blue",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--line",
+        "canonical": "#2a4368",
+        "oklch": "oklch(38.1% 0.071 258)",
+        "tonalRamp": [
+          "oklch(15.0% 0.071 258)",
+          "oklch(27.0% 0.071 258)",
+          "oklch(39.0% 0.071 258)",
+          "oklch(51.0% 0.071 258)",
+          "oklch(63.0% 0.071 258)",
+          "oklch(75.0% 0.071 258)",
+          "oklch(87.0% 0.071 258)",
+          "oklch(95.0% 0.071 258)"
+        ]
+      },
+      "site-ink": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "world": "site",
+        "scheme": "dark",
         "cssVariable": "--ink",
-        "canonical": "#101820",
-        "oklch": "oklch(20.5% 0.020 249)",
+        "canonical": "#f2f5f8",
+        "oklch": "oklch(96.9% 0.005 248)",
         "tonalRamp": [
-          "oklch(15.0% 0.020 249)",
-          "oklch(27.0% 0.020 249)",
-          "oklch(39.0% 0.020 249)",
-          "oklch(51.0% 0.020 249)",
-          "oklch(63.0% 0.020 249)",
-          "oklch(75.0% 0.020 249)",
-          "oklch(87.0% 0.020 249)",
-          "oklch(95.0% 0.020 249)"
+          "oklch(15.0% 0.005 248)",
+          "oklch(27.0% 0.005 248)",
+          "oklch(39.0% 0.005 248)",
+          "oklch(51.0% 0.005 248)",
+          "oklch(63.0% 0.005 248)",
+          "oklch(75.0% 0.005 248)",
+          "oklch(87.0% 0.005 248)",
+          "oklch(95.0% 0.005 248)"
         ]
       },
-      "ink-2": {
+      "site-soft": {
         "role": "neutral",
-        "displayName": "Second Ink",
-        "scheme": "light",
-        "cssVariable": "--ink-2",
-        "canonical": "#3a474e",
-        "oklch": "oklch(38.9% 0.021 232)",
+        "displayName": "Soft Chalk",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--soft",
+        "canonical": "#b6c3d6",
+        "oklch": "oklch(81.3% 0.030 258)",
         "tonalRamp": [
-          "oklch(15.0% 0.021 232)",
-          "oklch(27.0% 0.021 232)",
-          "oklch(39.0% 0.021 232)",
-          "oklch(51.0% 0.021 232)",
-          "oklch(63.0% 0.021 232)",
-          "oklch(75.0% 0.021 232)",
-          "oklch(87.0% 0.021 232)",
-          "oklch(95.0% 0.021 232)"
+          "oklch(15.0% 0.030 258)",
+          "oklch(27.0% 0.030 258)",
+          "oklch(39.0% 0.030 258)",
+          "oklch(51.0% 0.030 258)",
+          "oklch(63.0% 0.030 258)",
+          "oklch(75.0% 0.030 258)",
+          "oklch(87.0% 0.030 258)",
+          "oklch(95.0% 0.030 258)"
         ]
       },
-      "pen": {
+      "site-faint": {
+        "role": "neutral",
+        "displayName": "Faint Chalk",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--faint",
+        "canonical": "#8a9bb4",
+        "oklch": "oklch(68.5% 0.042 258)",
+        "tonalRamp": [
+          "oklch(15.0% 0.042 258)",
+          "oklch(27.0% 0.042 258)",
+          "oklch(39.0% 0.042 258)",
+          "oklch(51.0% 0.042 258)",
+          "oklch(63.0% 0.042 258)",
+          "oklch(75.0% 0.042 258)",
+          "oklch(87.0% 0.042 258)",
+          "oklch(95.0% 0.042 258)"
+        ]
+      },
+      "site-amber": {
         "role": "primary",
-        "displayName": "Pen Blue",
-        "scheme": "light",
-        "cssVariable": "--pen",
-        "canonical": "#1b3fa8",
-        "oklch": "oklch(41.5% 0.174 265)",
+        "displayName": "Hold Amber",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--amber",
+        "canonical": "#ffb000",
+        "oklch": "oklch(81.2% 0.170 76)",
         "tonalRamp": [
-          "oklch(15.0% 0.174 265)",
-          "oklch(27.0% 0.174 265)",
-          "oklch(39.0% 0.174 265)",
-          "oklch(51.0% 0.174 265)",
-          "oklch(63.0% 0.174 265)",
-          "oklch(75.0% 0.174 265)",
-          "oklch(87.0% 0.174 265)",
-          "oklch(95.0% 0.174 265)"
+          "oklch(15.0% 0.170 76)",
+          "oklch(27.0% 0.170 76)",
+          "oklch(39.0% 0.170 76)",
+          "oklch(51.0% 0.170 76)",
+          "oklch(63.0% 0.170 76)",
+          "oklch(75.0% 0.170 76)",
+          "oklch(87.0% 0.170 76)",
+          "oklch(95.0% 0.170 76)"
         ]
       },
-      "pen-2": {
+      "site-amber-lit": {
         "role": "primary",
-        "displayName": "Faded Pen",
-        "scheme": "light",
-        "cssVariable": "--pen-2",
-        "canonical": "#3d58a6",
-        "oklch": "oklch(48.1% 0.129 267)",
-        "tonalRamp": [
-          "oklch(15.0% 0.129 267)",
-          "oklch(27.0% 0.129 267)",
-          "oklch(39.0% 0.129 267)",
-          "oklch(51.0% 0.129 267)",
-          "oklch(63.0% 0.129 267)",
-          "oklch(75.0% 0.129 267)",
-          "oklch(87.0% 0.129 267)",
-          "oklch(95.0% 0.129 267)"
-        ]
-      },
-      "bar": {
-        "role": "neutral",
-        "displayName": "Bar",
-        "scheme": "light",
-        "cssVariable": "--bar",
-        "canonical": "#101820",
-        "oklch": "oklch(20.5% 0.020 249)",
-        "tonalRamp": [
-          "oklch(15.0% 0.020 249)",
-          "oklch(27.0% 0.020 249)",
-          "oklch(39.0% 0.020 249)",
-          "oklch(51.0% 0.020 249)",
-          "oklch(63.0% 0.020 249)",
-          "oklch(75.0% 0.020 249)",
-          "oklch(87.0% 0.020 249)",
-          "oklch(95.0% 0.020 249)"
-        ]
-      },
-      "bar-ink": {
-        "role": "neutral",
-        "displayName": "Bar Ink",
-        "scheme": "light",
-        "cssVariable": "--bar-ink",
-        "canonical": "#f4f6f2",
-        "oklch": "oklch(97.1% 0.006 129)",
-        "tonalRamp": [
-          "oklch(15.0% 0.006 129)",
-          "oklch(27.0% 0.006 129)",
-          "oklch(39.0% 0.006 129)",
-          "oklch(51.0% 0.006 129)",
-          "oklch(63.0% 0.006 129)",
-          "oklch(75.0% 0.006 129)",
-          "oklch(87.0% 0.006 129)",
-          "oklch(95.0% 0.006 129)"
-        ]
-      },
-      "bar-dim": {
-        "role": "neutral",
-        "displayName": "Bar Dim",
-        "scheme": "light",
-        "cssVariable": "--bar-dim",
-        "canonical": "#a9b6b2",
-        "oklch": "oklch(76.5% 0.016 176)",
-        "tonalRamp": [
-          "oklch(15.0% 0.016 176)",
-          "oklch(27.0% 0.016 176)",
-          "oklch(39.0% 0.016 176)",
-          "oklch(51.0% 0.016 176)",
-          "oklch(63.0% 0.016 176)",
-          "oklch(75.0% 0.016 176)",
-          "oklch(87.0% 0.016 176)",
-          "oklch(95.0% 0.016 176)"
-        ]
-      },
-      "sev-critical": {
-        "role": "secondary",
-        "displayName": "Critical Red",
-        "scheme": "light",
-        "cssVariable": "--sev-critical",
-        "canonical": "#b3261e",
-        "oklch": "oklch(50.1% 0.178 29)",
-        "tonalRamp": [
-          "oklch(15.0% 0.178 29)",
-          "oklch(27.0% 0.178 29)",
-          "oklch(39.0% 0.178 29)",
-          "oklch(51.0% 0.178 29)",
-          "oklch(63.0% 0.178 29)",
-          "oklch(75.0% 0.178 29)",
-          "oklch(87.0% 0.178 29)",
-          "oklch(95.0% 0.178 29)"
-        ]
-      },
-      "sev-critical-ink": {
-        "role": "secondary",
-        "displayName": "Critical Ink",
-        "scheme": "light",
-        "cssVariable": "--sev-critical-ink",
-        "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 90)",
-        "tonalRamp": [
-          "oklch(15.0% 0.000 90)",
-          "oklch(27.0% 0.000 90)",
-          "oklch(39.0% 0.000 90)",
-          "oklch(51.0% 0.000 90)",
-          "oklch(63.0% 0.000 90)",
-          "oklch(75.0% 0.000 90)",
-          "oklch(87.0% 0.000 90)",
-          "oklch(95.0% 0.000 90)"
-        ]
-      },
-      "sev-warning": {
-        "role": "secondary",
-        "displayName": "Warning Amber",
-        "scheme": "light",
-        "cssVariable": "--sev-warning",
-        "canonical": "#d9a400",
-        "oklch": "oklch(74.8% 0.153 85)",
-        "tonalRamp": [
-          "oklch(15.0% 0.153 85)",
-          "oklch(27.0% 0.153 85)",
-          "oklch(39.0% 0.153 85)",
-          "oklch(51.0% 0.153 85)",
-          "oklch(63.0% 0.153 85)",
-          "oklch(75.0% 0.153 85)",
-          "oklch(87.0% 0.153 85)",
-          "oklch(95.0% 0.153 85)"
-        ]
-      },
-      "sev-warning-ink": {
-        "role": "secondary",
-        "displayName": "Warning Ink",
-        "scheme": "light",
-        "cssVariable": "--sev-warning-ink",
-        "canonical": "#101820",
-        "oklch": "oklch(20.5% 0.020 249)",
-        "tonalRamp": [
-          "oklch(15.0% 0.020 249)",
-          "oklch(27.0% 0.020 249)",
-          "oklch(39.0% 0.020 249)",
-          "oklch(51.0% 0.020 249)",
-          "oklch(63.0% 0.020 249)",
-          "oklch(75.0% 0.020 249)",
-          "oklch(87.0% 0.020 249)",
-          "oklch(95.0% 0.020 249)"
-        ]
-      },
-      "sev-info": {
-        "role": "secondary",
-        "displayName": "Info Green",
-        "scheme": "light",
-        "cssVariable": "--sev-info",
-        "canonical": "#1d6f5c",
-        "oklch": "oklch(48.8% 0.083 174)",
-        "tonalRamp": [
-          "oklch(15.0% 0.083 174)",
-          "oklch(27.0% 0.083 174)",
-          "oklch(39.0% 0.083 174)",
-          "oklch(51.0% 0.083 174)",
-          "oklch(63.0% 0.083 174)",
-          "oklch(75.0% 0.083 174)",
-          "oklch(87.0% 0.083 174)",
-          "oklch(95.0% 0.083 174)"
-        ]
-      },
-      "sev-info-ink": {
-        "role": "secondary",
-        "displayName": "Info Ink",
-        "scheme": "light",
-        "cssVariable": "--sev-info-ink",
-        "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 90)",
-        "tonalRamp": [
-          "oklch(15.0% 0.000 90)",
-          "oklch(27.0% 0.000 90)",
-          "oklch(39.0% 0.000 90)",
-          "oklch(51.0% 0.000 90)",
-          "oklch(63.0% 0.000 90)",
-          "oklch(75.0% 0.000 90)",
-          "oklch(87.0% 0.000 90)",
-          "oklch(95.0% 0.000 90)"
-        ]
-      },
-      "sev-unknown": {
-        "role": "secondary",
-        "displayName": "Unknown Grey",
-        "scheme": "light",
-        "cssVariable": "--sev-unknown",
-        "canonical": "#5d6b70",
-        "oklch": "oklch(51.8% 0.019 221)",
-        "tonalRamp": [
-          "oklch(15.0% 0.019 221)",
-          "oklch(27.0% 0.019 221)",
-          "oklch(39.0% 0.019 221)",
-          "oklch(51.0% 0.019 221)",
-          "oklch(63.0% 0.019 221)",
-          "oklch(75.0% 0.019 221)",
-          "oklch(87.0% 0.019 221)",
-          "oklch(95.0% 0.019 221)"
-        ]
-      },
-      "sev-unknown-ink": {
-        "role": "secondary",
-        "displayName": "Unknown Ink",
-        "scheme": "light",
-        "cssVariable": "--sev-unknown-ink",
-        "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 90)",
-        "tonalRamp": [
-          "oklch(15.0% 0.000 90)",
-          "oklch(27.0% 0.000 90)",
-          "oklch(39.0% 0.000 90)",
-          "oklch(51.0% 0.000 90)",
-          "oklch(63.0% 0.000 90)",
-          "oklch(75.0% 0.000 90)",
-          "oklch(87.0% 0.000 90)",
-          "oklch(95.0% 0.000 90)"
-        ]
-      },
-      "rack-dark": {
-        "role": "neutral",
-        "displayName": "Rack (dark)",
+        "displayName": "Lit Amber",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--rack",
-        "canonical": "#0f1613",
-        "oklch": "oklch(19.2% 0.012 167)",
+        "canonical": "#ffc94d",
+        "oklch": "oklch(86.3% 0.149 85)",
         "tonalRamp": [
-          "oklch(15.0% 0.012 167)",
-          "oklch(27.0% 0.012 167)",
-          "oklch(39.0% 0.012 167)",
-          "oklch(51.0% 0.012 167)",
-          "oklch(63.0% 0.012 167)",
-          "oklch(75.0% 0.012 167)",
-          "oklch(87.0% 0.012 167)",
-          "oklch(95.0% 0.012 167)"
+          "oklch(15.0% 0.149 85)",
+          "oklch(27.0% 0.149 85)",
+          "oklch(39.0% 0.149 85)",
+          "oklch(51.0% 0.149 85)",
+          "oklch(63.0% 0.149 85)",
+          "oklch(75.0% 0.149 85)",
+          "oklch(87.0% 0.149 85)",
+          "oklch(95.0% 0.149 85)"
         ]
       },
-      "well-dark": {
-        "role": "neutral",
-        "displayName": "Well (dark)",
+      "site-go": {
+        "role": "secondary",
+        "displayName": "Go Green",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--well",
-        "canonical": "#080d0b",
-        "oklch": "oklch(15.3% 0.009 169)",
+        "cssVariable": "--go",
+        "canonical": "#2fd07b",
+        "oklch": "oklch(75.8% 0.177 154)",
         "tonalRamp": [
-          "oklch(15.0% 0.009 169)",
-          "oklch(27.0% 0.009 169)",
-          "oklch(39.0% 0.009 169)",
-          "oklch(51.0% 0.009 169)",
-          "oklch(63.0% 0.009 169)",
-          "oklch(75.0% 0.009 169)",
-          "oklch(87.0% 0.009 169)",
-          "oklch(95.0% 0.009 169)"
+          "oklch(15.0% 0.177 154)",
+          "oklch(27.0% 0.177 154)",
+          "oklch(39.0% 0.177 154)",
+          "oklch(51.0% 0.177 154)",
+          "oklch(63.0% 0.177 154)",
+          "oklch(75.0% 0.177 154)",
+          "oklch(87.0% 0.177 154)",
+          "oklch(95.0% 0.177 154)"
         ]
       },
-      "strip-dark": {
-        "role": "neutral",
-        "displayName": "Strip (dark)",
+      "site-go-lit": {
+        "role": "secondary",
+        "displayName": "Lit Green",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--strip",
-        "canonical": "#1c2622",
-        "oklch": "oklch(25.8% 0.016 169)",
+        "canonical": "#5be29a",
+        "oklch": "oklch(82.0% 0.157 157)",
         "tonalRamp": [
-          "oklch(15.0% 0.016 169)",
-          "oklch(27.0% 0.016 169)",
-          "oklch(39.0% 0.016 169)",
-          "oklch(51.0% 0.016 169)",
-          "oklch(63.0% 0.016 169)",
-          "oklch(75.0% 0.016 169)",
-          "oklch(87.0% 0.016 169)",
-          "oklch(95.0% 0.016 169)"
+          "oklch(15.0% 0.157 157)",
+          "oklch(27.0% 0.157 157)",
+          "oklch(39.0% 0.157 157)",
+          "oklch(51.0% 0.157 157)",
+          "oklch(63.0% 0.157 157)",
+          "oklch(75.0% 0.157 157)",
+          "oklch(87.0% 0.157 157)",
+          "oklch(95.0% 0.157 157)"
         ]
       },
-      "edge-dark": {
-        "role": "neutral",
-        "displayName": "Edge (dark)",
+      "site-nogo": {
+        "role": "secondary",
+        "displayName": "Abort Red",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--edge",
-        "canonical": "#38443e",
-        "oklch": "oklch(37.4% 0.019 164)",
+        "cssVariable": "--nogo",
+        "canonical": "#ff4d4f",
+        "oklch": "oklch(67.3% 0.214 24)",
         "tonalRamp": [
-          "oklch(15.0% 0.019 164)",
-          "oklch(27.0% 0.019 164)",
-          "oklch(39.0% 0.019 164)",
-          "oklch(51.0% 0.019 164)",
-          "oklch(63.0% 0.019 164)",
-          "oklch(75.0% 0.019 164)",
-          "oklch(87.0% 0.019 164)",
-          "oklch(95.0% 0.019 164)"
+          "oklch(15.0% 0.214 24)",
+          "oklch(27.0% 0.214 24)",
+          "oklch(39.0% 0.214 24)",
+          "oklch(51.0% 0.214 24)",
+          "oklch(63.0% 0.214 24)",
+          "oklch(75.0% 0.214 24)",
+          "oklch(87.0% 0.214 24)",
+          "oklch(95.0% 0.214 24)"
         ]
       },
-      "rule-dark": {
-        "role": "neutral",
-        "displayName": "Rule (dark)",
+      "site-model": {
+        "role": "tertiary",
+        "displayName": "Model Violet",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--rule",
-        "canonical": "#2c3933",
-        "oklch": "oklch(33.1% 0.020 165)",
+        "cssVariable": "--model",
+        "canonical": "#b9a0ff",
+        "oklch": "oklch(76.4% 0.135 295)",
         "tonalRamp": [
-          "oklch(15.0% 0.020 165)",
-          "oklch(27.0% 0.020 165)",
-          "oklch(39.0% 0.020 165)",
-          "oklch(51.0% 0.020 165)",
-          "oklch(63.0% 0.020 165)",
-          "oklch(75.0% 0.020 165)",
-          "oklch(87.0% 0.020 165)",
-          "oklch(95.0% 0.020 165)"
+          "oklch(15.0% 0.135 295)",
+          "oklch(27.0% 0.135 295)",
+          "oklch(39.0% 0.135 295)",
+          "oklch(51.0% 0.135 295)",
+          "oklch(63.0% 0.135 295)",
+          "oklch(75.0% 0.135 295)",
+          "oklch(87.0% 0.135 295)",
+          "oklch(95.0% 0.135 295)"
         ]
       },
-      "ink-dark": {
+      "site-code-ink": {
         "role": "neutral",
-        "displayName": "Printed Ink (dark)",
+        "displayName": "Terminal Ink",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--ink",
-        "canonical": "#e8eeea",
-        "oklch": "oklch(94.3% 0.008 157)",
+        "canonical": "#d7e2f0",
+        "oklch": "oklch(90.9% 0.023 254)",
         "tonalRamp": [
-          "oklch(15.0% 0.008 157)",
-          "oklch(27.0% 0.008 157)",
-          "oklch(39.0% 0.008 157)",
-          "oklch(51.0% 0.008 157)",
-          "oklch(63.0% 0.008 157)",
-          "oklch(75.0% 0.008 157)",
-          "oklch(87.0% 0.008 157)",
-          "oklch(95.0% 0.008 157)"
+          "oklch(15.0% 0.023 254)",
+          "oklch(27.0% 0.023 254)",
+          "oklch(39.0% 0.023 254)",
+          "oklch(51.0% 0.023 254)",
+          "oklch(63.0% 0.023 254)",
+          "oklch(75.0% 0.023 254)",
+          "oklch(87.0% 0.023 254)",
+          "oklch(95.0% 0.023 254)"
         ]
       },
-      "ink-2-dark": {
+      "site-stage": {
         "role": "neutral",
-        "displayName": "Second Ink (dark)",
+        "displayName": "Stage Black",
+        "world": "site",
         "scheme": "dark",
-        "cssVariable": "--ink-2",
-        "canonical": "#a3b3ac",
-        "oklch": "oklch(75.2% 0.020 168)",
+        "canonical": "#000000",
+        "oklch": "oklch(0.0% 0.000 0)",
         "tonalRamp": [
-          "oklch(15.0% 0.020 168)",
-          "oklch(27.0% 0.020 168)",
-          "oklch(39.0% 0.020 168)",
-          "oklch(51.0% 0.020 168)",
-          "oklch(63.0% 0.020 168)",
-          "oklch(75.0% 0.020 168)",
-          "oklch(87.0% 0.020 168)",
-          "oklch(95.0% 0.020 168)"
+          "oklch(15.0% 0.000 0)",
+          "oklch(27.0% 0.000 0)",
+          "oklch(39.0% 0.000 0)",
+          "oklch(51.0% 0.000 0)",
+          "oklch(63.0% 0.000 0)",
+          "oklch(75.0% 0.000 0)",
+          "oklch(87.0% 0.000 0)",
+          "oklch(95.0% 0.000 0)"
         ]
       },
-      "pen-dark": {
+      "docs-ink": {
+        "role": "neutral",
+        "displayName": "Docs Ink",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--md-default-fg-color",
+        "canonical": "#e6ebf2",
+        "oklch": "oklch(93.8% 0.011 257)",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 257)",
+          "oklch(27.0% 0.011 257)",
+          "oklch(39.0% 0.011 257)",
+          "oklch(51.0% 0.011 257)",
+          "oklch(63.0% 0.011 257)",
+          "oklch(75.0% 0.011 257)",
+          "oklch(87.0% 0.011 257)",
+          "oklch(95.0% 0.011 257)"
+        ],
+        "surface": "docs"
+      },
+      "docs-footer-deep": {
+        "role": "neutral",
+        "displayName": "Docs Footer Deep",
+        "world": "site",
+        "scheme": "dark",
+        "cssVariable": "--md-footer-bg-color--dark",
+        "canonical": "#050b17",
+        "oklch": "oklch(15.0% 0.028 261)",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 261)",
+          "oklch(27.0% 0.028 261)",
+          "oklch(39.0% 0.028 261)",
+          "oklch(51.0% 0.028 261)",
+          "oklch(63.0% 0.028 261)",
+          "oklch(75.0% 0.028 261)",
+          "oklch(87.0% 0.028 261)",
+          "oklch(95.0% 0.028 261)"
+        ],
+        "surface": "docs"
+      },
+      "docs-link-light": {
         "role": "primary",
-        "displayName": "Pen Blue (dark)",
-        "scheme": "dark",
-        "cssVariable": "--pen",
-        "canonical": "#9db8ff",
-        "oklch": "oklch(78.9% 0.106 268)",
+        "displayName": "Docs Link, light scheme",
+        "world": "site",
+        "scheme": "light",
+        "cssVariable": "--md-typeset-a-color",
+        "canonical": "#8a4f00",
+        "oklch": "oklch(48.6% 0.111 63)",
         "tonalRamp": [
-          "oklch(15.0% 0.106 268)",
-          "oklch(27.0% 0.106 268)",
-          "oklch(39.0% 0.106 268)",
-          "oklch(51.0% 0.106 268)",
-          "oklch(63.0% 0.106 268)",
-          "oklch(75.0% 0.106 268)",
-          "oklch(87.0% 0.106 268)",
-          "oklch(95.0% 0.106 268)"
-        ]
+          "oklch(15.0% 0.111 63)",
+          "oklch(27.0% 0.111 63)",
+          "oklch(39.0% 0.111 63)",
+          "oklch(51.0% 0.111 63)",
+          "oklch(63.0% 0.111 63)",
+          "oklch(75.0% 0.111 63)",
+          "oklch(87.0% 0.111 63)",
+          "oklch(95.0% 0.111 63)"
+        ],
+        "surface": "docs"
       },
-      "pen-2-dark": {
+      "docs-accent-light": {
         "role": "primary",
-        "displayName": "Faded Pen (dark)",
-        "scheme": "dark",
-        "cssVariable": "--pen-2",
-        "canonical": "#8ea2d6",
-        "oklch": "oklch(71.6% 0.080 268)",
+        "displayName": "Docs Accent, light scheme",
+        "world": "site",
+        "scheme": "light",
+        "cssVariable": "--md-accent-fg-color",
+        "canonical": "#a35f00",
+        "oklch": "oklch(55.1% 0.125 64)",
         "tonalRamp": [
-          "oklch(15.0% 0.080 268)",
-          "oklch(27.0% 0.080 268)",
-          "oklch(39.0% 0.080 268)",
-          "oklch(51.0% 0.080 268)",
-          "oklch(63.0% 0.080 268)",
-          "oklch(75.0% 0.080 268)",
-          "oklch(87.0% 0.080 268)",
-          "oklch(95.0% 0.080 268)"
-        ]
-      },
-      "bar-dark": {
-        "role": "neutral",
-        "displayName": "Bar (dark)",
-        "scheme": "dark",
-        "cssVariable": "--bar",
-        "canonical": "#050907",
-        "oklch": "oklch(13.3% 0.010 165)",
-        "tonalRamp": [
-          "oklch(15.0% 0.010 165)",
-          "oklch(27.0% 0.010 165)",
-          "oklch(39.0% 0.010 165)",
-          "oklch(51.0% 0.010 165)",
-          "oklch(63.0% 0.010 165)",
-          "oklch(75.0% 0.010 165)",
-          "oklch(87.0% 0.010 165)",
-          "oklch(95.0% 0.010 165)"
-        ]
-      },
-      "bar-ink-dark": {
-        "role": "neutral",
-        "displayName": "Bar Ink (dark)",
-        "scheme": "dark",
-        "cssVariable": "--bar-ink",
-        "canonical": "#e8eeea",
-        "oklch": "oklch(94.3% 0.008 157)",
-        "tonalRamp": [
-          "oklch(15.0% 0.008 157)",
-          "oklch(27.0% 0.008 157)",
-          "oklch(39.0% 0.008 157)",
-          "oklch(51.0% 0.008 157)",
-          "oklch(63.0% 0.008 157)",
-          "oklch(75.0% 0.008 157)",
-          "oklch(87.0% 0.008 157)",
-          "oklch(95.0% 0.008 157)"
-        ]
-      },
-      "bar-dim-dark": {
-        "role": "neutral",
-        "displayName": "Bar Dim (dark)",
-        "scheme": "dark",
-        "cssVariable": "--bar-dim",
-        "canonical": "#8d9c99",
-        "oklch": "oklch(68.0% 0.018 182)",
-        "tonalRamp": [
-          "oklch(15.0% 0.018 182)",
-          "oklch(27.0% 0.018 182)",
-          "oklch(39.0% 0.018 182)",
-          "oklch(51.0% 0.018 182)",
-          "oklch(63.0% 0.018 182)",
-          "oklch(75.0% 0.018 182)",
-          "oklch(87.0% 0.018 182)",
-          "oklch(95.0% 0.018 182)"
-        ]
-      },
-      "sev-critical-dark": {
-        "role": "secondary",
-        "displayName": "Critical Red (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-critical",
-        "canonical": "#ef6a5e",
-        "oklch": "oklch(68.5% 0.167 27)",
-        "tonalRamp": [
-          "oklch(15.0% 0.167 27)",
-          "oklch(27.0% 0.167 27)",
-          "oklch(39.0% 0.167 27)",
-          "oklch(51.0% 0.167 27)",
-          "oklch(63.0% 0.167 27)",
-          "oklch(75.0% 0.167 27)",
-          "oklch(87.0% 0.167 27)",
-          "oklch(95.0% 0.167 27)"
-        ]
-      },
-      "sev-critical-ink-dark": {
-        "role": "secondary",
-        "displayName": "Critical Ink (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-critical-ink",
-        "canonical": "#0f1613",
-        "oklch": "oklch(19.2% 0.012 167)",
-        "tonalRamp": [
-          "oklch(15.0% 0.012 167)",
-          "oklch(27.0% 0.012 167)",
-          "oklch(39.0% 0.012 167)",
-          "oklch(51.0% 0.012 167)",
-          "oklch(63.0% 0.012 167)",
-          "oklch(75.0% 0.012 167)",
-          "oklch(87.0% 0.012 167)",
-          "oklch(95.0% 0.012 167)"
-        ]
-      },
-      "sev-warning-dark": {
-        "role": "secondary",
-        "displayName": "Warning Amber (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-warning",
-        "canonical": "#e6b422",
-        "oklch": "oklch(79.4% 0.155 87)",
-        "tonalRamp": [
-          "oklch(15.0% 0.155 87)",
-          "oklch(27.0% 0.155 87)",
-          "oklch(39.0% 0.155 87)",
-          "oklch(51.0% 0.155 87)",
-          "oklch(63.0% 0.155 87)",
-          "oklch(75.0% 0.155 87)",
-          "oklch(87.0% 0.155 87)",
-          "oklch(95.0% 0.155 87)"
-        ]
-      },
-      "sev-warning-ink-dark": {
-        "role": "secondary",
-        "displayName": "Warning Ink (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-warning-ink",
-        "canonical": "#0f1613",
-        "oklch": "oklch(19.2% 0.012 167)",
-        "tonalRamp": [
-          "oklch(15.0% 0.012 167)",
-          "oklch(27.0% 0.012 167)",
-          "oklch(39.0% 0.012 167)",
-          "oklch(51.0% 0.012 167)",
-          "oklch(63.0% 0.012 167)",
-          "oklch(75.0% 0.012 167)",
-          "oklch(87.0% 0.012 167)",
-          "oklch(95.0% 0.012 167)"
-        ]
-      },
-      "sev-info-dark": {
-        "role": "secondary",
-        "displayName": "Info Green (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-info",
-        "canonical": "#49b79b",
-        "oklch": "oklch(70.8% 0.109 173)",
-        "tonalRamp": [
-          "oklch(15.0% 0.109 173)",
-          "oklch(27.0% 0.109 173)",
-          "oklch(39.0% 0.109 173)",
-          "oklch(51.0% 0.109 173)",
-          "oklch(63.0% 0.109 173)",
-          "oklch(75.0% 0.109 173)",
-          "oklch(87.0% 0.109 173)",
-          "oklch(95.0% 0.109 173)"
-        ]
-      },
-      "sev-info-ink-dark": {
-        "role": "secondary",
-        "displayName": "Info Ink (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-info-ink",
-        "canonical": "#0f1613",
-        "oklch": "oklch(19.2% 0.012 167)",
-        "tonalRamp": [
-          "oklch(15.0% 0.012 167)",
-          "oklch(27.0% 0.012 167)",
-          "oklch(39.0% 0.012 167)",
-          "oklch(51.0% 0.012 167)",
-          "oklch(63.0% 0.012 167)",
-          "oklch(75.0% 0.012 167)",
-          "oklch(87.0% 0.012 167)",
-          "oklch(95.0% 0.012 167)"
-        ]
-      },
-      "sev-unknown-dark": {
-        "role": "secondary",
-        "displayName": "Unknown Grey (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-unknown",
-        "canonical": "#8d9ca0",
-        "oklch": "oklch(68.2% 0.018 216)",
-        "tonalRamp": [
-          "oklch(15.0% 0.018 216)",
-          "oklch(27.0% 0.018 216)",
-          "oklch(39.0% 0.018 216)",
-          "oklch(51.0% 0.018 216)",
-          "oklch(63.0% 0.018 216)",
-          "oklch(75.0% 0.018 216)",
-          "oklch(87.0% 0.018 216)",
-          "oklch(95.0% 0.018 216)"
-        ]
-      },
-      "sev-unknown-ink-dark": {
-        "role": "secondary",
-        "displayName": "Unknown Ink (dark)",
-        "scheme": "dark",
-        "cssVariable": "--sev-unknown-ink",
-        "canonical": "#0f1613",
-        "oklch": "oklch(19.2% 0.012 167)",
-        "tonalRamp": [
-          "oklch(15.0% 0.012 167)",
-          "oklch(27.0% 0.012 167)",
-          "oklch(39.0% 0.012 167)",
-          "oklch(51.0% 0.012 167)",
-          "oklch(63.0% 0.012 167)",
-          "oklch(75.0% 0.012 167)",
-          "oklch(87.0% 0.012 167)",
-          "oklch(95.0% 0.012 167)"
-        ]
+          "oklch(15.0% 0.125 64)",
+          "oklch(27.0% 0.125 64)",
+          "oklch(39.0% 0.125 64)",
+          "oklch(51.0% 0.125 64)",
+          "oklch(63.0% 0.125 64)",
+          "oklch(75.0% 0.125 64)",
+          "oklch(87.0% 0.125 64)",
+          "oklch(95.0% 0.125 64)"
+        ],
+        "surface": "docs"
       }
     },
     "typographyMeta": {
       "title": {
         "displayName": "Title",
-        "purpose": "Page heading, and the strip title on an incident page."
+        "purpose": "Console. The page heading.",
+        "world": "console"
       },
       "lead": {
         "displayName": "Lead",
-        "purpose": "First statement of a section: verdict, summary, the day's spend. The wordmark at weight 700."
+        "purpose": "Console. The first statement of a card.",
+        "world": "console"
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Running text, capped at 70ch. Tabular numerals are on page-wide."
-      },
-      "strip-title": {
-        "displayName": "Strip title",
-        "purpose": "The title of a strip on the board, one line."
-      },
-      "entry": {
-        "displayName": "Entry",
-        "purpose": "The value in a cell and the text of a record row. Weight 500 in pen. A literal 0.875rem in the stylesheet, not a custom property."
+        "purpose": "Console. Running text, with tabular numerals.",
+        "world": "console"
       },
       "small": {
         "displayName": "Small",
-        "purpose": "Standing lines, facts, notes, navigation, buttons, tables. --t-small."
-      },
-      "heading-label": {
-        "displayName": "Heading label",
-        "purpose": "Uppercase bay names and section headings over a 2px ink rule."
+        "purpose": "Console. Secondary lines, tables, notes.",
+        "world": "console"
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Uppercase cell labels, column heads, record tags, flags, the stage line. --t-label, tracking 0.04em to 0.06em."
-      },
-      "holder-id": {
-        "displayName": "Holder id",
-        "purpose": "The incident number in the holder. The severity word under it is sans 700 at 0.625rem, uppercase."
+        "purpose": "Console. Badges, box labels, table heads.",
+        "world": "console"
       },
       "figure": {
         "displayName": "Figure",
-        "purpose": "Counts, costs and table cells in monospace."
+        "purpose": "Console. The number of a stat or of a pipeline tile.",
+        "world": "console"
       },
-      "meta": {
-        "displayName": "Meta",
-        "purpose": "Times, event kinds, payloads. A literal 0.75rem in the stylesheet, not a custom property."
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Console. Ids, times, costs, event kinds, catalog actions, payloads.",
+        "world": "console"
+      },
+      "site-display": {
+        "displayName": "Site Display",
+        "purpose": "Site. The one headline of the first screen.",
+        "world": "site"
+      },
+      "site-headline": {
+        "displayName": "Site Headline",
+        "purpose": "Site. The heading of a band, and the closing question.",
+        "world": "site"
+      },
+      "site-rule": {
+        "displayName": "Site Rule",
+        "purpose": "Site. A flight rule, stated as a heading.",
+        "world": "site"
+      },
+      "site-answer": {
+        "displayName": "Site Answer",
+        "purpose": "Site. The level named by the dial, and the last Go key.",
+        "world": "site"
+      },
+      "site-count": {
+        "displayName": "Site Count",
+        "purpose": "Site. The T-5 to T-0 numerals of the countdown.",
+        "world": "site"
+      },
+      "site-title": {
+        "displayName": "Site Title",
+        "purpose": "Site. A station in the poll, a sub-heading under the dial, the board's clock.",
+        "world": "site"
+      },
+      "site-station": {
+        "displayName": "Site Station",
+        "purpose": "Site. A row's name on a board, a countdown step, the Go and No-go keys, the wordmark.",
+        "world": "site"
+      },
+      "site-key": {
+        "displayName": "Site Key",
+        "purpose": "Site. The dial's keys, the guard's cover, a video title in the reel.",
+        "world": "site"
+      },
+      "site-button": {
+        "displayName": "Site Button",
+        "purpose": "Site. The two buttons of the hero.",
+        "world": "site"
+      },
+      "site-lamp": {
+        "displayName": "Site Lamp",
+        "purpose": "Site. The word in a lamp, a monitor tab.",
+        "world": "site"
+      },
+      "site-nav": {
+        "displayName": "Site Nav",
+        "purpose": "Site. The top strip's links and a board's heading line.",
+        "world": "site"
+      },
+      "site-nav-compact": {
+        "displayName": "Site Nav, compact",
+        "purpose": "Site. The top strip's links under 60rem.",
+        "world": "site"
+      },
+      "site-tag": {
+        "displayName": "Site Tag",
+        "purpose": "Site. Voice tags and the Copy key.",
+        "world": "site"
+      },
+      "site-tag-small": {
+        "displayName": "Site Tag, small",
+        "purpose": "Site. The Simulated mark.",
+        "world": "site"
+      },
+      "site-lede": {
+        "displayName": "Site Lede",
+        "purpose": "Site. The paragraph under the headline.",
+        "world": "site"
+      },
+      "site-body": {
+        "displayName": "Site Body",
+        "purpose": "Site. Running text, at most 46rem wide.",
+        "world": "site"
+      },
+      "site-note": {
+        "displayName": "Site Note",
+        "purpose": "Site. A finding on a board row, fine print, the footer.",
+        "world": "site"
+      },
+      "site-caption": {
+        "displayName": "Site Caption",
+        "purpose": "Site. A figure caption or a tip.",
+        "world": "site"
+      },
+      "site-code": {
+        "displayName": "Site Code",
+        "purpose": "Site. Commands and inline code.",
+        "world": "site"
+      },
+      "site-code-name": {
+        "displayName": "Site Code Name",
+        "purpose": "Site. An action's name in the catalog.",
+        "world": "site"
+      },
+      "docs-display": {
+        "displayName": "Docs Display",
+        "purpose": "Docs. The page title, at MkDocs Material's root size.",
+        "world": "site"
+      },
+      "docs-headline": {
+        "displayName": "Docs Headline",
+        "purpose": "Docs. A section heading, under a 2px rule.",
+        "world": "site"
+      },
+      "docs-title": {
+        "displayName": "Docs Title",
+        "purpose": "Docs. A sub-section heading.",
+        "world": "site"
+      },
+      "docs-label": {
+        "displayName": "Docs Label",
+        "purpose": "Docs. Tabs, table heads, admonition titles.",
+        "world": "site"
+      },
+      "docs-body": {
+        "displayName": "Docs Body",
+        "purpose": "Docs. Running text.",
+        "world": "site"
       }
     },
     "colorSchemes": {
-      "switch": "prefers-color-scheme",
-      "note": "Each CSS custom property has one light and one dark value. Frontmatter keys ending in -dark are the dark value of the same variable. A print palette puts strips on white (#ffffff) with a #eef1ef well and the light inks."
+      "console": "Each custom property is one light-dark(light, dark) value. Frontmatter keys ending in -dark are the dark value of the same variable. The scheme follows the system unless data-theme is set on <html> by the switch in the sidebar.",
+      "site": "Dark only (color-scheme: dark). The documentation also has MkDocs Material's light scheme, where links use docs-link-light and docs-accent-light."
     },
-    "shadows": [],
-    "insetFrames": [
+    "shadows": [
       {
-        "name": "resolved-holder-frame",
-        "value": "inset 0 0 0 3px var(--holder)",
-        "purpose": "The severity colour kept as a frame on a resolved strip. A frame, not elevation."
+        "name": "console-card",
+        "world": "console",
+        "value": "light-dark(0 1px 2px rgb(16 24 40 / 0.05), none)",
+        "purpose": "The 1px shadow under a card, in the light scheme only (--shadow)."
       },
       {
-        "name": "target-row-ring",
-        "value": "inset 0 0 0 2px var(--ink)",
-        "purpose": "The record row a citation points to."
+        "name": "console-changed-ring",
+        "world": "console",
+        "value": "0 0 0 3px var(--accent-bg)",
+        "purpose": "The ring around an incident that just changed stage. A ring, not elevation."
+      },
+      {
+        "name": "console-live-ring",
+        "world": "console",
+        "value": "0 0 0 3px var(--ok-bg)",
+        "purpose": "The halo of the live dot; it uses --crit-bg when the refresh is stale."
       }
     ],
     "focus": [
       {
-        "name": "focus",
-        "value": "outline: 2px solid var(--pen); outline-offset: 2px",
-        "purpose": "Every focusable element. On a board strip the outline surrounds the whole strip."
+        "name": "console-focus",
+        "world": "console",
+        "value": "outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 0.25rem"
       },
       {
-        "name": "focus-bar",
-        "value": "outline: 2px solid var(--bar-ink); outline-offset: -3px",
-        "purpose": "Focus inside the dark bar."
+        "name": "site-focus",
+        "world": "site",
+        "value": "outline: 2px solid #ffb000; outline-offset: 3px"
       }
     ],
     "motion": [
       {
-        "name": "ease",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "The one easing curve (--ease)."
+        "name": "console-state-ease",
+        "world": "console",
+        "value": "150ms",
+        "purpose": "Hover and press colour changes on buttons and incident cards."
       },
       {
-        "name": "strip-slide",
-        "value": "420ms",
-        "purpose": "A strip sliding between bays on live refresh, as a view transition. Names are set per strip from script through the CSSOM. Off under prefers-reduced-motion."
+        "name": "console-incident-slide",
+        "world": "console",
+        "value": "320ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "An incident sliding to its new group on live refresh, as a view transition."
       },
       {
-        "name": "board-crossfade",
-        "value": "120ms",
-        "purpose": "Cross-fade of the rest of the page during the same view transition."
-      },
-      {
-        "name": "state-ease",
-        "value": "160ms",
-        "purpose": "Colour changes on hover and press (navigation, buttons, chips, strip border). State feedback, not movement."
-      },
-      {
-        "name": "refresh-interval",
+        "name": "console-refresh-interval",
+        "world": "console",
         "value": "10000ms",
         "purpose": "The board refetches itself; paused while the tab is hidden or focus is on the board."
       },
       {
-        "name": "changed-offset",
-        "value": "translate: 0.5rem 0",
-        "purpose": "A changed strip stands out of line, with no transition, until pointed at, pressed or focused."
+        "name": "site-ease",
+        "world": "site",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The one easing curve (--ease): a row coming up, the guard's cover."
+      },
+      {
+        "name": "site-state",
+        "world": "site",
+        "value": "180ms",
+        "purpose": "Fill, text and border colour of lamps, buttons, keys, tabs."
+      },
+      {
+        "name": "site-row-reveal",
+        "world": "site",
+        "value": "300ms",
+        "purpose": "A board row coming up from 38% opacity when its station is called."
+      },
+      {
+        "name": "site-poll-step",
+        "world": "site",
+        "value": "500ms, then one row every 620ms",
+        "purpose": "The poll, called row by row from script."
+      },
+      {
+        "name": "site-guard-hinge",
+        "world": "site",
+        "value": "transform 500ms, opacity 350ms; perspective(40rem) rotateX(-96deg) from the top edge",
+        "purpose": "The guard's cover lifting."
+      },
+      {
+        "name": "site-hold-blink",
+        "world": "site",
+        "value": "1.4s steps(2, jump-none) infinite, to 45% opacity",
+        "purpose": "The HOLD lamp of the YOU row. The only thing that repeats."
+      },
+      {
+        "name": "site-executor-steps",
+        "world": "site",
+        "value": "Apply at 1300ms, Verify at 2900ms, done at 4700ms after Go",
+        "purpose": "The executor's row after an answer."
+      },
+      {
+        "name": "reduced-motion",
+        "world": "both",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "No animation, no transition, no smooth scroll; the site's poll is shown complete."
       }
     ],
     "breakpoints": [
       {
-        "name": "wide",
+        "name": "console-table",
+        "world": "console",
         "value": "44rem",
-        "purpose": "Gutter 1.5rem, bar on one line, board in two columns, full table columns."
+        "purpose": "Record rows on one line, findings in two columns, full table columns."
       },
       {
-        "name": "desk",
-        "value": "78rem",
-        "purpose": "Board in four columns, wells at least 60vh."
+        "name": "console-sidebar",
+        "world": "console",
+        "value": "60rem",
+        "purpose": "The 15rem sticky sidebar; gutter 2rem."
+      },
+      {
+        "name": "console-boxes",
+        "world": "console",
+        "value": "64rem",
+        "purpose": "An incident card's boxes in one row."
+      },
+      {
+        "name": "site-rows",
+        "world": "site",
+        "value": "44rem",
+        "purpose": "Board rows on one line; the dial's keys in one row of four."
+      },
+      {
+        "name": "site-pairs",
+        "world": "site",
+        "value": "52rem",
+        "purpose": "Dial text beside the phone; countdown numeral beside its step."
+      },
+      {
+        "name": "site-band-head",
+        "world": "site",
+        "value": "60rem",
+        "purpose": "Band head in 5 and 7 columns, station columns, the full navigation."
+      },
+      {
+        "name": "site-hero",
+        "world": "site",
+        "value": "68rem",
+        "purpose": "The two-column first screen; the reel beside the video."
       }
     ],
     "containers": [
       {
-        "name": "page",
-        "value": "54rem"
+        "name": "console-page",
+        "world": "console",
+        "value": "60rem"
       },
       {
-        "name": "page-wide",
+        "name": "console-page-wide",
+        "world": "console",
+        "value": "76rem"
+      },
+      {
+        "name": "console-prose",
+        "world": "console",
+        "value": "46rem"
+      },
+      {
+        "name": "site-page",
+        "world": "site",
         "value": "96rem"
       },
       {
-        "name": "prose",
-        "value": "70ch"
+        "name": "site-videos",
+        "world": "site",
+        "value": "89rem"
+      },
+      {
+        "name": "site-prose",
+        "world": "site",
+        "value": "46rem"
+      },
+      {
+        "name": "site-lede",
+        "world": "site",
+        "value": "34rem"
+      }
+    ],
+    "stripes": [
+      {
+        "name": "site-guard-hazard",
+        "world": "site",
+        "value": "repeating-linear-gradient(-45deg, #ffb000 0 1.125rem, #0b1626 1.125rem 2.25rem)",
+        "purpose": "The guard's cover. Hard stops."
+      },
+      {
+        "name": "site-blanked-hatch",
+        "world": "site",
+        "value": "repeating-linear-gradient(-45deg, transparent 0 0.5rem, rgb(42 67 104 / 0.35) 0.5rem 0.5625rem)",
+        "purpose": "The catalog position that does not exist."
       }
     ],
     "delivery": {
-      "contentSecurityPolicy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
-      "note": "No inline style or script, no other host. Meter widths are SVG attributes; view-transition names are set from script through the CSSOM."
+      "console": "Nothing is loaded from another host and there is no inline style: system fonts, one stylesheet, two small scripts, inline SVG icons. Meter and chart sizes are SVG attributes.",
+      "site": "Barlow Condensed (500, 600, 700), Barlow (400, 500, 600) and JetBrains Mono (400, 600) are loaded from the Google Fonts stylesheet by website/index.html and mkdocs.yml. One stylesheet and one script for the landing page; videos are drawn on a canvas by website/videos/kit.js."
     }
   },
   "components": [
     {
-      "name": "Bar",
-      "kind": "nav",
-      "refersTo": "bar",
-      "description": "The dark band on every page: wordmark, three destinations, and the line that says which stages are on and that actions are none.",
-      "html": "<header class=\"ds-bar\"><div class=\"ds-bar-line\"><a class=\"ds-mark\" href=\"#\">Paeon</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Board</a><a href=\"#\">Log</a><a href=\"#\">Ledger</a></nav></div><ul class=\"ds-stages\"><li>Triage <b>shadow</b></li><li>Investigation <b>read-only</b></li><li class=\"ds-stage-off\">Postmortems <b>off</b></li><li>Actions <b>none</b></li></ul></header>",
-      "css": ".ds-bar { background: var(--bar); color: var(--bar-ink); padding: 0 0.75rem; font-family: var(--sans); } .ds-bar-line { display: flex; align-items: stretch; justify-content: space-between; gap: 1rem; } .ds-mark { font-weight: 700; font-size: 1.0625rem; letter-spacing: 0.01em; color: inherit; text-decoration: none; display: flex; align-items: center; min-height: 2.75rem; } .ds-nav { display: flex; } .ds-nav a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 0.75rem; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none; color: var(--bar-dim); transition: color 160ms var(--ease), background-color 160ms var(--ease); } .ds-nav a:hover { color: var(--bar-ink); } .ds-nav a[aria-current] { background: var(--rack); color: var(--ink); } .ds-bar :focus-visible { outline: 2px solid var(--bar-ink); outline-offset: -3px; } .ds-stages { margin: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.125rem 0.875rem; padding: 0.3125rem 0 0.4375rem; border-top: 1px solid color-mix(in srgb, var(--bar-ink) 22%, transparent); font-size: 0.6875rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--bar-dim); } .ds-stages b { color: var(--bar-ink); font-weight: 700; } .ds-stage-off b { color: var(--bar-dim); font-weight: 600; }"
-    },
-    {
-      "name": "Bay with strips",
-      "kind": "custom",
-      "refersTo": "strip",
-      "description": "A stage as a labelled rack, holding strips in their fixed board form: holder with id and written severity, one-line title and standing, six boxes. Pen blue italic marks what a model said.",
-      "html": "<section class=\"ds-bay\"><header class=\"ds-bay-head\"><h2 class=\"ds-bay-name\">Open</h2><span class=\"ds-bay-count\">2</span></header><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-critical\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">4</span><span class=\"ds-holder-sev\">critical</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">vpn_unhealthy</a></h3><p class=\"ds-strip-standing\"><span>13:03, open 30 min</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>1 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd>skipped</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>running</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0580</dd></div></dl></div></article><article class=\"ds-strip ds-sev-warning\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">3</span><span class=\"ds-holder-sev\">warning</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">slo_traefik_5xx</a></h3><p class=\"ds-strip-standing\"><span>12:08, open 85 min</span> <span class=\"ds-flag\">flapping</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>2 of 2 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd class=\"ds-pen\">real 86%</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd class=\"ds-pen\">78%, 3 calls</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.21</dd></div></dl></div></article></div></section>",
-      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; }"
-    },
-    {
-      "name": "Resolved strip",
-      "kind": "custom",
-      "refersTo": "strip-holder-resolved",
-      "description": "A resolved strip is turned over: the holder keeps its severity colour as a 3px frame only, on a clear ground with printed ink.",
-      "html": "<div class=\"ds-bay\"><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-info ds-is-resolved\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">1</span><span class=\"ds-holder-sev\">info</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">backup_late</a></h3><p class=\"ds-strip-standing\"><span>10:02, resolved in 20 min</span> <span class=\"ds-flag\">maintenance</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>0 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd class=\"ds-pen\">noise 91%</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>skipped</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0021</dd></div></dl></div></article></div></div>",
-      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; }"
-    },
-    {
-      "name": "Changed strip",
-      "kind": "custom",
-      "refersTo": "changed-tag",
-      "description": "After a live refresh, a strip that moved or changed stands 0.5rem out of line and carries an outlined tag until it is pointed at, pressed or focused.",
-      "html": "<div class=\"ds-bay\"><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-critical ds-is-resolved ds-is-changed\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">2</span><span class=\"ds-holder-sev\">critical</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">Source openobserve is stale</a></h3><p class=\"ds-strip-standing\"><span>10:42, resolved in 30 min</span><span class=\"ds-changed\">changed</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>0 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd>failed open</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>failed</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0019</dd></div></dl></div></article></div></div>",
-      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; } .ds-strip.ds-is-changed { translate: 0.5rem 0; } .ds-changed { flex: none; padding: 0 0.3125rem; color: var(--ink); border: 2px solid var(--ink); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; }"
-    },
-    {
-      "name": "Record rows and voice tags",
-      "kind": "custom",
-      "refersTo": "record-row",
-      "description": "Events of the log. The tag names the voice: in, code and you in second ink, model and tool in pen blue, sent reversed out of ink because it left the server.",
-      "html": "<ol class=\"ds-record\"><li class=\"ds-row-day\">Wed 18 Nov</li><li class=\"ds-row\"><time class=\"ds-row-time\">12:08:16</time><span class=\"ds-row-tag\">in</span><div><p class=\"ds-row-text\">slo_traefik_5xx is firing (warning)</p><p class=\"ds-row-meta\"><span>alert.firing</span></p></div></li><li class=\"ds-row\"><time class=\"ds-row-time\">12:08:16</time><span class=\"ds-row-tag\">code</span><div><p class=\"ds-row-text\">Incident opened</p><p class=\"ds-row-meta\"><span>incident.opened</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:16</time><span class=\"ds-row-tag\">model</span><div><p class=\"ds-row-text\">Model call for triage: claude-haiku-5-5, 1840 in, 212 out</p><p class=\"ds-row-meta\"><span>model.call</span> <span>cost 0.0024</span> <span>1310 ms</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:16</time><span class=\"ds-row-tag\">model</span><div><p class=\"ds-row-text ds-pen\">Triage verdict: real, 86%</p><p class=\"ds-row-meta\"><span>triage.verdict</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:58</time><span class=\"ds-row-tag\">tool</span><div><p class=\"ds-row-text\">c1 search_logs {\"stream\": \"traefik\"}</p><p class=\"ds-row-meta\"><span>tool.call</span> <span>240 ms</span></p></div></li><li class=\"ds-row ds-voice-out\"><time class=\"ds-row-time\">12:12:04</time><span class=\"ds-row-tag\">sent</span><div><p class=\"ds-row-text\">Sent to ntfy topic incidents: the investigation</p><p class=\"ds-row-meta\"><span>notification.sent</span></p></div></li></ol>",
-      "css": ".ds-record { margin: 0; padding: 0; list-style: none; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font-family: var(--sans); font-variant-numeric: tabular-nums; } .ds-row-day { padding: 0.25rem 0.625rem; background: var(--well); border-bottom: 1px solid var(--rule); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-row { display: grid; grid-template-columns: 4.5rem 3.25rem minmax(0, 1fr); column-gap: 0.625rem; align-items: baseline; padding: 0.375rem 0.625rem 0.4375rem; border-bottom: 1px solid var(--rule); } .ds-row:last-child { border-bottom: 0; } .ds-row:target { box-shadow: inset 0 0 0 2px var(--ink); } .ds-row p { margin: 0; } .ds-row-time { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); } .ds-row-tag { justify-self: start; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); } .ds-voice-model .ds-row-tag { color: var(--pen); } .ds-voice-out .ds-row-tag { background: var(--ink); color: var(--strip); padding: 0 0.25rem; } .ds-row-text { font-size: 0.875rem; line-height: 1.35; overflow-wrap: anywhere; } .ds-row-text.ds-pen { color: var(--pen); font-style: italic; } .ds-row-meta { display: flex; flex-wrap: wrap; gap: 0 0.75rem; font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); }"
-    },
-    {
-      "name": "Evidence with cite chips",
+      "name": "Console: Badge",
       "kind": "chip",
-      "refersTo": "cite",
-      "description": "A model's claim in pen, tied to the tool call behind it by an upright monospace chip. A claim with no call behind it gets a dashed chip that says so.",
-      "html": "<ul class=\"ds-evidence\"><li><span class=\"ds-pen\">Traefik logs 502 for media.example from 21:03:58.</span> <a class=\"ds-cite\" href=\"#\">c1</a></li><li><span class=\"ds-pen\">/srv has 0 bytes available.</span> <a class=\"ds-cite\" href=\"#\">c3</a></li><li><span class=\"ds-pen\">The backup job was changed last week.</span> <span class=\"ds-cite ds-cite-missing\">no tool call behind this</span></li></ul>",
-      "css": ".ds-evidence { margin: 0; padding: 0; list-style: none; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font: 400 0.9375rem/1.45 var(--sans); } .ds-evidence li { padding: 0.4375rem 0.625rem; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; } .ds-evidence li:last-child { border-bottom: 0; } .ds-pen { color: var(--pen); font-style: italic; } .ds-cite { font-family: var(--mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-width: 2.25rem; min-height: 1.75rem; margin-left: 0.25rem; padding: 0 0.4375rem; border: 1px solid var(--ink-2); color: var(--ink); font-style: normal; text-decoration: none; vertical-align: middle; } a.ds-cite:hover { background: var(--ink); color: var(--strip); } a.ds-cite:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-cite-missing { font-family: var(--sans); text-transform: uppercase; border-style: dashed; }"
+      "refersTo": "badge",
+      "world": "console",
+      "description": "A pill tinted by state, with a dot when it is a state and always with its word. Model is violet; a tag is outlined; updated is solid accent.",
+      "html": "<div class=\"ds-c-badges\"><span class=\"ds-c-badge ds-dot ds-c-crit\">Critical</span><span class=\"ds-c-badge ds-dot ds-c-warn\">Warning</span><span class=\"ds-c-badge ds-dot ds-c-info\">Waiting</span><span class=\"ds-c-badge ds-dot ds-c-ok\">Resolved</span><span class=\"ds-c-badge ds-c-model\">Model</span><span class=\"ds-c-badge ds-c-tag\">flapping</span><span class=\"ds-c-badge ds-c-updated\">updated</span></div>",
+      "css": ".ds-c-badges { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-c-badge { display: inline-flex; align-items: center; gap: 0.3125rem; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; background: light-dark(#f0f2f5, #191d27); color: light-dark(#4f596a, #a3acbd); } .ds-c-badge.ds-dot::before { content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; } .ds-c-crit { background: light-dark(#fdecee, #3a171d); color: light-dark(#c7253a, #ff7480); } .ds-c-warn { background: light-dark(#fdf2df, #33270e); color: light-dark(#a35400, #f3b045); } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-tag { background: none; box-shadow: inset 0 0 0 1px light-dark(#c9ced7, #353c4d); font-weight: 500; } .ds-c-updated { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } "
     },
     {
-      "name": "Button",
+      "name": "Console: Button",
       "kind": "button",
       "refersTo": "button",
-      "description": "The one button style: strip ground, ink hairline, square. Hover and the pressed state reverse it to ink.",
-      "html": "<div class=\"ds-buttons\"><button class=\"ds-btn\">Triage was right</button><button class=\"ds-btn\" aria-pressed=\"true\">Triage was wrong</button><button class=\"ds-btn\" disabled>Older</button></div>",
-      "css": ".ds-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0 0.875rem; font: 600 0.8125rem/1 var(--sans); letter-spacing: 0.02em; color: var(--ink); background: var(--strip); border: 1px solid var(--ink); border-radius: 0; cursor: pointer; transition: background-color 160ms var(--ease), color 160ms var(--ease); } .ds-btn:hover, .ds-btn[aria-pressed='true'] { background: var(--ink); color: var(--strip); } .ds-btn:active { background: var(--ink-2); color: var(--strip); } .ds-btn:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-btn:disabled { border-color: var(--edge); color: var(--ink-2); cursor: default; background: transparent; }"
+      "world": "console",
+      "description": "The one neutral button, 2.5rem tall. Pressed is solid accent; the kill switch is solid red. There is no other primary action.",
+      "html": "<div class=\"ds-c-buttons\"><button class=\"ds-c-btn\">Triage was right</button><button class=\"ds-c-btn\" aria-pressed=\"true\">Triage was wrong</button><button class=\"ds-c-btn ds-c-btn-stop\">Stop automation</button></div>",
+      "css": ".ds-c-buttons { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-c-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.875rem; border: 1px solid light-dark(#c9ced7, #353c4d); border-radius: 0.375rem; background: light-dark(#ffffff, #12151c); color: light-dark(#141821, #e7eaf0); font: 600 0.875rem -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; cursor: pointer; transition: background-color 0.15s, border-color 0.15s; } .ds-c-btn:hover { background: light-dark(#f0f2f5, #191d27); } .ds-c-btn:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-btn[aria-pressed='true'] { background: light-dark(#3451d1, #8da2ff); border-color: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } .ds-c-btn-stop { background: light-dark(#c7253a, #ff7480); border-color: light-dark(#c7253a, #ff7480); color: light-dark(#ffffff, #0b0d12); } .ds-c-btn-stop:hover { background: light-dark(#c7253a, #ff7480); filter: brightness(1.08); }"
     },
     {
-      "name": "Filter chips",
-      "kind": "chip",
-      "refersTo": "filter-chip",
-      "description": "The log's filters: a scrolling line of square links; the current one is reversed to ink.",
-      "html": "<nav class=\"ds-chips\"><a href=\"#\" aria-current=\"true\">Everything</a><a href=\"#\">Model calls</a><a href=\"#\">Tool calls</a><a href=\"#\">Sent</a></nav>",
-      "css": ".ds-chips { display: flex; gap: 0.3125rem; padding: 0.125rem 0; overflow-x: auto; scrollbar-width: none; } .ds-chips a { flex: none; display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.6875rem; font: 600 0.8125rem/1 var(--sans); color: var(--ink); text-decoration: none; background: var(--strip); border: 1px solid var(--edge); transition: background-color 160ms var(--ease), color 160ms var(--ease); } .ds-chips a:hover { border-color: var(--ink); } .ds-chips a:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-chips a[aria-current] { background: var(--ink); border-color: var(--ink); color: var(--strip); }"
+      "name": "Console: Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "world": "console",
+      "description": "Sidebar navigation from 60rem, a row that scrolls sideways on a phone. The current page is tinted with the accent.",
+      "html": "<nav class=\"ds-c-nav\"><a href=\"#\" aria-current=\"page\">Incidents</a><a href=\"#\">Log</a><a href=\"#\">Ledger</a><a href=\"#\">Actions</a></nav>",
+      "css": ".ds-c-nav { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-direction: column; gap: 0.125rem; width: 13.75rem; padding: 0.25rem 0.625rem; background: light-dark(#ffffff, #12151c); } .ds-c-nav a { display: flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.75rem; border-radius: 0.375rem; color: light-dark(#4f596a, #a3acbd); font-weight: 500; font-size: 0.875rem; text-decoration: none; white-space: nowrap; } .ds-c-nav a:hover { background: light-dark(#f0f2f5, #191d27); color: light-dark(#141821, #e7eaf0); } .ds-c-nav a:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-nav a[aria-current] { background: light-dark(#ecf0fe, #1a2142); color: light-dark(#3451d1, #8da2ff); font-weight: 600; }"
     },
     {
-      "name": "Field",
+      "name": "Console: Incident card",
+      "kind": "card",
+      "refersTo": "card",
+      "world": "console",
+      "description": "One incident on the board: a 3px severity edge, severity badge, id, title, when, and one labelled box per stage. What a model said is violet.",
+      "html": "<article class=\"ds-c-inc\"><div class=\"ds-c-inc-top\"><span class=\"ds-c-badge ds-dot ds-c-crit\">Critical</span><span class=\"ds-c-inc-id\">#3</span><h3 class=\"ds-c-inc-title\"><a href=\"#\">slo_traefik_5xx on server-1</a></h3><span class=\"ds-c-inc-when\">4 min ago</span></div><dl class=\"ds-c-kv\"><div><dt>Triage</dt><dd class=\"ds-c-pen\">real, 86%</dd></div><div><dt>Investigation</dt><dd class=\"ds-c-active\">running</dd></div><div><dt>Plan</dt><dd class=\"ds-c-mute\">none yet</dd></div></dl></article>",
+      "css": ".ds-c-inc { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); position: relative; max-width: 34rem; background: light-dark(#ffffff, #12151c); border: 1px solid light-dark(#e2e5ea, #232835); border-radius: 0.625rem; box-shadow: light-dark(0 1px 2px rgb(16 24 40 / 0.05), none); padding: 0.75rem 0.875rem 0.75rem 1.125rem; transition: border-color 0.15s, box-shadow 0.15s; } .ds-c-inc::before { content: ''; position: absolute; left: 0; top: 0.625rem; bottom: 0.625rem; width: 0.1875rem; border-radius: 0 0.1875rem 0.1875rem 0; background: light-dark(#c7253a, #ff7480); } .ds-c-inc:hover { border-color: light-dark(#c9ced7, #353c4d); } .ds-c-inc:has(a:focus-visible) { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-inc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.5rem; } .ds-c-inc-id { font: 600 0.8125rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-inc-title { margin: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.3; flex: 1 1 12rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-c-inc-title a { color: light-dark(#141821, #e7eaf0); text-decoration: none; outline: none; } .ds-c-inc:hover .ds-c-inc-title a { color: light-dark(#3451d1, #8da2ff); } .ds-c-inc-when { color: light-dark(#4f596a, #a3acbd); font-size: 0.8125rem; white-space: nowrap; } .ds-c-kv { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.5rem 1rem; margin: 0.625rem 0 0; } .ds-c-kv dt { font-size: 0.6875rem; font-weight: 500; color: light-dark(#667082, #7f899c); line-height: 1.3; } .ds-c-kv dd { margin: 0; font-size: 0.8125rem; font-weight: 500; } .ds-c-pen { color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-active { color: light-dark(#1565bd, #62adff); } .ds-c-active::before { content: ''; display: inline-block; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; margin-right: 0.3125rem; vertical-align: 0.08em; } .ds-c-mute { color: light-dark(#667082, #7f899c); font-weight: 400; } .ds-c-badge { display: inline-flex; align-items: center; gap: 0.3125rem; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; background: light-dark(#f0f2f5, #191d27); color: light-dark(#4f596a, #a3acbd); } .ds-c-badge.ds-dot::before { content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; } .ds-c-crit { background: light-dark(#fdecee, #3a171d); color: light-dark(#c7253a, #ff7480); } .ds-c-warn { background: light-dark(#fdf2df, #33270e); color: light-dark(#a35400, #f3b045); } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-tag { background: none; box-shadow: inset 0 0 0 1px light-dark(#c9ced7, #353c4d); font-weight: 500; } .ds-c-updated { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } "
+    },
+    {
+      "name": "Console: Field",
       "kind": "input",
       "refersTo": "field",
-      "description": "A labelled square input on the rack ground, set into a strip-coloured form.",
-      "html": "<div class=\"ds-vote\"><label class=\"ds-field\"><span>Note, optional</span><input type=\"text\"></label></div>",
-      "css": ".ds-vote { padding: 0.625rem; background: var(--strip); border: 1px solid var(--edge); font: 400 0.9375rem/1.45 var(--sans); } .ds-field { display: grid; gap: 0.1875rem; } .ds-field span { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-field input { font: inherit; color: var(--ink); background: var(--rack); border: 1px solid var(--edge); border-radius: 0; padding: 0.5rem 0.5625rem; min-height: 2.75rem; width: 100%; box-sizing: border-box; caret-color: var(--pen); } .ds-field input:hover { border-color: var(--ink-2); } .ds-field input:focus-visible { outline: 2px solid var(--pen); outline-offset: 0; border-color: var(--pen); }"
+      "world": "console",
+      "description": "A labelled text field, 2.5rem tall. Focus moves the border to the accent under the focus outline.",
+      "html": "<label class=\"ds-c-field\"><span>What was wrong (optional)</span><input type=\"text\" placeholder=\"It was a deploy\"></label>",
+      "css": ".ds-c-field { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: grid; gap: 0.25rem; max-width: 30rem; } .ds-c-field span { font-size: 0.75rem; font-weight: 500; color: light-dark(#4f596a, #a3acbd); } .ds-c-field input { height: 2.5rem; padding: 0 0.75rem; border: 1px solid light-dark(#c9ced7, #353c4d); border-radius: 0.375rem; background: light-dark(#ffffff, #12151c); color: light-dark(#141821, #e7eaf0); font: inherit; font-size: 0.875rem; } .ds-c-field input::placeholder { color: light-dark(#667082, #7f899c); } .ds-c-field input:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 0; border-color: light-dark(#3451d1, #8da2ff); }"
     },
     {
-      "name": "Table with meters",
+      "name": "Console: Record rows",
       "kind": "custom",
-      "refersTo": "table",
-      "description": "Ledger table: label heads, monospace cells, right-aligned figures, a 2px ink rule over the total, and flat ink meters drawn as SVG with the share as an attribute.",
-      "html": "<table class=\"ds-table\"><thead><tr><th>Day, UTC</th><th class=\"ds-num\">Calls</th><th class=\"ds-num\">Cost</th><th></th></tr></thead><tbody><tr><td>2026-11-18</td><td class=\"ds-num\">7</td><td class=\"ds-num\">0.27</td><td class=\"ds-meter-cell\"><svg class=\"ds-meter\" viewBox=\"0 0 100 6\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><rect class=\"ds-meter-track\" width=\"100\" height=\"6\"/><rect class=\"ds-meter-fill\" width=\"100.0\" height=\"6\"/></svg></td></tr><tr><td>2026-11-17</td><td class=\"ds-num\">3</td><td class=\"ds-num\">0.0840</td><td class=\"ds-meter-cell\"><svg class=\"ds-meter\" viewBox=\"0 0 100 6\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><rect class=\"ds-meter-track\" width=\"100\" height=\"6\"/><rect class=\"ds-meter-fill\" width=\"31.1\" height=\"6\"/></svg></td></tr></tbody><tfoot><tr><th>All</th><td class=\"ds-num\">10</td><td class=\"ds-num\">0.35</td><td></td></tr></tfoot></table>",
-      "css": ".ds-table { width: 100%; border-collapse: collapse; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font-family: var(--sans); font-size: 0.8125rem; font-variant-numeric: tabular-nums; } .ds-table th, .ds-table td { padding: 0.3125rem 0.625rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: baseline; } .ds-table th { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-table td { font-family: var(--mono); } .ds-table .ds-num { text-align: right; white-space: nowrap; } .ds-table tfoot th, .ds-table tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 700; color: var(--ink); } .ds-table .ds-meter-cell { width: 38%; vertical-align: middle; } .ds-meter { display: block; width: 100%; height: 0.375rem; } .ds-meter-track { fill: var(--rule); } .ds-meter-fill { fill: var(--ink); }"
+      "refersTo": "badge",
+      "world": "console",
+      "description": "The timeline: time in monospace, a voice tag (in, code, model, sent), the line, then its kind and cost in monospace. Model and tool rows carry the violet tag; a citation is a monospace chip on the accent tint.",
+      "html": "<div class=\"ds-c-record\"><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:12</span><span class=\"ds-c-rtag ds-c-info\">in</span><div class=\"ds-c-main\"><span>Alert received: slo_traefik_5xx</span><span class=\"ds-c-rmeta\"><span>alert.received</span></span></div></div><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:15</span><span class=\"ds-c-rtag ds-c-model\">model</span><div class=\"ds-c-main\"><span class=\"ds-c-pen\">media-server lost its database connections <a class=\"ds-c-cite\" href=\"#\">c1</a></span><span class=\"ds-c-rmeta\"><span>investigation.completed</span><span>$0.0412</span></span></div></div><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:16</span><span class=\"ds-c-rtag ds-c-ok\">sent</span><div class=\"ds-c-main\"><span>Notification sent to ntfy</span><span class=\"ds-c-rmeta\"><span>notify.sent</span></span></div></div></div>",
+      "css": ".ds-c-record { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); max-width: 40rem; background: light-dark(#ffffff, #12151c); border: 1px solid light-dark(#e2e5ea, #232835); border-radius: 0.625rem; box-shadow: light-dark(0 1px 2px rgb(16 24 40 / 0.05), none); overflow: hidden; } .ds-c-row { display: grid; grid-template-columns: 4.25rem 3.25rem minmax(0, 1fr); align-items: start; gap: 0.25rem 0.625rem; padding: 0.625rem 1.125rem; border-top: 1px solid light-dark(#e2e5ea, #232835); } .ds-c-row:first-child { border-top: 0; } .ds-c-time { font: 400 0.75rem/1.375rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-rtag { display: inline-flex; align-items: center; justify-content: center; height: 1.25rem; min-width: 3rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; line-height: 1; } .ds-c-main { display: grid; gap: 0.1875rem; font-size: 0.875rem; min-width: 0; } .ds-c-rmeta { display: flex; flex-wrap: wrap; gap: 0.125rem 0.75rem; font: 400 0.75rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-pen { color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-cite { display: inline-flex; align-items: center; justify-content: center; height: 1.375rem; min-width: 2rem; padding: 0 0.5rem; border-radius: 999px; font: 600 0.75rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; background: light-dark(#ecf0fe, #1a2142); color: light-dark(#3451d1, #8da2ff); text-decoration: none; } .ds-c-cite:hover { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } .ds-c-cite:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); }"
+    },
+    {
+      "name": "Site: Lamp",
+      "kind": "chip",
+      "refersTo": "site-lamp",
+      "world": "site",
+      "description": "The lit status cell: square, 2px border, its word inside in condensed capitals. Unlit, GO, HOLD, NO-GO, and at work.",
+      "html": "<div class=\"ds-s-lamps\"><span class=\"ds-s-lamp\" data-state=\"standby\">Standby</span><span class=\"ds-s-lamp\" data-state=\"go\">Go</span><span class=\"ds-s-lamp\" data-state=\"hold\">Hold</span><span class=\"ds-s-lamp\" data-state=\"nogo\">No-go</span><span class=\"ds-s-lamp\" data-state=\"run\">Verify</span></div>",
+      "css": ".ds-s-lamps { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 1.125rem; } .ds-s-lamp { display: inline-grid; place-items: center; min-width: 6.25rem; height: 2.125rem; padding: 0 0.625rem; font: 700 1.125rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.12em; border: 2px solid #2a4368; color: #8a9bb4; transition: background-color 0.18s, color 0.18s, border-color 0.18s; } .ds-s-lamp[data-state='go'] { background: #2fd07b; border-color: #2fd07b; color: #071020; } .ds-s-lamp[data-state='hold'] { background: #ffb000; border-color: #ffb000; color: #071020; } .ds-s-lamp[data-state='nogo'] { background: #ff4d4f; border-color: #ff4d4f; color: #071020; } .ds-s-lamp[data-state='run'] { border-color: #ffb000; color: #ffb000; } "
+    },
+    {
+      "name": "Site: Board",
+      "kind": "custom",
+      "refersTo": "site-board",
+      "world": "site",
+      "description": "The status board: a head line with the Simulated tag and the amber clock, then ruled rows of station, finding and lamp. A model's finding is violet; the YOU row is raised and amber.",
+      "html": "<div class=\"ds-s-board\"><div class=\"ds-s-board-head\"><h2>Incident #3 · slo_traefik_5xx · server-1</h2><span class=\"ds-s-sim\">Simulated</span><span class=\"ds-s-clock\">T+00:07</span></div><ol class=\"ds-s-rows\"><li class=\"ds-s-row\"><span class=\"ds-s-st\">Record</span><span class=\"ds-s-note\">two alerts, as they came</span><span class=\"ds-s-lamp\" data-state=\"go\">Go</span></li><li class=\"ds-s-row ds-s-voice-model\"><span class=\"ds-s-st\">Triage</span><span class=\"ds-s-note\">real, 86% sure</span><span class=\"ds-s-lamp\" data-state=\"go\">Go</span></li><li class=\"ds-s-row ds-s-row-you\"><span class=\"ds-s-st\">You</span><span class=\"ds-s-note\">waiting for your answer</span><span class=\"ds-s-lamp\" data-state=\"hold\">Hold</span></li><li class=\"ds-s-row\"><span class=\"ds-s-st\">Executor</span><span class=\"ds-s-note\">nothing runs without Go</span><span class=\"ds-s-lamp\" data-state=\"standby\">Standby</span></li></ol></div>",
+      "css": ".ds-s-board { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; background: #12233b; border: 1px solid #2a4368; max-width: 46rem; } .ds-s-board-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.875rem; padding: 0.75rem 1.125rem; border-bottom: 1px solid #2a4368; } .ds-s-board-head h2 { margin: 0 auto 0 0; font: 600 1.0625rem 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: 0.05em; color: #b6c3d6; } .ds-s-sim { border: 1px solid #8a9bb4; color: #8a9bb4; font: 600 0.8125rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.14em; padding: 0.0625rem 0.4375rem; } .ds-s-clock { color: #ffb000; font: 700 1.75rem/1 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: 0.08em; min-width: 7.5rem; text-align: right; } .ds-s-rows { margin: 0; padding: 0; list-style: none; } .ds-s-row { display: grid; grid-template-columns: 10.5rem 1fr auto; align-items: center; gap: 0.125rem 1rem; padding: 0.5rem 1.125rem; border-bottom: 1px solid #2a4368; } .ds-s-row:last-child { border-bottom: 0; } .ds-s-st { font: 600 1.5rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.1em; } .ds-s-note { color: #b6c3d6; font-size: 0.9375rem; overflow-wrap: anywhere; } .ds-s-voice-model .ds-s-note { color: #b9a0ff; font-weight: 500; } .ds-s-row-you { background: #183052; } .ds-s-row-you .ds-s-note { color: #ffb000; } @keyframes ds-s-hold { 50% { opacity: 0.45; } } .ds-s-row-you .ds-s-lamp[data-state='hold'] { animation: ds-s-hold 1.4s steps(2, jump-none) infinite; } @media (prefers-reduced-motion: reduce) { .ds-s-row-you .ds-s-lamp { animation: none !important; } } .ds-s-lamp { display: inline-grid; place-items: center; min-width: 6.25rem; height: 2.125rem; padding: 0 0.625rem; font: 700 1.125rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.12em; border: 2px solid #2a4368; color: #8a9bb4; transition: background-color 0.18s, color 0.18s, border-color 0.18s; } .ds-s-lamp[data-state='go'] { background: #2fd07b; border-color: #2fd07b; color: #071020; } .ds-s-lamp[data-state='hold'] { background: #ffb000; border-color: #ffb000; color: #071020; } .ds-s-lamp[data-state='nogo'] { background: #ff4d4f; border-color: #ff4d4f; color: #071020; } .ds-s-lamp[data-state='run'] { border-color: #ffb000; color: #ffb000; } "
+    },
+    {
+      "name": "Site: Guard and keys",
+      "kind": "custom",
+      "refersTo": "site-key-go",
+      "world": "site",
+      "description": "The signature control. A hazard-striped cover with an amber plate lies over the Go and No-go keys; lifting it swings it up from its top edge and enables them. Shown here closed, and beside it the keys once the guard is up.",
+      "html": "<div class=\"ds-s-guards\"><div class=\"ds-s-guard\"><button class=\"ds-s-cover\" type=\"button\">Lift the guard</button><div class=\"ds-s-keys\"><button class=\"ds-s-key ds-s-key-go\" type=\"button\" disabled>Go</button><button class=\"ds-s-key ds-s-key-nogo\" type=\"button\" disabled>No-go</button></div></div><div class=\"ds-s-guard\"><div class=\"ds-s-keys\"><button class=\"ds-s-key ds-s-key-go\" type=\"button\">Go</button><button class=\"ds-s-key ds-s-key-nogo\" type=\"button\">No-go</button></div></div></div>",
+      "css": ".ds-s-guards { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; background: #183052; display: grid; gap: 1.5rem; padding: 1.125rem; max-width: 30rem; } .ds-s-guard { position: relative; display: grid; } .ds-s-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; } .ds-s-key { display: inline-grid; place-items: center; height: 3.5rem; padding: 0 1rem; border: 2px solid currentColor; background: none; font: 700 1.5rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.16em; cursor: pointer; transition: background-color 0.18s, color 0.18s; } .ds-s-key:disabled { cursor: default; } .ds-s-key-go { color: #2fd07b; } .ds-s-key-nogo { color: #ff4d4f; } .ds-s-key-go:hover:not(:disabled), .ds-s-key-go:focus-visible { background: #2fd07b; color: #071020; border-color: #2fd07b; } .ds-s-key-nogo:hover:not(:disabled), .ds-s-key-nogo:focus-visible { background: #ff4d4f; color: #071020; border-color: #ff4d4f; } .ds-s-key:focus-visible, .ds-s-cover:focus-visible { outline: 2px solid #ffb000; outline-offset: 3px; } .ds-s-cover { position: absolute; inset: -0.25rem; z-index: 1; display: grid; place-items: center; border: 0; cursor: pointer; color: #071020; font: 700 1.375rem 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: 0.16em; text-transform: uppercase; background: repeating-linear-gradient(-45deg, #ffb000 0 1.125rem, #0b1626 1.125rem 2.25rem); transform-origin: top; transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s; } .ds-s-cover::before { content: ''; position: absolute; inset: 0.5rem 15%; background: #ffb000; z-index: -1; } .ds-s-cover:hover { filter: brightness(1.08); }"
+    },
+    {
+      "name": "Site: Buttons",
+      "kind": "button",
+      "refersTo": "site-button",
+      "world": "site",
+      "description": "Square, 3.25rem tall, 2px border, condensed capitals. The primary is solid amber, one per screen; the other is outlined and fills with Chalk on hover.",
+      "html": "<div class=\"ds-s-actions\"><a class=\"ds-s-btn ds-s-btn-amber\" href=\"#\">Quickstart</a><a class=\"ds-s-btn\" href=\"#\">Watch the flow</a></div>",
+      "css": ".ds-s-actions { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 1.125rem; } .ds-s-btn { display: inline-flex; align-items: center; height: 3.25rem; padding: 0 1.5rem; border: 2px solid #b6c3d6; color: #f2f5f8; font: 700 1.25rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; transition: background-color 0.18s, color 0.18s, border-color 0.18s; } .ds-s-btn:hover { background: #f2f5f8; border-color: #f2f5f8; color: #071020; } .ds-s-btn:focus-visible { outline: 2px solid #ffb000; outline-offset: 3px; } .ds-s-btn-amber { background: #ffb000; border-color: #ffb000; color: #071020; } .ds-s-btn-amber:hover { background: #ffc94d; border-color: #ffc94d; }"
+    },
+    {
+      "name": "Site: Station row with voice tag",
+      "kind": "custom",
+      "refersTo": "site-voice-tag",
+      "world": "site",
+      "description": "A ruled row on the page itself: a station in condensed capitals, a voice tag that names who speaks (Code outlined, Model solid violet, You solid amber), and a sentence in Barlow. The list opens under a 2px Chalk rule.",
+      "html": "<div class=\"ds-s-stations\"><div class=\"ds-s-station\"><h3>Record</h3><span class=\"ds-s-voice ds-s-voice-code\">Code</span><p>Every observation becomes one event in an append-only log.</p></div><div class=\"ds-s-station\"><h3>Triage</h3><span class=\"ds-s-voice ds-s-voice-model\">Model</span><p>One call to a cheap model, with no tools.</p></div><div class=\"ds-s-station ds-s-station-you\"><h3>You</h3><span class=\"ds-s-voice ds-s-voice-you\">You</span><p>Go or No-go, on your phone.</p></div></div>",
+      "css": ".ds-s-stations { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; border-top: 2px solid #f2f5f8; padding: 0 1.125rem; } .ds-s-station { display: grid; grid-template-columns: 14rem 6rem minmax(0, 1fr); gap: 2rem; padding: 1.25rem 0; border-bottom: 1px solid #2a4368; align-items: baseline; } .ds-s-station h3 { margin: 0; font: 600 1.75rem/1.1 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.08em; } .ds-s-station p { margin: 0; color: #b6c3d6; max-width: 46rem; } .ds-s-voice { justify-self: start; border: 2px solid currentColor; padding: 0 0.5rem; font: 700 0.9375rem/1.5rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.16em; } .ds-s-voice-code { color: #b6c3d6; } .ds-s-voice-model { color: #071020; background: #b9a0ff; border-color: #b9a0ff; } .ds-s-voice-you { color: #071020; background: #ffb000; border-color: #ffb000; } .ds-s-station-you h3 { color: #ffb000; }"
+    },
+    {
+      "name": "Site: Top strip",
+      "kind": "nav",
+      "refersTo": "site-nav-link",
+      "world": "site",
+      "description": "The sticky strip: the wordmark after its amber square, then links in condensed capitals. Hover turns the text Chalk over a 3px amber bar.",
+      "html": "<header class=\"ds-s-loop\"><a class=\"ds-s-mark\" href=\"#\"><span></span>Paeon</a><nav><a href=\"#\">How it works</a><a href=\"#\">Quickstart</a><a href=\"#\">Docs</a></nav></header>",
+      "css": ".ds-s-loop { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 1.5rem; height: 3.5rem; padding: 0 1.125rem; background: #071020; border-bottom: 1px solid #2a4368; } .ds-s-mark { display: inline-flex; align-items: center; gap: 0.625rem; color: #f2f5f8; font: 700 1.5rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.18em; text-decoration: none; } .ds-s-mark span { display: inline-block; width: 0.8125rem; height: 0.8125rem; background: #ffb000; } .ds-s-loop nav { display: flex; gap: 0.25rem; margin-left: auto; } .ds-s-loop nav a { display: inline-flex; align-items: center; height: 3.5rem; padding: 0 0.75rem; color: #b6c3d6; font: 600 1.0625rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none; white-space: nowrap; border-bottom: 3px solid transparent; } .ds-s-loop nav a:hover { color: #f2f5f8; border-bottom-color: #ffb000; } .ds-s-loop a:focus-visible { outline: 2px solid #ffb000; outline-offset: 3px; }"
+    },
+    {
+      "name": "Site: Tabs",
+      "kind": "custom",
+      "refersTo": "site-tab",
+      "world": "site",
+      "description": "Monitor tabs, and the same treatment on the video reel and the dial: the selected item is solid Chalk with Deep Navy text, the others are Faint Chalk and brighten on hover.",
+      "html": "<div class=\"ds-s-tabs\" role=\"tablist\"><button type=\"button\" role=\"tab\" aria-selected=\"true\">Incidents</button><button type=\"button\" role=\"tab\" aria-selected=\"false\">Investigation</button><button type=\"button\" role=\"tab\" aria-selected=\"false\">Ledger</button></div>",
+      "css": ".ds-s-tabs { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; display: flex; background: #12233b; border: 1px solid #2a4368; } .ds-s-tabs button { height: 3rem; padding: 0 1.125rem; border: 0; border-right: 1px solid #2a4368; background: none; color: #8a9bb4; font: 600 1.125rem 'Barlow Condensed', 'Arial Narrow', sans-serif; text-transform: uppercase; letter-spacing: 0.12em; white-space: nowrap; cursor: pointer; } .ds-s-tabs button:hover { color: #f2f5f8; } .ds-s-tabs button:focus-visible { outline: 2px solid #ffb000; outline-offset: 3px; } .ds-s-tabs button[aria-selected='true'] { background: #f2f5f8; color: #071020; }"
+    },
+    {
+      "name": "Site: Command block",
+      "kind": "custom",
+      "refersTo": "site-command",
+      "world": "site",
+      "description": "A command on Deep Navy in JetBrains Mono, with a Copy key at its right that turns solid amber on hover.",
+      "html": "<div class=\"ds-s-cmd\"><pre><code>uv run paeon incidents</code></pre><button class=\"ds-s-copy\" type=\"button\">Copy</button></div>",
+      "css": ".ds-s-cmd { color-scheme: dark; background: #0b1626; color: #f2f5f8; font: 400 1.0625rem/1.6 Barlow, -apple-system, 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid #2a4368; background: #071020; max-width: 40rem; } .ds-s-cmd pre { margin: 0; padding: 0.875rem 1rem; overflow-x: auto; color: #d7e2f0; line-height: 1.55; } .ds-s-cmd code { font: 400 0.875rem 'JetBrains Mono', ui-monospace, Menlo, monospace; font-variant-ligatures: none; white-space: pre; } .ds-s-copy { align-self: stretch; min-width: 4.5rem; padding: 0 0.75rem; border: 0; border-left: 1px solid #2a4368; background: #12233b; color: #b6c3d6; font: 600 0.9375rem 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; } .ds-s-copy:hover { color: #071020; background: #ffb000; } .ds-s-copy:focus-visible { outline: 2px solid #ffb000; outline-offset: 3px; }"
     }
   ],
   "narrative": {
-    "northStar": "The Strip Bay",
-    "overview": "The console is an air traffic control strip board. The ground is a grey-green rack. An incident is an off-white printed strip in a holder, ruled into labelled boxes. A bay is a stage of the pipeline: Triage, Investigation, Open, Resolved. Where a strip sits says what it is waiting for, so the board answers \"where does everything stand\" before a word is read.\n\nEverything on a strip is either printed or written in pen. Printed ink is what code recorded. Pen blue, slanted, is what a model said. The operator reads the model's words as annotation and never as fact, then opens the strip and finds each claim tied to the tool call behind it. The system is flat and dense: hairlines, square corners, no shadow, no gradient, no picture. It is the opposite of the dark observability dashboard of stat tiles over a table, which this world refuses.\n\nThe console is server-rendered and makes no request to another host. That constraint shapes the look as much as the metaphor does: system fonts only, one stylesheet, one small script, no inline style anywhere.",
+    "northStar": "The Go / No-go Board",
+    "overview": "Paeon has two visual worlds. They are separate on purpose, and a surface belongs to exactly one.\n\nIn the frontmatter, a token with no prefix belongs to the console. A token that starts with `site-` belongs to the site, and one that starts with `docs-` exists only in the documentation theme. Nothing crosses: the console never takes a `site-` token, and the site never takes a console token. The two worlds share one idea and nothing else: what a model said is violet. The site's model violet is the same value as the console's dark-scheme one.\n\nEvery section below has a **Console** part and a **Site** part.\n\nThe console is an incident management app, in the family of the tools an operator already knows: a sidebar, a list of incidents grouped by where they stand, status as coloured badges, a detail page with a summary header and a timeline. It is clean and quiet: neutral surfaces, one accent, colour kept for state.\n\nIt replaces the earlier \"Strip Bay\" console. Three things carry over, because they come from the product and not from the old look:\n\nThe site is a launch-day status board. Each station of Paeon reports in turn on a deep navy ground, in chalk-white condensed capitals, and answers with a lit cell: green GO, amber HOLD, red NO-GO. The last row holds on YOU, beside a striped guard over the one switch that acts. The board is the argument of the page: a visitor sees where thinking stops and doing starts because the poll stops there.\n\nThe page is dark only (`color-scheme: dark`), flat, ruled and square. It has no card grid, no shadow and no soft gradient. What reads as a sentence is set in Barlow in sentence case; what reads as a label, a station or an answer is set in Barlow Condensed capitals.\n\nThe documentation wears the same board at reading size: condensed capital headings, amber links, square code blocks and tables, with a plain Barlow body. It also has a light scheme (MkDocs Material's white page under the navy header), where amber darkens to stay readable. The three videos are drawn on a canvas from the same palette, copied by value into `kit.js`.",
     "keyCharacteristics": [
-      "A rack, bays and strips: position carries state.",
-      "Two voices, one rule everywhere: printed ink for code, blue italic for a model.",
-      "Severity is the fill of the holder, and is always also written as a word.",
-      "Hairlines and square corners; depth comes from three flat tones (rack, well, strip).",
-      "Small uppercase labels over plain values, figures in monospace with tabular numerals.",
-      "Light and dark follow the system setting; a print palette puts the strips on white paper."
+      "A navy board in four tonal steps, with hairline rules between rows.",
+      "Status is a lit square cell with its word inside: GO, HOLD, NO-GO.",
+      "Barlow Condensed capitals for stations, headings and keys; Barlow for sentences; JetBrains Mono for commands and catalog names.",
+      "Square corners everywhere, and no shadow.",
+      "One guarded switch: lift the hazard-striped cover, then press.",
+      "Every example is fictional and says so on the board (`Simulated`) and in the footer."
     ],
     "rules": [
       {
-        "name": "The Two Voices Rule",
-        "body": "What code recorded is printed ink, upright. What a model said is pen blue and italic. One rule on every page: a verdict, a summary, a claim, a suggested step are pen; a fact about a model call (its tokens, cost, duration, failure) is printed ink. The slant means the voice never rests on colour alone.",
-        "section": "colors"
+        "name": "The Lamp Rule",
+        "body": "A status colour is a lit cell with its word in it. Green is GO, amber is HOLD, red is NO-GO; the cell is filled, its text is Deep Navy, and the word is always there. An unlit cell is a Rule Blue outline with Faint Chalk text. A cell at work (`Apply`, `Verify`) is an amber outline with amber text.",
+        "section": "colors",
+        "world": "site"
       },
       {
-        "name": "The Reversed Tag Rule",
-        "body": "A tag reversed out of solid ink marks what left the server (a notification that was sent), and nothing else. A tag for anything that stayed inside is plain or outlined.",
-        "section": "colors"
+        "name": "The Violet Is A Voice Rule",
+        "body": "Violet marks words a model produced, on the site as in the console, and a `Model` tag stands beside them. It is never an accent.",
+        "section": "colors",
+        "world": "site"
       },
       {
-        "name": "The Written Severity Rule",
-        "body": "Severity lives in the fill of the holder and is always also written there as a word (critical, warning, info, unknown). Severity colour is never used for text, borders of other parts, or decoration.",
-        "section": "colors"
+        "name": "The Ink On Light Rule",
+        "body": "Text on amber, green, red, violet or Chalk is Deep Navy. Chalk text never sits on a lit colour.",
+        "section": "colors",
+        "world": "site"
       },
       {
-        "name": "The Turned Over Rule",
-        "body": "A resolved strip keeps its severity colour as a 3px frame inside the holder, with a clear ground and printed ink. The colour says what it was; the empty holder says it is over.",
-        "section": "colors"
+        "name": "The Capitals Rule",
+        "body": "Capitals belong to Barlow Condensed, and to things that are one line: a heading, a station, a key, a tag. Anything read as a sentence is Barlow in sentence case. The heading line of a board (the incident's name) stays condensed but in its own case.",
+        "section": "typography",
+        "world": "site"
       },
       {
-        "name": "The Same Host Rule",
-        "body": "System fonts only. The pages load nothing from another host, so no webfont is ever added, whether hosted elsewhere or bundled.",
-        "section": "typography"
+        "name": "The Tracking Rule",
+        "body": "The smaller the capitals, the wider the tracking: 0.01em on the display, 0.06em to 0.1em on titles and stations, 0.12em to 0.16em on lamps, keys and tags.",
+        "section": "typography",
+        "world": "site"
       },
       {
-        "name": "The Counted In Mono Rule",
-        "body": "Monospace is for what is counted or cited: ids, counts, costs, times, event kinds, payloads. A sentence is never set in it.",
-        "section": "typography"
+        "name": "The Ruled Row Rule",
+        "body": "A list starts under a 2px Chalk rule, and each row ends on a 1px Rule Blue hairline. Rows are not boxed, not shaded in turn and not laid out as a grid of cards.",
+        "section": "layout",
+        "world": "site"
       },
       {
-        "name": "The Fixed Form Rule",
-        "body": "On the board a strip is six boxes, one line each, always the same height. Reasons and long values belong to the incident page, not to the board.",
-        "section": "layout"
+        "name": "The No Shadow Rule",
+        "body": "Nothing on the site casts a shadow or glows. A lamp is lit by its fill, not by a halo.",
+        "section": "elevation",
+        "world": "site"
       },
       {
-        "name": "The Hairline Rule",
-        "body": "Surfaces are separated by tone and a 1px line. No drop shadow, no blur, no gradient, no translucent layer.",
-        "section": "elevation"
+        "name": "The Square Rule",
+        "body": "No radius on the site, the docs or the video player. The one exception is a picture of another device: the phone and its notification keep a phone's round corners (`site-pictured-phone`, `site-pictured-notification`, `site-pictured-notification-key`), on the page and in the videos. Those three values are for that picture only.",
+        "section": "shapes",
+        "world": "site"
+      },
+      {
+        "name": "The Hard Stripe Rule",
+        "body": "Stripes have hard stops and mean \"guarded\" or \"blanked\". A gradient that fades from one colour to another is not used anywhere.",
+        "section": "shapes",
+        "world": "site"
+      },
+      {
+        "name": "The Two Step Rule",
+        "body": "The control that acts is under a guard: lift, then press. Nothing else on the site takes two steps, and nothing that acts takes one.",
+        "section": "components",
+        "world": "site"
       }
     ],
     "dos": [
-      "Do set every word a model produced in pen blue italic, and every fact code recorded in upright printed ink, on every page.",
-      "Do write severity as a word in the holder whenever the holder is filled or framed with its colour.",
-      "Do keep the reversed ink tag for what left the server.",
-      "Do build new surfaces from the strip ground with a 1px edge hairline and 1px rule hairlines inside, corners square.",
-      "Do label every box with a small uppercase label and put the value under it in plain type.",
-      "Do set ids, counts, costs, times and event kinds in monospace.",
-      "Do say what was not done in a printed line: a stage that is off, a call that failed, a budget that is spent, a claim with no tool call behind it.",
-      "Do keep interactive targets at 2.75rem tall for buttons, fields and navigation.",
-      "Do set per-element values without inline style: SVG attributes for meters, the CSSOM from script for view-transition names.",
-      "Do define every new colour for light and dark together, and check the print palette."
+      "Console: **Do** mark every word a model produced: violet, with a Model badge or a model tag nearby.",
+      "Console: **Do** write severity and state as a word inside the badge.",
+      "Console: **Do** say what was not done in a note: a stage that is off, a failed call, a spent budget.",
+      "Console: **Do** define a new colour as one `light-dark()` token and check both schemes.",
+      "Console: **Do** keep targets at 2.5rem for buttons, fields and navigation on a phone.",
+      "Site: **Do** put a status in a lamp, with its word: GO, HOLD, NO-GO, or the fact itself (`In catalog`, `Proposed`, `Blanked`).",
+      "Site: **Do** set text on a lit colour in Deep Navy.",
+      "Site: **Do** lay new content out as ruled rows under a 2px Chalk rule.",
+      "Site: **Do** keep violet for a model's words and put a `Model` tag beside them.",
+      "Site: **Do** mark a simulated incident as simulated on the board that shows it.",
+      "Site: **Do** keep sentences in Barlow, sentence case, at 46rem wide at most."
     ],
     "donts": [
-      "Don't use pen blue for anything code recorded, or use italic for emphasis: the slant belongs to the model.",
-      "Don't use a severity colour outside a holder, or let colour be the only sign of severity.",
-      "Don't reverse a tag for anything that stayed on the server; the changed tag is outlined.",
-      "Don't add a shadow, a gradient, a blur or a rounded corner.",
-      "Don't load a font, script, image or style from another host, and don't add a webfont.",
-      "Don't write a `style` attribute or a `<style>` block: the content policy refuses them.",
-      "Don't let a strip on the board grow: no wrapped title, no seventh box, no reason text.",
-      "Don't add a second motion. A strip sliding between bays is the only movement, and it is off under reduced motion.",
-      "Don't build the dashboard of stat tiles over a table.",
-      "Don't show approvals, actions or autonomy controls as if they existed."
+      "Console: **Don't** load a font, script, image or style from another host, or write a `style` attribute.",
+      "Console: **Don't** use a state colour for decoration, or violet for something code recorded.",
+      "Console: **Don't** let an incident card on the board grow: reasons belong to the incident page.",
+      "Console: **Don't** add a control that approves or runs anything: the console shows, and can only stop.",
+      "Site: **Don't** round a corner, except on the picture of the phone.",
+      "Site: **Don't** add a shadow, a glow or a gradient that fades. Hard stripes belong to the guard and to the blanked position.",
+      "Site: **Don't** use green, amber or red for anything but go, hold and no-go, and what you can press.",
+      "Site: **Don't** set a sentence in capitals, or Barlow Condensed in a paragraph.",
+      "Site: **Don't** bring a console token, a pill badge or a rounded card onto the site, or a `site-` token into the console.",
+      "Site: **Don't** put a second solid amber button on a screen."
     ]
   }
 }

@@ -12,6 +12,8 @@ with a hard line between what a model may **think** and what code may **do**.
 ![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776ab.svg)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
+**[Website](https://mmornati.github.io/paeon/)** · **[Documentation](https://mmornati.github.io/paeon/docs/)** · **[Videos](https://mmornati.github.io/paeon/#videos)**
+
 [Quick start](#quick-start) · [How it works](#how-it-works) · [Acting](#acting) · [Safety](#safety-model) · [Privacy](#what-leaves-your-server) · [Roadmap](#roadmap) · [Design](docs/llm-incident-response-architecture.md)
 
 </div>
