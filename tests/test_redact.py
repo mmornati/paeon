@@ -76,3 +76,8 @@ def test_a_long_run_of_word_characters_is_redacted_in_linear_time() -> None:
     cleaned = redact_text(text, max_length=200_000)
     assert time.monotonic() - started < 2
     assert "hunter2" not in cleaned
+
+
+def test_a_secret_under_a_very_long_key_is_still_masked() -> None:
+    for key in ("x_" * 60 + "password", "token" + "_x" * 60, "a" * 100 + "secret" + "b" * 100):
+        assert "hunter2" not in redact_text(f"{key}=hunter2hunter2"), key
