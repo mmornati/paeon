@@ -14,7 +14,7 @@ copy of the rules file and a link you tapped.
 |---|---|
 | A second process | `paeon executor`: the same image with another command. It has its own database, its own port (8081) and its own secrets. |
 | Two secrets | `PAEON_EXECUTOR_TOKEN`, shared by the core and the executor, and `PAEON_SIGNING_KEY`, for the executor alone. They must differ. |
-| A Docker proxy that can write | For the executor only: start, stop and restart of containers. The investigator keeps its read-only proxy. |
+| A Docker proxy that can write | For the executor only: start, stop and restart of containers, and nothing else. With `tecnativa/docker-socket-proxy` that is `POST: 1`, `CONTAINERS: 0` and the `ALLOW_*` switches: `POST` with `CONTAINERS` on would also allow creating and deleting containers. The executor then lists and inspects through a read-only proxy (`docker_read_url`). |
 | An ntfy topic for approvals | With a token of its own and read access for you alone. A one-tap approval is exactly as strong as this channel. |
 | One public path | `https://<somewhere>/act/` routed to the executor, **without** single sign-on: the phone's button has no session, the signed link is the proof. Route nothing else there. |
 
@@ -37,6 +37,7 @@ actions:
   executor_url: http://paeon-executor:8081
   public_url: https://paeon-act.example.org
   docker_url: http://dockerproxy-act:2375
+  docker_read_url: http://dockerproxy:2375
   lock_dir: /locks
   ntfy: { url: https://ntfy.example.org, topic: incidents, token_env: PAEON_ACTIONS_NTFY_TOKEN }
   catalog:
@@ -50,13 +51,33 @@ actions:
 
 ### The catalog
 
-Three actions exist, and the file cannot add one:
+Six actions exist, and the file cannot add one:
 
 | Action | Does | Pre-check | Inverse (Undo, rollback) |
 |---|---|---|---|
 | `restart_container` | `POST /containers/{id}/restart` | the container exists | none |
 | `start_container` | `POST /containers/{id}/start` | it exists and is not running | stop |
 | `unpause_container` | `POST /containers/{id}/unpause` | it is paused | pause |
+| `reattach_network_alias` | reconnects the container to its networks with its compose service name as alias | it is a compose service, and a network misses the alias | none |
+| `coolify_restart` | `POST /api/v1/applications/{uuid}/restart` (or `services`) on Coolify | the resource answers | none |
+| `config_change` | one value of one YAML file, as a pull request | see below | close the pull request |
+
+For `reattach_network_alias` the write proxy also needs `NETWORKS: 1`, which with `POST: 1`
+allows creating and removing networks: add it only if you use the action. It reconnects only the
+networks that lost the alias, and keeps the aliases they had.
+
+For `coolify_restart`, name the resources it may restart; a plan uses your name, never a uuid:
+
+```yaml
+actions:
+  coolify:
+    url: http://coolify:8000
+    token_env: PAEON_COOLIFY_TOKEN        # an API token that can deploy; executor only
+    resources:
+      media: { uuid: abc123def, kind: service }
+  catalog:
+    coolify_restart: { targets: [media] }
+```
 
 `targets` and `deny` are name patterns. Leave out, or deny, what must never be restarted by a
 machine: your identity provider, the reverse proxy, the tunnel you reach the server through, your
@@ -106,6 +127,49 @@ Start with `approve` on one alert and one container.
    notification: the incident is yours.
 6. **It is recorded.** Every decision is an event in the executor's journal, mirrored into the
    incident's record, the console and the postmortem's automation review.
+
+## Configuration changes
+
+Restarting a container that runs out of memory fixes tonight. The durable fix is a line in a
+compose file, and that is configuration: Paeon never applies it. `config_change` turns it into a
+pull request on your deployment repository, and merging is your approval, given on the forge.
+
+```yaml
+actions:
+  repository:
+    path: /repo                       # a clone that is Paeon's own: nothing else uses it
+    base: main
+    identity_file: /run/secrets/paeon_deploy_key
+    known_hosts_file: /config/known_hosts
+    github: { repo: you/deployment, token_env: PAEON_GITHUB_TOKEN }
+    files:
+      media:
+        path: stacks/media/compose.yaml
+        keys: ["services.*.mem_limit", "services.*.deploy.resources.limits.memory"]
+        values: "[0-9]+[mMgG]"        # what a new value must look like
+  catalog:
+    config_change: { targets: [media] }
+  policies:
+    - { action: config_change, level: approve }
+```
+
+What it can do is narrow on purpose:
+
+- one file you named, one key that matches a pattern you wrote (`*` is one name, it does not
+  cross a dot), one value that matches your expression;
+- the key must already exist and hold a single value. Nothing is added, removed or moved;
+- only the value's own characters change. Comments, order, quoting and layout stay, and the
+  file is parsed again afterwards: if anything else differs, the change is dropped;
+- the branch is `paeon/incident-<id>-<hash>`, always cut from the remote's base. Nothing is
+  merged, and nothing is deployed.
+
+At `approve` or `auto` the pull request is opened without a Go on your phone: it is the request
+for approval. At `suggest` or `observe` nothing is pushed. Give the deploy key write access to
+that one repository, and the token the right to open pull requests on it and nothing else.
+Without `github` the branch is pushed and the notification says so.
+
+A change and a plan of actions for the same incident live side by side: the restart waits for
+your Go while the pull request waits for your review.
 
 ## Runbooks
 
@@ -194,10 +258,11 @@ docker compose exec paeon-executor paeon resume
 
 ## What it cannot do
 
-- Act on anything but containers of the Docker host its proxy reaches.
-- Change a configuration, delete data, touch the network, a secret or a firewall. If a plan needs
-  one of those, it says so in words, for you.
-- Approve from the console. An approval behind single sign-on is the design's answer for riskier
-  actions; none exists yet, so neither does that page.
+- Act on anything but containers of the Docker host its proxy reaches and the Coolify resources
+  you named.
+- Apply a change to configuration, delete data, touch a secret or a firewall. A change to a
+  value is proposed as a pull request; anything else is said in words, for you.
+- Approve from the console. A configuration change is approved by merging it on the forge;
+  nothing riskier exists.
 - Re-run the alert's own query to confirm a fix. The container's health decides; the incident
   resolving, minutes or an hour later, is the confirmation, and it is in the record.

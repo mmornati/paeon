@@ -92,6 +92,8 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
             "plan.not_proposed",
             "plan.cancelled",
             "plan.completed",
+            "change.proposed",
+            "change.failed",
             "approval.requested",
             "approval.granted",
             "approval.declined",
@@ -295,6 +297,11 @@ def describe(event: Event) -> str:
             if p.get("outcome") == "verified":
                 return f"Plan ran {how} and verified: {_steps(p)}"
             return f"Plan ran {how} and failed ({_text(p.get('reason'))})"
+        case "change.proposed":
+            where = "a pull request is open" if p.get("url") else "the branch is pushed"
+            return f"Change proposed, nothing applied: {_steps(p)} ({where})"
+        case "change.failed":
+            return f"The change could not be proposed: {_text(p.get('reason'))}"
         case "approval.requested":
             return "Go or No-go asked on your phone"
         case "approval.granted":
@@ -325,6 +332,11 @@ def describe(event: Event) -> str:
         case "killswitch.released":
             return f"Automation resumed (from the {_text(p.get('via'))})"
     return event.kind
+
+
+def _link(value: Any) -> str | None:
+    """A URL only if it is one a page may link to: the forge's, over TLS."""
+    return value if isinstance(value, str) and value.startswith("https://") else None
 
 
 def _steps(payload: dict[str, Any]) -> str:
@@ -479,6 +491,8 @@ _AFTER_PLAN = (
     "approval.expired",
     "plan.cancelled",
     "plan.completed",
+    "change.proposed",
+    "change.failed",
     "action.started",
     "action.undone",
 )
@@ -525,7 +539,15 @@ def plan_of(events: Sequence[Event]) -> PlanView | None:
     if "plan.cancelled" in later:
         reason = _text(later["plan.cancelled"].payload.get("reason"))
         state, story, waiting = "cancelled", f"Cancelled: {reason}. Nothing ran.", False
-    if "approval.granted" in later or level == "auto":
+    if "change.proposed" in later:
+        url = later["change.proposed"].payload.get("url")
+        where = "A pull request is open" if url else "A branch is pushed"
+        state, waiting = "proposed", False
+        story = f"{where} on your configuration repository. Nothing is applied until you merge."
+    elif "change.failed" in later:
+        reason = _text(later["change.failed"].payload.get("reason"))
+        state, story, waiting = "failed", f"The change could not be proposed: {reason}.", False
+    elif "approval.granted" in later or level == "auto":
         how = "You said Go." if "approval.granted" in later else "It ran without asking (auto)."
         state, story, waiting = "running", f"{how} The executor is running it.", False
         done = later.get("plan.completed")
@@ -661,6 +683,7 @@ class IncidentView:
     cost: float
     calls: frozenset[str]
     plan: PlanView | None = None
+    changes: tuple[tuple[str, str | None], ...] = ()  # what was proposed, and the pull request
 
 
 def incident_view(
@@ -690,7 +713,12 @@ def incident_view(
         failure = str(redact(describe(failed), max_length=300))
     return IncidentView(
         strip=strip_of(incident, events, now, acting=acting),
-        plan=plan_of(events),
+        plan=plan_of([e for e in events if e.payload.get("kind") != "change"] or events),
+        changes=tuple(
+            (_steps(e.payload), _link(e.payload.get("url")))
+            for e in events
+            if e.kind == "change.proposed"
+        ),
         rows=tuple(row_of(event, detail=True) for event in events),
         verdict=None if verdict is None else redact(verdict.payload),
         triage_skip=None if skipped is None else _text(skipped.payload.get("skip")),

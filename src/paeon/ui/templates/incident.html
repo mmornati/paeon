@@ -118,6 +118,15 @@
   {% else %}
     <p class="lead">No plan: nothing in the analysis was a catalog action, and no runbook matched.</p>
   {% endif %}
+  {% if view.changes %}
+  <h3>Changes proposed</h3>
+  <ul class="evidence">
+    {% for steps, url in view.changes -%}
+    <li><span class="typed">{{ steps }}</span> {% if url %}<a class="cite" href="{{ url }}" rel="noreferrer noopener">pull request</a>{% else %}<span class="dim">branch pushed</span>{% endif %}</li>
+    {% endfor -%}
+  </ul>
+  <p class="note">A change is never applied by Paeon. Merging the pull request is your approval.</p>
+  {% endif %}
 </section>
 {% endif %}
 

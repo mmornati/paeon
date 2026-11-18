@@ -34,6 +34,7 @@ from typing import Any
 import httpx2 as httpx
 
 from paeon import autonomy, digest
+from paeon.actuators import ActuatorError, CoolifyActuator, RepositoryActuator
 from paeon.catalog import ACTIONS, Proposal, Step
 from paeon.links import LinkError, Signer
 from paeon.rules import Level, Rules, Verify
@@ -169,12 +170,22 @@ class ExecutorStore(Store):
 class DockerActuator:
     """The few Docker calls that change something, through a proxy that allows only those."""
 
-    def __init__(self, http: httpx.Client) -> None:
+    def __init__(self, http: httpx.Client, read: httpx.Client | None = None) -> None:
+        # Two endpoints when the proxy that may act allows nothing else: with the usual socket
+        # proxies, "POST on /containers" also means create, delete and exec.
         self._http = http
+        self._read = read or http
+
+    def close(self) -> None:
+        self._http.close()
+        self._read.close()
 
     def find(self, name: str) -> tuple[str, dict[str, Any]] | None:
         """The id and state of the container with exactly this name."""
-        for entry in self._http.get("/containers/json", params={"all": "true"}).json():
+        listing = self._read.get("/containers/json", params={"all": "true"})
+        if listing.status_code >= 400:
+            raise RuntimeError(f"docker answered HTTP {listing.status_code} to the listing")
+        for entry in listing.json():
             names = [str(n).lstrip("/") for n in entry.get("Names") or []]
             container_id = entry.get("Id")
             if name in names and isinstance(container_id, str) and container_id.isalnum():
@@ -182,7 +193,7 @@ class DockerActuator:
         return None
 
     def state(self, container_id: str) -> dict[str, Any]:
-        data = self._http.get(f"/containers/{container_id}/json").json()
+        data = self._read.get(f"/containers/{container_id}/json").json()
         state = data.get("State") or {}
         return {
             "running": bool(state.get("Running")),
@@ -197,6 +208,37 @@ class DockerActuator:
         response = self._http.post(f"/containers/{container_id}/{verb}", params=params)
         if response.status_code >= 400:
             raise RuntimeError(f"docker answered HTTP {response.status_code}")
+
+    def networks(self, container_id: str) -> tuple[str | None, dict[str, dict[str, Any]]]:
+        """The compose service of a container, and its user-defined networks with the names
+        it answers to on each."""
+        data = self._read.get(f"/containers/{container_id}/json").json()
+        labels = (data.get("Config") or {}).get("Labels") or {}
+        service = labels.get("com.docker.compose.service")
+        found: dict[str, dict[str, Any]] = {}
+        for name, net in ((data.get("NetworkSettings") or {}).get("Networks") or {}).items():
+            network_id = net.get("NetworkID")
+            if name in ("bridge", "host", "none") or not isinstance(network_id, str):
+                continue  # the default networks have no aliases
+            names = [*(net.get("Aliases") or []), *(net.get("DNSNames") or [])]
+            found[name] = {
+                "id": network_id,
+                "aliases": [str(alias) for alias in net.get("Aliases") or []],
+                "names": {str(alias) for alias in names},
+            }
+        return (service if isinstance(service, str) and service else None), found
+
+    def reconnect(self, network_id: str, container_id: str, aliases: list[str]) -> None:
+        """Take the container off a network and put it back with these aliases."""
+        if not network_id.isalnum():
+            raise RuntimeError("docker returned an unexpected network id")
+        for verb, body in (
+            ("disconnect", {"Container": container_id, "Force": False}),
+            ("connect", {"Container": container_id, "EndpointConfig": {"Aliases": aliases}}),
+        ):
+            response = self._http.post(f"/networks/{network_id}/{verb}", json=body)
+            if response.status_code >= 400:
+                raise RuntimeError(f"docker answered HTTP {response.status_code} to {verb}")
 
 
 @contextlib.contextmanager
@@ -238,6 +280,8 @@ class Executor:
         *,
         signer: Signer | None = None,
         docker: DockerActuator | None = None,
+        coolify: CoolifyActuator | None = None,
+        repository: RepositoryActuator | None = None,
         ntfy_token: str | None = None,
         kill_env: bool = False,
         publish: Callable[..., None] = digest.publish_ntfy,
@@ -250,6 +294,8 @@ class Executor:
         self._actions = rules.actions
         self._signer = signer
         self._docker = docker
+        self._coolify = coolify
+        self._repository = repository
         self._ntfy_token = ntfy_token
         self._kill_env = kill_env
         self._publish = publish
@@ -284,7 +330,8 @@ class Executor:
             "kill_switch": self.killed(),
             "kill_switch_env": self._kill_env,
             "can_ask": self.can_ask(),
-            "can_act": self._docker is not None,
+            "can_act": self._docker is not None or self._coolify is not None,
+            "can_change": self._repository is not None,
             "pending": [
                 {
                     "proposal": p.id,
@@ -363,7 +410,15 @@ class Executor:
             if known.hash == proposal.hash and known.status not in ("cancelled", "expired"):
                 # The core retries: the same plan for the same incident is the same proposal.
                 return {"status": known.status, "proposal": known.id, "level": known.level}
+        # A change (a pull request) and a plan of actions live side by side for one incident:
+        # each supersedes, and is limited by, only its own kind.
+        earlier = [known for known in earlier if known.proposal.changes == proposal.changes]
         level, reasons = self._level(proposal, earlier, now)
+        if proposal.changes and level in ("approve", "auto"):
+            # Tier 2 is never applied. Opening the pull request needs no Go: merging it is
+            # the approval, and it is given on the forge, behind its own login.
+            level = "approve"
+            reasons = [*reasons, "a configuration change is only ever proposed"]
         for known in earlier:
             if known.status == "pending" and self._store.move(
                 known.id, to="cancelled", only_from=("pending",)
@@ -371,9 +426,11 @@ class Executor:
                 self._journal(
                     "plan.cancelled", {"proposal": known.id, "reason": "superseded"}, incident
                 )
-        waits = level == "approve"
+        waits = level == "approve" and not proposal.changes
         expires = now + timedelta(minutes=self._actions.approval_minutes) if waits else None
         status = {"approve": "pending", "auto": "approved"}.get(level, "recorded")
+        if proposal.changes and level == "approve":
+            status = "approved"
         proposal_id = self._store.add_proposal(
             proposal, status=status, level=level, now=now, expires_at=expires
         )
@@ -385,6 +442,7 @@ class Executor:
                 "origin": proposal.origin,
                 "runbook": proposal.runbook,
                 "mode": proposal.mode,
+                "kind": "change" if proposal.changes else "actions",
                 "level": level,
                 "held_back_by": reasons,
                 "steps": [step.label for step in proposal.steps],
@@ -393,7 +451,9 @@ class Executor:
             },
             incident,
         )
-        if level == "approve" and expires is not None:
+        if proposal.changes and status == "approved":
+            self._spawn(lambda: self.open_change(proposal_id))
+        elif level == "approve" and expires is not None:
             self._ask(proposal_id, proposal, expires, now)
         elif level == "auto":
             self._spawn(lambda: self.execute(proposal_id, "auto"))
@@ -402,14 +462,16 @@ class Executor:
     def _refusal(self, proposal: Proposal) -> str | None:
         """Why a plan cannot even be considered. Checked against this process's catalog."""
         for step in proposal.steps:
-            kind = ACTIONS.get(step.action)
-            entry = self._actions.catalog.get(step.action)
-            if kind is None or not kind.proposable or entry is None:
-                return f"{step.action} is not in the catalog"
-            if kind.tier != 1:  # pragma: no cover - every action in code is tier 1 today
-                return f"{step.action} is not a tier 1 action"
-            if not entry.allows(step.target):
-                return f"{step.action} is not allowed on {step.target}"
+            refusal = self._actions.refusal(step.action, step.target, step.params)
+            if refusal is not None:
+                return refusal
+        if proposal.changes:
+            if any(step.tier != 2 for step in proposal.steps):
+                return "a configuration change and an action cannot be one plan"
+            if self._repository is None:
+                return "the executor has no deployment repository"
+            if proposal.origin == "runbook":
+                return "a runbook does not change configuration"
         if proposal.origin == "runbook":
             steps = [(step.action, step.target) for step in proposal.steps]
             known = any(
@@ -457,8 +519,11 @@ class Executor:
                 level = to
                 reasons.append(why)
 
-        if self._docker is None:
+        backends = {ACTIONS[step.action].backend for step in proposal.steps}
+        if "docker" in backends and self._docker is None:
             cap("suggest", "the executor has no Docker endpoint")
+        if "coolify" in backends and self._coolify is None:
+            cap("suggest", "the executor has no Coolify endpoint")
         # Counted from the plans themselves, not from their completion: a burst of proposals
         # must hit the limit before the first of them has finished running.
         hour_ago = now - timedelta(hours=1)
@@ -475,7 +540,7 @@ class Executor:
             cap("approve", "the confidence is under the threshold")
         if any(known.status in _SPENT for known in earlier):
             cap("approve", "a plan already ran for this incident")
-        if level == "approve" and not self.can_ask():
+        if level == "approve" and not proposal.changes and not self.can_ask():
             cap("suggest", "there is no approval channel (signing key, public_url, ntfy)")
         return level, reasons
 
@@ -505,6 +570,7 @@ class Executor:
         actions: list[dict[str, Any]],
         priority: int = 4,
         tags: tuple[str, ...] = ("wrench",),
+        click: str | None = None,
     ) -> None:
         ntfy = self._actions.ntfy
         if ntfy is None:
@@ -517,7 +583,7 @@ class Executor:
                 message=message,
                 priority=priority,
                 tags=tags,
-                click=self._details(incident_id),
+                click=click or self._details(incident_id),
                 actions=actions,
             )
         except RuntimeError as exc:
@@ -782,31 +848,148 @@ class Executor:
         """Pre-check, apply, verify, roll back. Returns (worked, why not, rolled back)."""
         kind = ACTIONS[step.action]
         entry = self._actions.catalog.get(step.action)
-        docker = self._docker
-        if entry is None or docker is None or not entry.allows(step.target):
+        if entry is None or self._actions.refusal(step.action, step.target, step.params):
             return False, "not allowed by the catalog", False  # pragma: no cover - checked before
-        with target_lock(self._actions.lock_dir, step.target) as held:
+        # A container's lock is the file other repair scripts take: `<container>.lock`.
+        docker = kind.backend == "docker"
+        name = step.target if docker else f"{kind.backend}-{step.target}"
+        with target_lock(self._actions.lock_dir, name) as held:
             if not held:
-                return False, "another repair holds this container's lock", False
+                what = "container" if docker else "resource"
+                return False, f"another repair holds this {what}'s lock", False
             try:
-                found = docker.find(step.target)
-                if found is None:
-                    return False, "no such container", False
-                container_id, before = found
-                # Is the world still as the plan assumed?
-                if step.action == "start_container" and before["running"]:
-                    return False, "it is already running", False
-                if step.action == "unpause_container" and not before["paused"]:
-                    return False, "it is not paused", False
-                docker.apply(container_id, kind.verb)
-                ok, reason = self._verify(docker, container_id, entry.verify)
-                if ok or kind.inverse is None:
-                    return ok, reason, False
-                docker.apply(container_id, ACTIONS[kind.inverse].verb)
-                return False, reason, True
+                if kind.backend == "coolify":
+                    return self._apply_coolify(step, entry.verify)
+                return self._apply_docker(step, kind, entry.verify)
+            except ActuatorError as exc:
+                return False, str(exc), False
             except (httpx.HTTPError, RuntimeError, ValueError) as exc:
                 detail = str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__
                 return False, f"docker: {detail}", False
+
+    def _apply_docker(self, step: Step, kind: Any, verify: Verify) -> tuple[bool, str, bool]:
+        docker = self._docker
+        if docker is None:
+            return False, "the executor has no Docker endpoint", False
+        found = docker.find(step.target)
+        if found is None:
+            return False, "no such container", False
+        container_id, before = found
+        # Is the world still as the plan assumed?
+        if step.action == "start_container" and before["running"]:
+            return False, "it is already running", False
+        if step.action == "unpause_container" and not before["paused"]:
+            return False, "it is not paused", False
+        if step.action == "reattach_network_alias":
+            service, networks = docker.networks(container_id)
+            if service is None:
+                return False, "it is not a compose service: there is no alias to give back", False
+            missing = {n: net for n, net in networks.items() if service not in net["names"]}
+            if not missing:
+                return False, f"it already answers to {service} on every network", False
+            for net in missing.values():
+                docker.reconnect(net["id"], container_id, [*net["aliases"], service])
+            _, after = docker.networks(container_id)
+            if any(service not in net["names"] for net in after.values()):
+                return False, "the alias is still missing after reconnecting", False
+        else:
+            docker.apply(container_id, kind.verb)
+        ok, reason = self._verify(docker, container_id, verify)
+        if ok or kind.inverse is None:
+            return ok, reason, False
+        docker.apply(container_id, ACTIONS[kind.inverse].verb)
+        return False, reason, True
+
+    def _apply_coolify(self, step: Step, verify: Verify) -> tuple[bool, str, bool]:
+        coolify = self._coolify
+        if coolify is None:
+            return False, "the executor has no Coolify endpoint", False
+        coolify.status(step.target)  # it must exist and answer before it is restarted
+        coolify.restart(step.target)
+        self._sleep(verify.wait_seconds)
+        reason = "not checked"
+        for _ in range(max(int(verify.timeout_seconds // POLL_SECONDS), 1)):
+            status = coolify.status(step.target)
+            # Coolify's own word is `running:healthy`. A resource that reports none is
+            # taken at its restart being accepted, unless a health URL says otherwise.
+            if status is not None and (not status.startswith("running") or "unhealthy" in status):
+                reason = f"coolify says {status}"
+            elif verify.http is not None and not self._http_ok(verify.http):
+                reason = "the health URL does not answer"
+            else:
+                return True, "", False
+            self._sleep(POLL_SECONDS)
+        return False, reason, False
+
+    def open_change(self, proposal_id: int) -> None:
+        """Turn a configuration change into a branch and a pull request. Nothing is applied."""
+        plan = self._store.proposals(proposal_id=proposal_id)[0]
+        incident = plan.incident_id
+        steps = [step.label for step in plan.proposal.steps]
+        if self.killed() or self._repository is None:
+            if self._store.move(proposal_id, to="cancelled", only_from=("approved",)):
+                self._journal(
+                    "plan.cancelled",
+                    {"proposal": proposal_id, "reason": "the kill switch was engaged"},
+                    incident,
+                )
+            return
+        if not self._store.move(proposal_id, to="running", only_from=("approved",)):
+            return
+        try:
+            with target_lock(self._actions.lock_dir, "repository") as held:
+                if not held:
+                    raise ActuatorError("another change is being prepared")
+                change = self._repository.open(proposal_id, plan.proposal, plan.proposal.steps)
+        except ActuatorError as exc:
+            self._store.move(proposal_id, to="failed", only_from=("running",))
+            self._journal(
+                "change.failed",
+                {"proposal": proposal_id, "steps": steps, "reason": str(exc)},
+                incident,
+            )
+            return
+        except Exception:
+            log.exception("plan %d: the change crashed", proposal_id)
+            self._store.move(proposal_id, to="failed", only_from=("running",))
+            self._journal(
+                "change.failed",
+                {"proposal": proposal_id, "steps": steps, "reason": "unexpected error"},
+                incident,
+            )
+            return
+        self._store.move(proposal_id, to="done", only_from=("running",))
+        self._journal(
+            "change.proposed",
+            {
+                "proposal": proposal_id,
+                "steps": steps,
+                "branch": change.branch,
+                "url": change.url,
+                "files": list(change.files),
+            },
+            incident,
+        )
+        where = "A pull request is open." if change.url else f"Branch {change.branch} is pushed."
+        self._notify(
+            incident,
+            "change",
+            title=f"Incident #{incident}: a change waits for your review",
+            message="\n".join(
+                [
+                    plan.proposal.title,
+                    plan.proposal.summary,
+                    "",
+                    *[f"{n}. {label}" for n, label in enumerate(steps, 1)],
+                    "",
+                    f"{where} Nothing was applied: merging it is your approval.",
+                ]
+            ),
+            actions=[],
+            priority=3,
+            tags=("memo",),
+            click=change.url,
+        )
 
     def _verify(
         self, docker: DockerActuator, container_id: str, verify: Verify
@@ -907,6 +1090,8 @@ class Executor:
 def _plain(steps: Any) -> list[str]:
     return [
         f"{number}. {ACTIONS[step.action].summary} ({step.target})"
+        if not step.params
+        else f"{number}. {step.label}"
         for number, step in enumerate(steps, 1)
     ]
 

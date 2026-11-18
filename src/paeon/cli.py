@@ -12,6 +12,7 @@ import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from paeon import __version__, autonomy
 from paeon import digest as digests
@@ -91,6 +92,60 @@ def _autonomy(db: str) -> int:
     finally:
         store.close()
     return 0
+
+
+def _replay(args: argparse.Namespace) -> int:
+    from paeon import replay
+    from paeon.config import _secret
+    from paeon.models import build_client
+
+    rules = _rules()
+    stage = rules.triage if args.stage == "triage" else rules.investigation
+    since = None if args.days is None else datetime.now(UTC) - timedelta(days=args.days)
+    skipped = 0
+    if args.corpus:
+        with Path(args.corpus).open(encoding="utf-8") as file:
+            triaged, investigated = replay.read_corpus(file)
+    else:
+        store = Store(args.db)
+        try:
+            triaged = replay.triage_cases(store, since=since)
+            investigated, skipped = replay.investigation_cases(store, since=since)
+        finally:
+            store.close()
+    cases: Sequence[Any] = triaged if args.stage == "triage" else investigated
+    cases = cases[-args.limit :] if args.limit else cases
+    if args.export:
+        with Path(args.export).open("w", encoding="utf-8") as file:
+            count = replay.write_corpus(list(cases), file)
+        sys.stdout.write(f"{count} cases written to {args.export}\n")
+        return 0
+    if args.dry_run or not cases:
+        for case in cases:
+            rated = f" (you said {case.label})" if case.label else ""
+            sys.stdout.write(f"#{case.incident_id} {case.title}{rated}\n")
+        sys.stdout.write(f"{len(cases)} cases, {skipped} that cannot be replayed.\n")
+        return 0
+    if stage.model not in rules.models:
+        raise ConfigError(f"{args.stage}.model {stage.model!r} is not defined under `models`")
+    alias = rules.models[stage.model]
+    if alias.model == "auto":
+        sys.stderr.write(
+            "paeon: the model is `auto`: a gateway may answer with a different model each"
+            " time. Pin one to tell a prompt change from a routing change.\n"
+        )
+    key = _secret(os.environ, alias.api_key_env) if alias.api_key_env else ""
+    client = build_client(alias, key)
+    try:
+        if args.stage == "triage":
+            report = replay.report_triage(replay.replay_triage(cases, client, alias))
+        else:
+            results = replay.replay_investigation(cases, client, rules)
+            report = replay.report_investigation(results, skipped)
+    finally:
+        client.close()
+    sys.stdout.write("\n".join(report.lines) + f"\nCost of this replay: {report.cost:g}.\n")
+    return 1 if report.failed else 0
 
 
 def _switch(db: str, kind: str, payload: dict[str, str]) -> int:
@@ -194,6 +249,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     reinstate.add_argument("action")
     reinstate.add_argument("target")
     reinstate.add_argument("--db", default=executor_db, help="the executor's database")
+    replay = commands.add_parser(
+        "replay", help="re-run recorded incidents against the model and prompts of today"
+    )
+    replay.add_argument("stage", choices=["triage", "investigation"])
+    replay.add_argument("--db", default=default_db)
+    replay.add_argument("--days", type=int, help="only incidents of the last days")
+    replay.add_argument("--limit", type=int, help="only the most recent cases")
+    replay.add_argument("--corpus", help="read the cases from this file instead of the database")
+    replay.add_argument("--export", help="write the cases to this file and call no model")
+    replay.add_argument("--dry-run", action="store_true", help="list the cases, call no model")
     events.add_argument("--kind", help="only this kind, e.g. alert.firing")
     events.add_argument("--after", type=int, default=0, help="only events with a greater id")
     args = parser.parse_args(argv)
@@ -213,6 +278,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _mcp(args.db)
         if args.command == "autonomy":
             return _autonomy(args.db)
+        if args.command == "replay":
+            return _replay(args)
         if args.command == "stop":
             return _switch(args.db, "killswitch.engaged", {})
         if args.command == "resume":

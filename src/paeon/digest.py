@@ -125,6 +125,26 @@ def _line(line: DigestLine) -> str:
     return f"{text}\n    {line.reason}" if line.reason else text
 
 
+def to_rate(digest: Digest, limit: int) -> list[DigestLine]:
+    """The verdicts worth a question, most useful first: a model's own verdict that nobody has
+    rated yet, those it would have demoted before the others."""
+    asked = [
+        line
+        for line in digest.lines
+        if line.verdict is not None and not line.fail_open and line.feedback is None
+    ]
+    asked.sort(key=lambda line: (not line.demoted, -line.incident.id))
+    return asked[:limit]
+
+
+def question(line: DigestLine) -> tuple[str, str]:
+    """Title and text of the short message that asks whether one verdict was right."""
+    incident = line.incident
+    sure = "" if line.confidence is None else f", {line.confidence:.0%} sure"
+    title = f"#{incident.id} {incident.title}: {line.verdict}{sure}"
+    return title, f"{line.reason or 'No reason given.'}\n\nWas triage right?"
+
+
 def render(digest: Digest, *, console: bool = False) -> str:
     """Plain text, for a terminal or a notification."""
     if not digest.lines:
@@ -141,7 +161,7 @@ def render(digest: Digest, *, console: bool = False) -> str:
         parts += ["", "Kept:", *(_line(line) for line in kept)]
     parts += [
         "",
-        "Was triage right? Tap to open the console and say so on each incident."
+        "Was triage right? Tap to open the console, or answer the questions that follow."
         if console
         else "Was triage right? paeon feedback <id> up|down",
     ]

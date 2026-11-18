@@ -40,7 +40,7 @@ from paeon.models import (
     cost_of,
 )
 from paeon.redact import redact
-from paeon.rules import CatalogEntry, Rules
+from paeon.rules import Actions, CatalogEntry, Rules
 from paeon.schema import Alert, Incident, StageState
 from paeon.store import Store
 from paeon.tools import Toolbox
@@ -84,6 +84,13 @@ class PlanStep(BaseModel):
     # step can ever be run by code. Everything else is a sentence for a person.
     catalog_action: str | None = Field(default=None, max_length=64)
     target: str | None = Field(default=None, max_length=128)
+    # Only for `config_change`: the dotted key in the file, and its new value.
+    key: str | None = Field(default=None, max_length=200)
+    value: str | None = Field(default=None, max_length=100)
+
+    @property
+    def params(self) -> dict[str, str]:
+        return {name: text for name, text in (("key", self.key), ("value", self.value)) if text}
 
     @property
     def typed(self) -> bool:
@@ -117,7 +124,13 @@ def submit_spec(catalog: Mapping[str, CatalogEntry] | None = None) -> ToolSpec:
             "enum": sorted(catalog),
             "description": "Only when the step is exactly this action on one container.",
         }
-        step["target"] = {**_TEXT, "description": "The container's exact name."}
+        step["target"] = {
+            **_TEXT,
+            "description": "The exact name of the container, resource or file the action is for.",
+        }
+        if "config_change" in catalog:
+            step["key"] = {**_TEXT, "description": "config_change only: the dotted key."}
+            step["value"] = {**_TEXT, "description": "config_change only: the new value."}
     return _submit_spec(step)
 
 
@@ -218,23 +231,40 @@ Finish by calling `{SUBMIT}`.
 """
 
 CATALOG_PROMPT = """
-A few fixes can be run by code for the owner, once they have approved them (you still cannot
-run anything). They are listed below with the containers each may be applied to. When a step of
-your plan is exactly one of them on one container, set `catalog_action` and `target` (the
-container's exact name) on that step. Leave both out for every other step, which stays advice
-for a person. Never bend the right fix into one of these because it is the one on offer, and
-never propose one unless your evidence says it addresses the cause.
+A few fixes can be carried out by code for the owner (you still cannot run anything). They are
+listed below with what each may be applied to. When a step of your plan is exactly one of them,
+set `catalog_action` and `target` (an exact name from the list or from the tools) on that step.
+Leave both out for every other step, which stays advice for a person. Never bend the right fix
+into one of these because it is the one on offer, and never propose one unless your evidence
+says it addresses the cause.
 
+"""
+CHANGE_PROMPT = """
+`config_change` is different: it is never applied. It becomes a pull request on the owner's
+configuration repository, changing one existing value in one file, for them to review and
+merge. Give the file's name as `target`, the dotted `key` and the new `value`. Use it for the
+durable fix (a limit that is too low), next to the action that restores service now.
 """
 
 
-def catalog_prompt(catalog: Mapping[str, CatalogEntry]) -> str:
-    lines = [
-        f"- {name}: {ACTIONS[name].summary.lower()}; containers: {', '.join(entry.targets)}"
-        + (f"; never: {', '.join(entry.deny)}" if entry.deny else "")
-        for name, entry in sorted(catalog.items())
-    ]
-    return CATALOG_PROMPT + "\n".join(lines) + "\n"
+def catalog_prompt(actions: Actions) -> str:
+    lines = []
+    for name, entry in sorted(actions.catalog.items()):
+        kind = ACTIONS[name]
+        line = f"- {name}: {kind.summary.lower()}; allowed on: {', '.join(entry.targets)}"
+        if entry.deny:
+            line += f"; never: {', '.join(entry.deny)}"
+        if kind.backend == "coolify" and actions.coolify is not None:
+            line += f"; resources: {', '.join(sorted(actions.coolify.resources))}"
+        if kind.backend == "repository" and actions.repository is not None:
+            files = [
+                f"{file} (keys {', '.join(spec.keys)})"
+                for file, spec in sorted(actions.repository.files.items())
+            ]
+            line += f"; files: {'; '.join(files)}"
+        lines.append(line)
+    change = CHANGE_PROMPT if "config_change" in actions.catalog else ""
+    return CATALOG_PROMPT + "\n".join(lines) + "\n" + change
 
 
 @dataclass(frozen=True)
@@ -270,7 +300,7 @@ class Investigator:
         self._after = after
         actions = rules.actions
         self._catalog = dict(actions.catalog) if actions.enabled else {}
-        self._system = SYSTEM_PROMPT + (catalog_prompt(self._catalog) if self._catalog else "")
+        self._system = SYSTEM_PROMPT + (catalog_prompt(actions) if self._catalog else "")
 
     # --- which incidents ----------------------------------------------------------------------
 
@@ -327,6 +357,15 @@ class Investigator:
                 "alias": config.model,
                 "prompt_version": PROMPT_VERSION,
                 "tools": [spec.name for spec in specs],
+                # Kept so that the investigation can be replayed with the tools as they were.
+                "specs": [
+                    {
+                        "name": spec.name,
+                        "description": spec.description,
+                        "input_schema": spec.input_schema,
+                    }
+                    for spec in specs
+                ],
                 "input": pack,
             },
             incident_id=incident.id,
@@ -463,22 +502,22 @@ class Investigator:
     def _checked(self, findings: Findings) -> Findings:
         """Refuse a typed step the catalog does not allow, before anyone is shown it."""
         for number, step in enumerate(findings.plan, 1):
-            if step.catalog_action is None and step.target is None:
+            if step.catalog_action is None and step.target is None and not step.params:
                 continue
             if not self._catalog:  # actions are off: a typed step is only its sentence
-                step.catalog_action = step.target = None
+                step.catalog_action = step.target = step.key = step.value = None
                 continue
-            entry = self._catalog.get(step.catalog_action or "")
             target = step.target or ""
-            if entry is None or re.fullmatch(TARGET_PATTERN, target) is None:
+            if step.catalog_action is None or re.fullmatch(TARGET_PATTERN, target) is None:
                 raise ValueError(
                     f"plan step {number}: catalog_action must be one of {sorted(self._catalog)}"
-                    " with the exact name of one container as target, or both left out"
+                    " with an exact name as target, or both left out"
                 )
-            if not entry.allows(target):
+            refusal = self._rules.actions.refusal(step.catalog_action, target, step.params)
+            if refusal is not None:
                 raise ValueError(
-                    f"plan step {number}: {step.catalog_action} is not allowed on {target!r};"
-                    " describe the step for a person instead and leave catalog_action out"
+                    f"plan step {number}: {refusal}; describe the step for a person instead"
+                    " and leave catalog_action out"
                 )
         return findings
 
@@ -654,7 +693,7 @@ def render(findings: Findings) -> str:
         parts += ["", "Suggested, for you to do:"]
         parts += [
             f"{number}. {step.action} [{step.risk} risk]"
-            + (f" (Paeon can run it: {step.catalog_action} on {step.target})" if step.typed else "")
+            + (f" (Paeon can do it: {step.catalog_action} on {step.target})" if step.typed else "")
             for number, step in enumerate(findings.plan, 1)
         ]
     unverified = sum(1 for item in findings.evidence if not item.verified)

@@ -383,3 +383,87 @@ def test_actions_need_the_executor_token(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="PAEON_EXECUTOR_TOKEN"):
         load(env)
     assert load({**env, "PAEON_EXECUTOR_TOKEN": "x" * 24}).executor_token == "x" * 24
+
+
+def test_the_digest_asks_about_each_verdict_with_two_buttons(
+    store: Store, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from paeon import digest as digests
+
+    sent: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        digests, "publish_ntfy", lambda ntfy, token, **message: sent.append(message)
+    )
+    base = load({"PAEON_INGEST_TOKEN": TOKEN})
+    document = {
+        "actions": ACTIONS,
+        "ui": {"public_url": "https://paeon.example.org"},
+        "digest": {
+            "hour": 0,
+            "feedback": 2,
+            "ntfy": {"url": "https://ntfy.example.org", "topic": "incidents"},
+        },
+    }
+    settings = Settings(
+        db_path=base.db_path,
+        host=base.host,
+        port=base.port,
+        ingest_token=TOKEN,
+        openobserve=None,
+        heartbeat_url=None,
+        heartbeat_seconds=60,
+        rules=parse_rules(document),
+        executor_token=TOKEN,
+    )
+    fake = FakeExecutor()
+    send = create_app(settings, store, executor=fake).state.send_digest
+    recorder = Recorder(store, Correlator(store, settings.rules))
+    verdicts: list[tuple[str, str | None, str | None]] = [
+        ("real", None, None),
+        ("noise", None, None),
+        ("noise", "budget", None),
+        ("transient", None, "up"),
+        ("known_issue", None, None),
+    ]
+    for number, (verdict, fail_open, vote) in enumerate(verdicts, 1):
+        labels = {"host": f"h{number}"}
+        recorder.observe(
+            alert(Status.FIRING, number, f"a{number}", title=f"m{number}", labels=labels)
+        )
+        store.append(
+            "triage.verdict",
+            {
+                "verdict": verdict,
+                "effective_verdict": "real" if fail_open else verdict,
+                "fail_open": fail_open,
+                "confidence": 0.9,
+                "reason": f"because {number}",
+            },
+            incident_id=number,
+        )
+        if vote:
+            store.append("feedback.recorded", {"about": "triage", "vote": vote}, incident_id=number)
+    assert send(T0 + timedelta(hours=1))
+    summary, *questions = sent
+    assert "answer the questions that follow" in summary["message"]
+    assert summary["click"] == "https://paeon.example.org/ui"
+    # Two at most, the demoted one first; never a fail-open or an already rated verdict.
+    assert [q["title"] for q in questions] == [
+        "#2 m2: noise, 90% sure",
+        "#5 m5: known_issue, 90% sure",
+    ]
+    first = questions[0]
+    assert first["message"] == "because 2\n\nWas triage right?"
+    assert first["priority"] == 1
+    assert first["click"] == "https://paeon.example.org/ui/incidents/2"
+    assert [(a["label"], a["url"]) for a in first["actions"]] == [
+        ("Right", "https://act.example.org/act/up2"),
+        ("Wrong", "https://x/down"),
+    ]
+    assert next(store.events(kind="digest.sent")).payload["asked"] == 2
+
+    # Without the executor there is nobody to sign a button: the digest alone goes out.
+    sent.clear()
+    fake.down = True
+    assert send(T0 + timedelta(hours=17))  # the next day, with the same incidents in reach
+    assert len(sent) == 1

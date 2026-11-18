@@ -30,7 +30,7 @@ a root cause, the evidence for it, and a plan.
 > [!IMPORTANT]
 > **Out of the box Paeon takes no action on your server.** It records, correlates, triages,
 > investigates and drafts postmortems. Acting is a second process you add on purpose, with a
-> catalog of three container actions, and nothing runs without your Go until you say otherwise.
+> closed catalog of actions, and nothing runs without your Go until you say otherwise.
 > It is alpha software, and the acting part has not yet run on a real server for long: run it
 > next to your alerting, never instead of it.
 
@@ -186,6 +186,7 @@ The investigator's tools:
 | `paeon stop` / `paeon resume` | The kill switch, next to the executor |
 | `paeon reinstate <alert> <action> <container>` | Lift a demotion, next to the executor |
 | `paeon mcp` | Serve the record read-only to an assistant, over MCP on stdio |
+| `paeon replay triage\|investigation` | Re-run recorded incidents against the model and prompts of today |
 
 The same is available over HTTP behind the bearer token: `GET /incidents`, `GET /incidents/{id}`,
 `POST /incidents/{id}/feedback`, `GET /digest`, `GET /postmortems`, `GET /autonomy`, and
@@ -204,6 +205,37 @@ claude mcp add paeon -- ssh server-1 docker exec -i paeon paeon mcp
 
 Then "has this happened before?" is a question it can answer. What it returns is redacted like
 everything a model reads, and it has no tool that writes.
+
+### Before you change a prompt or a model
+
+Every triage call recorded what it was given, and every investigation its tools and what each
+one returned. `paeon replay` sends the same again to the model as it is configured now:
+
+```bash
+paeon replay triage --days 90
+```
+
+It compares with what was said then and with what you said about it. A verdict you rated right
+that changes is a regression, and one that would now be called noise is reported loudest; the
+command exits 1. For investigations the old and new root causes are printed side by side, and
+a call the model did not make at the time answers "not recorded". `--export corpus.jsonl` writes
+the cases to a file you can keep in git, `--corpus` replays from it, `--dry-run` lists them.
+
+A replay writes nothing to the event log and counts against no budget, but it does call the
+model: it prints what that cost. Pin the model for it; with a gateway choosing, a prompt change
+and a routing change cannot be told apart.
+
+### Traces
+
+```yaml
+telemetry:
+  otlp_endpoint: http://openobserve:5080/api/default
+  authorization_env: PAEON_OTLP_AUTHORIZATION     # "Basic <base64 of user:password>"
+```
+
+Each incident becomes an OpenTelemetry trace: a span for the incident and one per step, with its
+duration, model, token counts, cost and outcome. Spans carry facts about a step and never its
+content: no prompt, no answer, no tool input or result.
 
 ### Console
 
@@ -260,7 +292,8 @@ actions:
 
 | | |
 |---|---|
-| **The catalog is closed** | Three actions exist, all on containers of the Docker host: `restart_container`, `start_container`, `unpause_container`. The rules file switches them on for the containers you name; it cannot add one. Anything else in a plan stays a sentence for you. |
+| **The catalog is closed** | Six actions exist. On a container: `restart_container`, `start_container`, `unpause_container`, `reattach_network_alias`. On a Coolify resource you named: `coolify_restart`. On a configuration file you named: `config_change`. The rules file switches them on for the targets you name; it cannot add one. Anything else in a plan stays a sentence for you. |
+| **Configuration is proposed, never applied** | `config_change` changes one existing value of one YAML file on a branch of your deployment repository and opens a pull request. Merging it is the approval. Comments and layout of the file are kept: only the value's own characters change. |
 | **Four levels** | `observe` records what would have been done. `suggest` tells you, with no button. `approve` waits for your Go. `auto` runs, verifies, then tells you, with Undo where the action has an inverse and always "This was wrong". The default is `suggest`. |
 | **Go is a signed link** | Sent by the executor straight to your phone: the core never sees it, so a subverted core cannot approve its own plan. It works once, for 30 minutes, for that exact plan. A new plan, a resolved incident or a No-go kills it. No answer: nothing happens, and one reminder says so. |
 | **Checked, applied, verified** | Under a lock per container that your own repair scripts can share, the executor checks the world is still as the plan assumed, applies the step, then waits for the container to be running and healthy (and for a URL of yours to answer, if you gave one). On failure it rolls back where there is an inverse, stops, and hands the incident back to you. |
@@ -278,7 +311,9 @@ of secret-shaped strings:
 | Triage | Alert titles, descriptions and labels, and excerpts of the three runbooks or past postmortems that match them. No raw payload, no log line. |
 | Investigation | The same, plus what its tools return: rows of the log streams you listed, the metrics you listed, container state without the environment, log lines of the containers you listed, the definition of an OpenObserve alert, monitor names and states, commit subjects and file names of the repositories you listed, the output of the commands you prepared on other hosts, and excerpts of your runbooks and postmortems. |
 | Postmortems | The incident's timeline and the investigation's findings. |
-| Actions | Nothing: no model is involved. The catalog (action names and container name patterns) is part of the investigator's prompt when actions are on. |
+| Actions | Nothing: no model is involved. The catalog (action names, target name patterns, the Coolify resource names and the files and keys you allow) is part of the investigator's prompt when actions are on. |
+| Replay | What was sent at the time, again: recorded context packs and recorded tool results. |
+| Traces | To your OTLP endpoint, not to a model: kinds, durations, model names, token counts, costs, outcomes, and incident and alert titles. |
 
 The allow-lists in `investigation.tools` are the control: a stream or a container that is not
 listed cannot be read. Leave out anything that holds personal data. Give Paeon credentials that
@@ -287,7 +322,8 @@ can only read as well (an OpenObserve account limited to search, a Docker socket
 
 Paeon itself has no telemetry and calls nothing but what you configure: your alert source, your
 model endpoint, your ntfy topics, your heartbeat URL and, if you set them, a git remote for the
-postmortems and the hosts you listed for SSH.
+postmortems, the hosts you listed for SSH, an OTLP endpoint, Coolify, and your deployment
+repository with its forge's API.
 
 ## Safety model
 
@@ -326,21 +362,22 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 <details>
 <summary><strong>Limits as built</strong></summary>
 
-- Actions exist for containers of one Docker host only. There is no action on another host, on
-  the network, on Kubernetes or on Coolify, and none that changes configuration (the design's
-  tier 2, as a pull request on your deployment repository): those stay sentences in a plan.
-- A step is verified by the container's state, its health check and an optional URL. The alert's
-  own query is not re-run by the executor; the incident resolving is what confirms the fix.
-- The OpenObserve alerts API was written from its documentation (v2 by id, with the older list as
-  a fallback) and has not been checked against every version. If a definition cannot be read,
-  the alert is recorded with its name and id only, as before.
-- The digest has no per-incident buttons (a notification holds three): it opens the console,
-  where each incident has them. The analysis of an investigation carries "cause is right / wrong".
-- There is no replay of past incidents as a regression suite for prompt changes, and no export of
-  traces to OpenTelemetry: both are in the design, neither is built.
-- The Horae source plugin lives in Horae; this side offers `GET /brief` for it.
-- The console cannot approve. An approval "behind single sign-on" for riskier actions needs a
-  design decision about where that page lives; there is no such action yet.
+- Actions are for one Docker host, the Coolify instance and the deployment repository you
+  configure. There is none on another host, on the network or on Kubernetes.
+- `config_change` changes a value that already exists in a YAML file. It cannot add a key, edit
+  another format, or open a pull request anywhere but GitHub (elsewhere the branch is pushed and
+  the notification says so).
+- A step is verified by the container's state, its health check, Coolify's own status and an
+  optional URL. The alert's own query is not re-run by the executor; the incident resolving is
+  what confirms the fix.
+- `coolify_restart` is written from Coolify's published API description and has not been run
+  against an instance. The trace export has been tested against a collector double, not against
+  a real OTLP endpoint.
+- The quick start was run end to end without a model key: the investigation step of it was not.
+- Replay judges a triage verdict by itself; for an investigation it shows the old and new root
+  cause and leaves the judgment to you.
+- There is no retention period for tool results in the event log, and no channel but ntfy.
+- The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.
 
 </details>
 
@@ -369,6 +406,10 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 - **Links** (`paeon.links`): the signed, single-use, expiring links behind every button.
 - **Autonomy** (`paeon.autonomy`): track records, demotions and promotion proposals.
 - **MCP** (`paeon.mcp`): the read-only server over the record.
+- **Actuators** (`paeon.actuators`): Coolify, and the deployment repository with the YAML edit
+  that changes one value and nothing else.
+- **Replay** (`paeon.replay`) and **telemetry** (`paeon.telemetry`): the regression suite and the
+  trace export.
 - **Model clients** (`paeon.models`): the Anthropic Messages API (through the `anthropic` SDK)
   and the OpenAI-compatible chat API, both with tool calls.
 - **Redaction** (`paeon.redact`): the scrub applied before anything reaches a model.

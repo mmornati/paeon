@@ -152,25 +152,32 @@ class Remediator:
         return tuple(dict.fromkeys(alert.title for alert in incident.alerts)) or (incident.title,)
 
     def on_findings(self, incident: Incident, findings: Findings) -> None:
-        """Hand the typed steps of an analysis to the executor. The rest stays advice."""
-        steps = tuple(
-            Step(action=step.catalog_action, target=step.target)
+        """Hand the typed steps of an analysis to the executor. The rest stays advice.
+
+        Configuration changes go first and on their own: they become a pull request, while
+        the actions wait for a Go. The plan of actions is then the incident's latest plan.
+        """
+        steps = [
+            Step(action=step.catalog_action, target=step.target, params=step.params)
             for step in findings.plan
             if step.catalog_action is not None and step.target is not None
-        )
-        if not steps:
-            return
-        self._propose(
-            Proposal(
-                incident_id=incident.id,
-                title=incident.title[:300],
-                origin="investigation",
-                alerts=self._alerts(incident)[:50],
-                confidence=findings.root_cause.confidence,
-                summary=findings.summary[:1500],
-                steps=steps[:10],
-            )
-        )
+        ]
+        for group in (
+            [step for step in steps if step.tier >= 2],
+            [step for step in steps if step.tier < 2],
+        ):
+            if group:
+                self._propose(
+                    Proposal(
+                        incident_id=incident.id,
+                        title=incident.title[:300],
+                        origin="investigation",
+                        alerts=self._alerts(incident)[:50],
+                        confidence=findings.root_cause.confidence,
+                        summary=findings.summary[:1500],
+                        steps=tuple(group[:10]),
+                    )
+                )
 
     def _propose(self, proposal: Proposal) -> dict[str, Any] | None:
         try:
@@ -184,20 +191,26 @@ class Remediator:
             return None
         return answer
 
-    def extras(self, incident: Incident) -> Extras:
-        """The page an analysis links to, and its two buttons: was the root cause right?"""
+    def page(self, incident_id: int) -> str | None:
         base = self._rules.ui.public_url
-        click = None if base is None else f"{base.rstrip('/')}/ui/incidents/{incident.id}"
+        return None if base is None else f"{base.rstrip('/')}/ui/incidents/{incident_id}"
+
+    def buttons(self, incident_id: int, about: str, right: str, wrong: str) -> Extras:
+        """The incident's page, and two signed buttons that record a thumbs-up or down."""
         try:
-            links = self._executor.vote_links(incident.id, "root_cause")
+            links = self._executor.vote_links(incident_id, about)
         except ExecutorError:
             links = {}
-        buttons = tuple(
+        actions = tuple(
             {"action": "http", "label": label, "url": links[vote], "method": "POST", "clear": True}
-            for vote, label in (("up", "Cause is right"), ("down", "Cause is wrong"))
+            for vote, label in (("up", right), ("down", wrong))
             if vote in links
         )
-        return Extras(click=click, actions=buttons)
+        return Extras(click=self.page(incident_id), actions=actions)
+
+    def extras(self, incident: Incident) -> Extras:
+        """What an analysis carries: was the root cause right?"""
+        return self.buttons(incident.id, "root_cause", "Cause is right", "Cause is wrong")
 
     def stop(self) -> None:
         """Engage the kill switch. The core can stop automation; it cannot resume it."""

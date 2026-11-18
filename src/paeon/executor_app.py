@@ -22,6 +22,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from paeon.actuators import CoolifyActuator, RepositoryActuator
 from paeon.catalog import Proposal
 from paeon.config import ExecutorSettings
 from paeon.executor import DockerActuator, Executor, ExecutorStore
@@ -80,12 +81,36 @@ def build_executor(settings: ExecutorSettings, store: ExecutorStore) -> Executor
     actions = settings.rules.actions
     docker = None
     if actions.docker_url:
-        docker = DockerActuator(httpx.Client(base_url=actions.docker_url.rstrip("/"), timeout=30))
+        read = actions.docker_read_url
+        docker = DockerActuator(
+            httpx.Client(base_url=actions.docker_url.rstrip("/"), timeout=30),
+            None if read is None else httpx.Client(base_url=read.rstrip("/"), timeout=30),
+        )
+    coolify = None
+    if actions.coolify is not None and settings.coolify_token:
+        coolify = CoolifyActuator(
+            httpx.Client(
+                base_url=actions.coolify.url.rstrip("/"),
+                headers={"Authorization": f"Bearer {settings.coolify_token}"},
+                timeout=30,
+            ),
+            actions.coolify,
+        )
+    repository = None
+    if actions.repository is not None:
+        github = actions.repository.github
+        repository = RepositoryActuator(
+            actions.repository,
+            token=settings.github_token,
+            http=None if github is None else httpx.Client(base_url=github.api_url, timeout=30),
+        )
     return Executor(
         store,
         settings.rules,
         signer=Signer(settings.signing_key) if settings.signing_key else None,
         docker=docker,
+        coolify=coolify,
+        repository=repository,
         ntfy_token=settings.ntfy_token,
         kill_env=settings.kill_switch,
     )

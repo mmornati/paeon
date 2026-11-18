@@ -442,8 +442,7 @@ Still open, by the phase that needs the answer:
 | Phase 0 | Enrichment is built from the documentation of the alerts API (§11); it is still to be checked against the reference instance. |
 | Phase 1 | Budget ceilings per day and per incident (placeholders: 2 € and 0.50 €). |
 | Phase 1 | Where the model gateway runs for Paeon. |
-| Tier 2 | Which credential opens pull requests on the deployment repo, and who holds it. |
-| Tier 2 | Where an approval behind single sign-on is given, if the console (in the core) must not approve. |
+| Tier 3 | Nothing destructive or security-relevant exists as an action, and none is planned. |
 
 ## 11. As built
 
@@ -455,20 +454,23 @@ What the code does where this document left a choice open, or said something els
 | Who sends the approval | The executor, straight to ntfy. The core never holds a Go link, so the signing key "lives with the approval endpoint and the executor" by being in one process. |
 | The executor and alerts | It cannot see them. It trusts the core for the alert class of a plan, and for nothing else: actions, targets, levels and approvals are its own. The consequence is in the threat model. |
 | Alert class | The alert's title, matched by a regular expression in `actions.policies`. |
-| Catalog | Three tier-1 actions on containers: restart, start, unpause. Reattaching a network alias, a Coolify redeploy and rotating a log are not built. Tier 2 (a pull request on the deployment repo) is not built: its credential question stays open. |
+| Catalog | Tier 1: restart, start and unpause a container, reattach its network alias, restart a Coolify resource. Tier 2: `config_change`, one existing value of one allow-listed YAML file, as a branch and a pull request on the deployment repository; the deploy key and the forge token are named in the rules file and held by the executor. Rotating a log is not built. |
 | Verification | The container's state, its health check, and an optional URL from the rules file. The executor does not re-run the alert's query; the incident resolving is recorded when it happens. |
-| Approval strength | One tap, for tier 1. There is no tier-2 page behind single sign-on, since there is no tier-2 action. |
+| Approval strength | One tap, for tier 1. Tier 2 is approved by merging the pull request, on the forge and behind its login: Paeon serves no page for it. |
 | Kill switch | Notification button, console button, CLI, environment variable. Released only next to the executor (`paeon resume`): no link and no API call resumes. |
 | Runbooks | In the rules file (`actions.runbooks`): a matcher and a ladder of catalog steps. They are written by hand; extraction from past investigations is not built. HolmesGPT's runbook format was not adopted. |
 | Promotion | Proposed as a policy line on the Autonomy page and by `paeon autonomy`, not as an automatic pull request. |
 | Demotion | Stored as events in the executor's journal; lifted with `paeon reinstate`. |
 | Lock | One `flock` file per container in `actions.lock_dir`, for other repair scripts to share. |
 | Knowledge search | SQLite FTS5, in memory, rebuilt from the files as they change. |
-| OpenObserve enrichment | Alert definitions by the v2 alerts API with the older list as a fallback, written from the documentation. The Phase 0 spike questions (`skipped`, the `slo` module) are still open. |
+| OpenObserve enrichment | Alert definitions from one request to the v2 alerts API, checked against OpenObserve 1.1 (the older list stays as a fallback). Three query types exist there: `sql`, `promql` and `slo`, the last a burn-rate condition with no query. A list entry's `level` is the alert's state, not a severity. The Phase 0 question about `skipped` rows is still open. |
 | Postmortems in git | Committed, and optionally pushed, in the working copy that holds the directory, with a deploy key named in the rules file. Which repository is the deployment's choice. |
 | uptime-kuma | History from Paeon's own record of the webhook; live state from `/metrics` with an API key. |
 | SSH | Commands written by the owner, chosen by name. The forced command on the far side is the owner's to set. |
 | MCP | A read-only server on stdio, written against the protocol without the SDK. Context providers and actuators over MCP are not built. |
-| Feedback | Buttons on the analysis (root cause right or wrong), through the executor's links; triage feedback in the console, the CLI and the API. The digest opens the console. |
+| Feedback | Buttons on the analysis (root cause right or wrong) and, after the digest, one short message per triage verdict (right or wrong), all through the executor's links; also the console, the CLI and the API. |
+| Replay | `paeon replay`: recorded triage packs, and investigations with their recorded tool results, against the current prompts and model, compared with the recorded outcome and the owner's feedback. Investigations record their tools' definitions for it. |
+| Traces | OTLP/HTTP JSON, one trace per incident, facts about each step and never its content. |
+| Docker proxies | The executor acts through one proxy and reads through another: in the usual socket proxies POST is global, and with the containers section on it would also allow create, delete and exec. |
 | Horae | `GET /brief` for a source plugin. The plugin itself belongs to Horae. |
-| Not built | Replay of closed incidents as a regression corpus, OpenTelemetry export, a retention period for tool results, a cost report by alert class, Telegram / Slack / email channels. |
+| Not built | A retention period for tool results, a cost report by alert class, Telegram / Slack / email channels, runbook extraction from past investigations, actions on other hosts. |

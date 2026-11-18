@@ -80,6 +80,9 @@ digest:
   #   url: https://ntfy.example.org
   #   topic: incidents
   #   token_env: PAEON_NTFY_TOKEN
+  # After the digest, one quiet message per verdict with Right / Wrong buttons, those triage
+  # would have demoted first. Needs the executor, which signs the buttons. 0: none.
+  feedback: 5
 
 # Stage 2: a strong model investigates with tools that only read. Its analysis is advice:
 # nothing here can act on the server.
@@ -167,9 +170,10 @@ actions:
   # reachable without single sign-on. Without it there are no buttons, and no plan goes
   # above `suggest`.
   # public_url: https://paeon-act.example.org
-  # Executor only: a Docker socket proxy that allows start, stop and restart. Not the one
-  # the investigator reads through.
+  # Executor only: a Docker socket proxy that allows start, stop and restart and nothing
+  # else, and the read-only one it lists and inspects containers through.
   docker_url: http://dockerproxy-act:2375
+  docker_read_url: http://dockerproxy:2375
   # One lock file per container. Point your own repair scripts at the same files
   # (flock /locks/<container>.lock ...) and two automations never restart the same thing.
   lock_dir: /locks
@@ -183,16 +187,42 @@ actions:
   #   topic: incidents
   #   token_env: PAEON_ACTIONS_NTFY_TOKEN
 
-  # The closed set of actions, each switched on for the containers you name. Three exist:
-  # restart_container, start_container, unpause_container. Nothing else can be added here.
+  # The closed set of actions, each switched on for the targets you name. Six exist:
+  # restart_container, start_container, unpause_container, reattach_network_alias,
+  # coolify_restart and config_change. Nothing else can be added here.
   catalog:
     restart_container:
       targets: ["media-*", worker]
       deny: [media-db]                      # refused even though media-* matches
       verify:
         wait_seconds: 15                    # then: running, healthy, and the URL answers
-        timeout_seconds: 120
+        timeout_seconds: 120                # longer than the container's health check interval
         # http: http://worker:8080/healthz
+    # reattach_network_alias: { targets: [worker] }   # the write proxy then needs NETWORKS: 1
+    # coolify_restart: { targets: [media] }           # names from `coolify.resources` below
+    # config_change: { targets: [media] }             # names from `repository.files` below
+
+  # Executor only. Resources `coolify_restart` may restart, by a name of yours.
+  # coolify:
+  #   url: http://coolify:8000
+  #   token_env: PAEON_COOLIFY_TOKEN
+  #   resources:
+  #     media: { uuid: abc123def, kind: service }     # kind: application (default) or service
+
+  # Executor only. `config_change` never applies anything: it changes one existing value of
+  # one of these files on a branch of this clone, pushes it and opens a pull request.
+  # Merging it is your approval.
+  # repository:
+  #   path: /repo                         # a clone that is Paeon's own
+  #   base: main
+  #   identity_file: /run/secrets/paeon_deploy_key
+  #   known_hosts_file: /config/known_hosts
+  #   github: { repo: you/deployment, token_env: PAEON_GITHUB_TOKEN }
+  #   files:
+  #     media:
+  #       path: stacks/media/compose.yaml
+  #       keys: ["services.*.mem_limit"]  # `*` is one name: it does not cross a dot
+  #       values: "[0-9]+[mMgG]"
 
   # Autonomy per (alert, action, container). The first match wins.
   #   observe: record what would have been done      suggest: say it, no button
@@ -213,3 +243,10 @@ actions:
       match: { source: uptime-kuma, title: "worker_stalled" }
       steps:
         - { action: restart_container, target: worker }
+
+# Traces of Paeon's own work, over OTLP/HTTP: one per incident. Facts about each step
+# (duration, model, tokens, cost, outcome), never its content.
+# telemetry:
+#   otlp_endpoint: http://openobserve:5080/api/default
+#   authorization_env: PAEON_OTLP_AUTHORIZATION      # "Basic <base64 of user:password>"
+#   headers: { stream-name: paeon }

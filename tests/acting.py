@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,9 @@ class FakeDocker:
         self.broken: set[str] = set()
         self.posts: list[str] = []
         self.status = 204
+        # name -> compose service and {network: aliases}, for the alias action
+        self.networks: dict[str, tuple[str | None, dict[str, list[str]]]] = {}
+        self.sticky_alias = True  # False: reconnecting does not bring the alias back
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
@@ -35,11 +39,43 @@ class FakeDocker:
             return httpx.Response(
                 200, json=[{"Id": ID[name], "Names": [f"/{name}"]} for name in self.states]
             )
+        if path.startswith("/networks/"):
+            _, _, network, verb = path.split("/")
+            body = json.loads(request.content)
+            name = next(n for n, i in ID.items() if i == body["Container"])
+            self.posts.append(f"{verb} {name} {network}")
+            if self.status >= 400:
+                return httpx.Response(self.status)
+            aliases = self.networks[name][1]
+            net = network.removeprefix("net")
+            if verb == "disconnect":
+                aliases[net] = []
+            elif self.sticky_alias:
+                aliases[net] = list(body["EndpointConfig"]["Aliases"])
+            return httpx.Response(200)
         _, _, container_id, verb = path.split("/")
         name = next(n for n, i in ID.items() if i == container_id)
         state = self.states[name]
         if request.method == "GET":
-            return httpx.Response(200, json={"State": state, "RestartCount": 0})
+            service, nets = self.networks.get(name, (None, {}))
+            labels = {"com.docker.compose.service": service} if service else {}
+            return httpx.Response(
+                200,
+                json={
+                    "State": state,
+                    "RestartCount": 0,
+                    "Config": {"Labels": labels},
+                    "NetworkSettings": {
+                        "Networks": {
+                            "bridge": {"NetworkID": "b0", "Aliases": None},
+                            **{
+                                net: {"NetworkID": f"net{net}", "Aliases": aliases or None}
+                                for net, aliases in nets.items()
+                            },
+                        }
+                    },
+                },
+            )
         self.posts.append(f"{verb} {name}")
         if self.status >= 400:
             return httpx.Response(self.status)
@@ -109,6 +145,7 @@ def proposal(
     confidence: float = 0.9,
     **more: Any,
 ) -> Proposal:
+    params = more.pop("params", {})
     return Proposal(
         incident_id=incident,
         title="Worker is down",
@@ -117,7 +154,8 @@ def proposal(
         confidence=confidence,
         summary="It stalled.",
         steps=tuple(
-            Step(action=a, target=t) for a, t in steps or [("restart_container", "worker")]
+            Step(action=a, target=t, params=params if a == "config_change" else {})
+            for a, t in steps or [("restart_container", "worker")]
         ),
         **more,
     )
@@ -134,6 +172,8 @@ class Bench:
         signer: bool = True,
         with_docker: bool = True,
         kill_env: bool = False,
+        coolify_actuator: Any = None,
+        repository_actuator: Any = None,
         **actions: Any,
     ) -> None:
         tmp_path.mkdir(parents=True, exist_ok=True)
@@ -149,6 +189,8 @@ class Bench:
             self.rules,
             signer=Signer(KEY) if signer else None,
             docker=self.docker.actuator() if with_docker else None,
+            coolify=coolify_actuator,
+            repository=repository_actuator,
             ntfy_token="ntfy-token",
             kill_env=kill_env,
             publish=self.publish,

@@ -38,6 +38,7 @@ from paeon.schema import Change, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
+from paeon.telemetry import Exporter
 from paeon.tools import (
     Tool,
     Toolbox,
@@ -222,6 +223,16 @@ def create_app(
             return
         await asyncio.to_thread(writer.run_pending, _now())
 
+    exporter: Exporter | None = None
+    if rules.telemetry is not None:
+        exporter = Exporter(store, rules.telemetry, settings.telemetry_authorization)
+        closers.append(exporter.close)
+
+    async def run_telemetry() -> None:
+        if exporter is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(exporter.export)
+
     async def run_remediation() -> None:
         if remediator is None:  # pragma: no cover - not scheduled
             return
@@ -249,7 +260,31 @@ def create_app(
                     message=text,
                     click=f"{base.rstrip('/')}/ui",
                 )
-            store.append("digest.sent", {"date": today, "incidents": len(report.lines)})
+            asked = 0
+            if remediator is not None:
+                # One short, quiet message per verdict: a notification holds three buttons.
+                for line in digests.to_rate(report, rules.digest.feedback):
+                    extras = remediator.buttons(line.incident.id, "triage", "Right", "Wrong")
+                    if not extras.actions:
+                        break  # the executor is not there to sign them
+                    title, text = digests.question(line)
+                    try:
+                        digests.publish_ntfy(
+                            ntfy,
+                            settings.ntfy_token,
+                            title=title,
+                            message=text,
+                            priority=1,
+                            tags=("question",),
+                            click=extras.click,
+                            actions=extras.actions,
+                        )
+                    except RuntimeError:
+                        break
+                    asked += 1
+            store.append(
+                "digest.sent", {"date": today, "incidents": len(report.lines), "asked": asked}
+            )
         store.set_cursor("digest", today)
         return bool(report.lines)
 
@@ -288,6 +323,9 @@ def create_app(
                     _every(REMEDIATION_TICK_SECONDS, "remediation", run_remediation)
                 )
             )
+        if exporter is not None and rules.telemetry is not None:
+            seconds = rules.telemetry.interval_seconds
+            tasks.append(asyncio.create_task(_every(seconds, "telemetry", run_telemetry)))
         try:
             yield
         finally:
@@ -432,6 +470,7 @@ def create_app(
     if rules.ui.enabled:
         mount_ui(app, store, rules, now=_now, stop=None if remediator is None else remediator.stop)
 
+    app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager
     app.state.investigator = investigator

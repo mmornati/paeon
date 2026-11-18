@@ -43,6 +43,7 @@ class Settings:
     investigation_ntfy_token: str | None = None
     executor_token: str | None = None  # how the core proves itself to the executor
     uptime_kuma_key: str | None = None
+    telemetry_authorization: str | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,8 @@ class ExecutorSettings:
     signing_key: str | None
     ntfy_token: str | None
     kill_switch: bool
+    coolify_token: str | None = None
+    github_token: str | None = None
 
 
 def _secret(env: Mapping[str, str], name: str) -> str:
@@ -135,6 +138,13 @@ def load(env: Mapping[str, str]) -> Settings:
     kuma = rules.investigation.tools.uptime_kuma
     kuma_key = _secret(env, kuma.api_key_env) if kuma is not None and kuma.api_key_env else ""
 
+    telemetry = rules.telemetry
+    telemetry_authorization = (
+        _secret(env, telemetry.authorization_env)
+        if telemetry is not None and telemetry.authorization_env
+        else ""
+    )
+
     port = int(_number(env, "PAEON_PORT", 8080, minimum=1))
     return Settings(
         db_path=Path(env.get("PAEON_DB", "").strip() or "paeon.sqlite"),
@@ -150,6 +160,7 @@ def load(env: Mapping[str, str]) -> Settings:
         investigation_ntfy_token=analysis_token or None,
         executor_token=executor_token or None,
         uptime_kuma_key=kuma_key or None,
+        telemetry_authorization=telemetry_authorization or None,
     )
 
 
@@ -172,7 +183,18 @@ def load_executor(env: Mapping[str, str]) -> ExecutorSettings:
         raise ConfigError("PAEON_SIGNING_KEY must differ from PAEON_EXECUTOR_TOKEN")
     ntfy = rules.actions.ntfy
     ntfy_token = _secret(env, ntfy.token_env) if ntfy is not None and ntfy.token_env else ""
+    coolify = rules.actions.coolify
+    coolify_token = "" if coolify is None else _secret(env, coolify.token_env)
+    if coolify is not None and not coolify_token:
+        raise ConfigError(f"actions.coolify: {coolify.token_env} (or _FILE) is not set")
+    repository = rules.actions.repository
+    github = None if repository is None else repository.github
+    github_token = "" if github is None else _secret(env, github.token_env)
+    if github is not None and not github_token:
+        raise ConfigError(f"actions.repository.github: {github.token_env} (or _FILE) is not set")
     return ExecutorSettings(
+        coolify_token=coolify_token or None,
+        github_token=github_token or None,
         db_path=Path(env.get("PAEON_EXECUTOR_DB", "").strip() or "executor.sqlite"),
         host=env.get("PAEON_EXECUTOR_HOST", "").strip() or "127.0.0.1",
         port=int(_number(env, "PAEON_EXECUTOR_PORT", 8081, minimum=1)),
