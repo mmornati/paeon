@@ -59,3 +59,15 @@ Decided after the finish review: the model's voice is blue and slanted everywher
 a fact about a model call (tokens, cost, failure) is printed ink. A changed strip stands out of
 line and carries an outlined tag; the reversed tag is kept for what left the server. Board
 strips are a fixed form of six boxes, one line each; reasons are on the incident page.
+
+## Redirected (2026-11-18)
+
+The user asked to leave Strip Bay for the look and habits of an observability and incident
+management app: cleaner, professional. The console was rebuilt by hand, outside the comp-led
+path: sidebar shell, pipeline counts over incidents grouped by stage, rounded cards, status
+badges, section tabs on the incident page, cost figures and a spend chart on the ledger, a light
+or dark switch. The thesis, own-world and form above describe the previous build and no longer
+hold; `DESIGN.md` describes the current one. Kept from before: the model's words look different
+from what code recorded (violet, with a Model badge or tag), severity is always also a word, no
+request to another host, no inline style. `.impeccable/design.json` was generated from the old
+DESIGN.md and has not been regenerated.

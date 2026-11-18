@@ -45,7 +45,7 @@ docker compose stop demo-app
 ```
 
 Within a minute Prometheus fires `DemoAppDown`, Alertmanager posts it to
-`/ingest/alertmanager`, and a strip appears on the board. With a key, about twenty seconds later
+`/ingest/alertmanager`, and an incident appears on the board. With a key, about twenty seconds later
 the investigation starts: watch the incident's page, where each tool call appears as it is made.
 The model lists the containers, sees `demo-app` exited, reads its last log lines (the only
 container the rules let it read), finds the runbook in `runbooks/demo-app.md`, and hands in a root
@@ -98,6 +98,6 @@ docker compose down --volumes
 | Symptom | Cause |
 |---|---|
 | Paeon restarts in a loop | `secrets/ingest_token` is missing or shorter than 24 characters. `docker compose logs paeon` says so. |
-| No strip after two minutes | Check <http://127.0.0.1:9090/alerts>: the alert must be firing, not pending. Then `docker compose logs alertmanager` for a 401 (the token file) or a connection error. |
+| No incident after two minutes | Check <http://127.0.0.1:9090/alerts>: the alert must be firing, not pending. Then `docker compose logs alertmanager` for a 401 (the token file) or a connection error. |
 | The investigation fails at once | The key is wrong or the model name does not exist for it: the incident page shows `HTTP 401` or `HTTP 404`. The alert is recorded all the same. |
 | `/ui` answers 404 | `ui.enabled` is not set in the rules file Paeon reads. |

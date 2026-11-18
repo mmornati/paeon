@@ -3,8 +3,10 @@
 {% block title %}Log{% endblock %}
 {% block main %}
 <div class="head">
-  <h1>Log</h1>
-  <p class="live">Every event Paeon recorded, newest first. Nothing is ever edited or removed.</p>
+  <div>
+    <h1>Log</h1>
+    <p class="sub">Every event Paeon recorded, newest first. Nothing is ever edited or removed.</p>
+  </div>
 </div>
 <nav class="chips" aria-label="Show">
   <a href="/ui/log"{% if not show %} aria-current="true"{% endif %}>Everything</a>
@@ -23,7 +25,7 @@
 {% else %}
 <div class="empty">
   <p>The log is empty: nothing has reached Paeon yet.</p>
-  <p>Point a webhook at <code>/ingest/uptime-kuma</code> or <code>/ingest/alertmanager</code>, or set the <code>PAEON_OPENOBSERVE_*</code> variables. The first alert that fires shows up here and opens a strip on the board.</p>
+  <p>Point a webhook at <code>/ingest/uptime-kuma</code> or <code>/ingest/alertmanager</code>, or set the <code>PAEON_OPENOBSERVE_*</code> variables. The first alert that fires shows up here and opens an incident.</p>
 </div>
 {% endif %}
 {% endblock %}

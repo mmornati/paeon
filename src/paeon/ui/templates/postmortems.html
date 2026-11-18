@@ -2,18 +2,22 @@
 {% block title %}Postmortems{% endblock %}
 {% block main %}
 <div class="head">
-  <h1>Postmortems</h1>
-  <p class="live">Drafts written from the event log once an incident has stayed resolved. A draft is yours to correct: set <code>status: reviewed</code> in the file when you have.</p>
+  <div>
+    <h1>Postmortems</h1>
+    <p class="sub">Drafts written from the event log once an incident has stayed resolved. A draft is yours to correct: set <code>status: reviewed</code> in the file when you have.</p>
+  </div>
 </div>
 {% if drafts %}
+<div class="table-card">
 <table class="table">
   <thead><tr><th>Day</th><th>What broke</th><th class="num wide">Open items</th><th>Status</th></tr></thead>
   <tbody>
     {% for d in drafts -%}
-    <tr><td>{{ d.detected_at[:10] or "?" }}</td><td class="prose"><a href="/ui/postmortems/{{ d.name }}">{{ d.title }}</a></td><td class="num wide">{{ d.open_items|length }}</td><td><span class="outcome outcome-{{ d.status }}">{{ d.status }}</span></td></tr>
+    <tr><td class="keep">{{ d.detected_at[:10] or "?" }}</td><td class="prose"><a href="/ui/postmortems/{{ d.name }}">{{ d.title }}</a></td><td class="num wide">{{ d.open_items|length }}</td><td><span class="outcome outcome-{{ d.status }}">{{ d.status }}</span></td></tr>
     {% endfor -%}
   </tbody>
 </table>
+</div>
 {% else %}
 <div class="empty">
   <p>No postmortem has been written yet.</p>

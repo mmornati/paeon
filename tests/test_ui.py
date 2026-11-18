@@ -107,6 +107,7 @@ def test_board_page_and_fragment(store: Store, seeded: dict[str, int]) -> None:
     assert http.get("/ui/static/mark.svg").status_code == 200
     assert http.get("/ui/static/console.css").status_code == 200
     assert http.get("/ui/static/console.js").status_code == 200
+    assert http.get("/ui/static/theme.js").status_code == 200
 
 
 def test_empty_board_says_what_each_bay_is_for(store: Store) -> None:

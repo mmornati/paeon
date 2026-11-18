@@ -73,6 +73,18 @@ earn autonomy.
 
 ### Changed
 
+- The console is redesigned as an incident management app: a sidebar (a tab row on a phone), the
+  board as a pipeline count over incidents grouped by stage, a filter box (`/`), an incident page
+  with a summary header and section tabs, cost figures and a chart of spend per day on the
+  ledger, status badges throughout, and a light or dark switch. Same pages, same URLs, same
+  policy: nothing is loaded from another host.
+- A postmortem is shown rendered instead of as markdown source (new dependency:
+  `markdown-it-py`). Raw HTML in the file is shown as text, and a link is kept only to an http(s)
+  or mailto address or to another postmortem.
+- A `mermaid` block of a postmortem is drawn as a diagram, by Mermaid 12.3.0 bundled in the
+  package (5.5 MB, served from Paeon itself). A postmortem page that has a diagram is served
+  with `style-src 'self' 'unsafe-inline'`, because Mermaid styles its drawing inline; every
+  other page keeps the strict policy.
 - Prompt versions are `triage-2` and `investigate-2`.
 - The image contains `git` and the OpenSSH client, and exposes port 8081 as well.
 - Triage now sends excerpts of matching runbooks and postmortems to its model. See "What leaves

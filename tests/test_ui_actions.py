@@ -93,6 +93,16 @@ def test_a_plan_waiting_for_go_has_its_own_bay(store: Store, seeded: dict[str, i
     assert [bay.key for bay in plain] == ["triage", "investigation", "open", "resolved"]
 
 
+def test_a_postmortem_without_a_diagram_keeps_the_strict_policy(
+    store: Store, seeded: dict[str, int], tmp_path: Path
+) -> None:
+    (tmp_path / "postmortems" / "plain.md").write_text("# Plain\n\nNo diagram here.\n")
+    page = client(store, tmp_path).get("/ui/postmortems/plain.md")
+    assert "<p>No diagram here.</p>" in page.text
+    assert "mermaid" not in page.text
+    assert "unsafe-inline" not in page.headers["content-security-policy"]
+
+
 def test_the_incident_page_tells_the_plan_and_cannot_approve(
     store: Store, seeded: dict[str, int], tmp_path: Path
 ) -> None:
@@ -184,6 +194,26 @@ def test_postmortems_are_listed_and_shown_with_secrets_masked(
     page = http.get(f"/ui/postmortems/{name}")
     assert page.status_code == 200
     assert "Add a liveness probe" in page.text
+    # Rendered, not shown as markdown: headings, a table, ticked and empty boxes.
+    assert "<h2>Timeline</h2>" in page.text
+    assert "<strong>dead VPN route</strong>" in page.text
+    assert "<th>What happened</th>" in page.text
+    assert page.text.count('<input type="checkbox" disabled') == 2
+    assert (
+        'href="https://git.example/ops/runbooks/worker.md" rel="noreferrer noopener"' in page.text
+    )
+    # Nothing the file contains can run or link to a script.
+    assert "<script>alert(1)</script>" not in page.text
+    assert 'href="javascript' not in page.text
+    assert "## Timeline" in page.text  # the source is still there to read
+    # A mermaid block is drawn in the browser by the bundled library, never from another host.
+    assert '<code class="language-mermaid">sequenceDiagram' in page.text
+    assert 'src="/ui/static/vendor/mermaid.min.js' in page.text
+    assert http.get("/ui/static/diagrams.js").status_code == 200
+    policy = page.headers["content-security-policy"]
+    assert "style-src 'self' 'unsafe-inline'" in policy
+    assert "script-src 'self';" in policy
+    assert "default-src 'none'" in policy
     assert "hunter2hunter2" not in page.text
     assert f"/ui/incidents/{seeded['worker']}" in page.text
     assert http.get("/ui/postmortems/missing.md").status_code == 404

@@ -9,6 +9,11 @@ FastAPI, Starlette, httpx2, Jinja2, MarkupSafe, pydantic, python-multipart,
 PyYAML, tzdata and uvicorn. Their licence texts ship inside each package's
 metadata.
 
+The console bundles Mermaid 12.3.0 (MIT, Copyright (c) 2014 - 2022 Knut Sveidqvist),
+unmodified, as src/paeon/ui/static/vendor/mermaid.min.js, to draw the diagrams of a
+postmortem. Its licence is next to it (mermaid.LICENSE); the bundle includes its own
+dependencies, whose notices it carries.
+
 The container image is built on Debian and also contains, unmodified and as
 separate programs, git (GPL-2.0) and the OpenSSH client (BSD), with the other
 packages of the base image. Their licences are in /usr/share/doc of the image.

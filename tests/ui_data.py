@@ -407,7 +407,33 @@ autonomy: auto
 
 ## Summary
 
-The worker stalled on a dead VPN route. The runbook restarted it and it recovered.
+The worker stalled on a **dead VPN route**. The runbook restarted it and it recovered. See the
+[runbook](https://git.example/ops/runbooks/worker.md), not [this](javascript:alert(1)).
+
+## Timeline
+
+| Time (UTC) | What happened |
+|---|---|
+| 22:41 | `worker_stalled` fired |
+| 22:42 | Runbook `worker-stalled` ran `restart_container(worker)` |
+| 22:50 | The alert resolved |
+
+```
+restart_container(worker): up and healthy after 8 s
+```
+
+<script>alert(1)</script>
+
+```mermaid
+sequenceDiagram
+    participant A as Alertmanager
+    participant P as Paeon
+    participant E as Executor
+    A->>P: worker_stalled firing
+    P->>E: plan restart_container(worker)
+    E-->>P: verified
+    A->>P: resolved
+```
 
 ## Action items
 
