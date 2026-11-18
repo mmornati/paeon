@@ -371,6 +371,26 @@ class Ui(_Rule):
     )
 
 
+class Telemetry(_Rule):
+    """Traces of Paeon's own work, over OTLP/HTTP. Facts about each step, never its content."""
+
+    otlp_endpoint: str = Field(
+        pattern=r"^https?://[^\s]+$",
+        description="The OTLP/HTTP base, without /v1/traces. OpenObserve:"
+        " http://openobserve:5080/api/default.",
+    )
+    authorization_env: str | None = Field(
+        default=None,
+        description="Environment variable (or NAME_FILE) with the whole Authorization header,"
+        " for example `Basic <base64 of user:password>`.",
+    )
+    headers: dict[str, str] = Field(
+        default_factory=dict, description="Other headers, none of them secret (stream-name)."
+    )
+    service_name: str = Field(default="paeon", min_length=1, max_length=100)
+    interval_seconds: float = Field(default=30, ge=5, le=3600)
+
+
 Level = Literal["observe", "suggest", "approve", "auto"]
 LEVELS: tuple[Level, ...] = ("observe", "suggest", "approve", "auto")
 
@@ -609,6 +629,7 @@ class Rules(_Rule):
     postmortems: Postmortems = Field(default_factory=Postmortems)
     ui: Ui = Field(default_factory=Ui)
     actions: Actions = Field(default_factory=Actions)
+    telemetry: Telemetry | None = None
 
     @model_validator(mode="after")
     def _actions_known(self) -> Rules:

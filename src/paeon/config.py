@@ -43,6 +43,7 @@ class Settings:
     investigation_ntfy_token: str | None = None
     executor_token: str | None = None  # how the core proves itself to the executor
     uptime_kuma_key: str | None = None
+    telemetry_authorization: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +138,13 @@ def load(env: Mapping[str, str]) -> Settings:
     kuma = rules.investigation.tools.uptime_kuma
     kuma_key = _secret(env, kuma.api_key_env) if kuma is not None and kuma.api_key_env else ""
 
+    telemetry = rules.telemetry
+    telemetry_authorization = (
+        _secret(env, telemetry.authorization_env)
+        if telemetry is not None and telemetry.authorization_env
+        else ""
+    )
+
     port = int(_number(env, "PAEON_PORT", 8080, minimum=1))
     return Settings(
         db_path=Path(env.get("PAEON_DB", "").strip() or "paeon.sqlite"),
@@ -152,6 +160,7 @@ def load(env: Mapping[str, str]) -> Settings:
         investigation_ntfy_token=analysis_token or None,
         executor_token=executor_token or None,
         uptime_kuma_key=kuma_key or None,
+        telemetry_authorization=telemetry_authorization or None,
     )
 
 

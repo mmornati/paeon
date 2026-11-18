@@ -38,6 +38,7 @@ from paeon.schema import Change, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
+from paeon.telemetry import Exporter
 from paeon.tools import (
     Tool,
     Toolbox,
@@ -222,6 +223,16 @@ def create_app(
             return
         await asyncio.to_thread(writer.run_pending, _now())
 
+    exporter: Exporter | None = None
+    if rules.telemetry is not None:
+        exporter = Exporter(store, rules.telemetry, settings.telemetry_authorization)
+        closers.append(exporter.close)
+
+    async def run_telemetry() -> None:
+        if exporter is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(exporter.export)
+
     async def run_remediation() -> None:
         if remediator is None:  # pragma: no cover - not scheduled
             return
@@ -312,6 +323,9 @@ def create_app(
                     _every(REMEDIATION_TICK_SECONDS, "remediation", run_remediation)
                 )
             )
+        if exporter is not None and rules.telemetry is not None:
+            seconds = rules.telemetry.interval_seconds
+            tasks.append(asyncio.create_task(_every(seconds, "telemetry", run_telemetry)))
         try:
             yield
         finally:
@@ -456,6 +470,7 @@ def create_app(
     if rules.ui.enabled:
         mount_ui(app, store, rules, now=_now, stop=None if remediator is None else remediator.stop)
 
+    app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager
     app.state.investigator = investigator
