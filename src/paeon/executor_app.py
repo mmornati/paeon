@@ -80,7 +80,11 @@ def build_executor(settings: ExecutorSettings, store: ExecutorStore) -> Executor
     actions = settings.rules.actions
     docker = None
     if actions.docker_url:
-        docker = DockerActuator(httpx.Client(base_url=actions.docker_url.rstrip("/"), timeout=30))
+        read = actions.docker_read_url
+        docker = DockerActuator(
+            httpx.Client(base_url=actions.docker_url.rstrip("/"), timeout=30),
+            None if read is None else httpx.Client(base_url=read.rstrip("/"), timeout=30),
+        )
     return Executor(
         store,
         settings.rules,

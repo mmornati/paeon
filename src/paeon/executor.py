@@ -169,12 +169,22 @@ class ExecutorStore(Store):
 class DockerActuator:
     """The few Docker calls that change something, through a proxy that allows only those."""
 
-    def __init__(self, http: httpx.Client) -> None:
+    def __init__(self, http: httpx.Client, read: httpx.Client | None = None) -> None:
+        # Two endpoints when the proxy that may act allows nothing else: with the usual socket
+        # proxies, "POST on /containers" also means create, delete and exec.
         self._http = http
+        self._read = read or http
+
+    def close(self) -> None:
+        self._http.close()
+        self._read.close()
 
     def find(self, name: str) -> tuple[str, dict[str, Any]] | None:
         """The id and state of the container with exactly this name."""
-        for entry in self._http.get("/containers/json", params={"all": "true"}).json():
+        listing = self._read.get("/containers/json", params={"all": "true"})
+        if listing.status_code >= 400:
+            raise RuntimeError(f"docker answered HTTP {listing.status_code} to the listing")
+        for entry in listing.json():
             names = [str(n).lstrip("/") for n in entry.get("Names") or []]
             container_id = entry.get("Id")
             if name in names and isinstance(container_id, str) and container_id.isalnum():
@@ -182,7 +192,7 @@ class DockerActuator:
         return None
 
     def state(self, container_id: str) -> dict[str, Any]:
-        data = self._http.get(f"/containers/{container_id}/json").json()
+        data = self._read.get(f"/containers/{container_id}/json").json()
         state = data.get("State") or {}
         return {
             "running": bool(state.get("Running")),

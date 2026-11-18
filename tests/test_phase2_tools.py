@@ -555,6 +555,10 @@ def test_the_knowledge_index_follows_the_files(tmp_path: Path) -> None:
         "SELECT * FROM (SELECT * FROM traefik",
         "SELECT * FROM traefik WHERE x IN (SELECT y FROM finance)",
         "SELECT 1FROM finance",  # a number that runs into a keyword
+        "SELECT 1.FROM finance",  # `1.` is a number to the engine
+        "SELECT * FROM traefik WHERE x = 1.JOIN finance ON 1 = 1",
+        "SELECT * FROM traefik t JOIN traefik u ON t.x = 1.where, finance",
+        "SELECT t.from FROM traefik t",  # refused outright: not worth the doubt
         "SELECT * FROM traefik WHERE x = 1e5JOIN finance ON 1 = 1",
         "SELECT * FROM traefik t JOIN traefik u ON t.where = 1, finance",  # a column named where
         "SELECT * FROM traefik t JOIN traefik u ON t.limit = u.order, finance f",
@@ -579,5 +583,5 @@ def test_sql_streams_reads_plain_queries() -> None:
     assert sql_streams("SELECT * FROM (SELECT x FROM inner_one) AS t") == {"inner_one"}
     assert sql_streams("SELECT a, b FROM traefik t WHERE f(a, 1) > 2 GROUP BY a, b") == {"traefik"}
     assert sql_streams("SELECT a FROM x UNION SELECT a, b FROM y ORDER BY a, b") == {"x", "y"}
-    assert sql_streams("SELECT t.from, 1.5e3 FROM traefik t WHERE t.limit > 10") == {"traefik"}
+    assert sql_streams("SELECT t.x, 1.5e3 FROM traefik t WHERE t.limit > 10") == {"traefik"}
     assert sql_streams('select "a" from "traefik" as t where "m" = \'x, y\'') == {"traefik"}

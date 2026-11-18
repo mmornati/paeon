@@ -14,7 +14,7 @@ copy of the rules file and a link you tapped.
 |---|---|
 | A second process | `paeon executor`: the same image with another command. It has its own database, its own port (8081) and its own secrets. |
 | Two secrets | `PAEON_EXECUTOR_TOKEN`, shared by the core and the executor, and `PAEON_SIGNING_KEY`, for the executor alone. They must differ. |
-| A Docker proxy that can write | For the executor only: start, stop and restart of containers. The investigator keeps its read-only proxy. |
+| A Docker proxy that can write | For the executor only: start, stop and restart of containers, and nothing else. With `tecnativa/docker-socket-proxy` that is `POST: 1`, `CONTAINERS: 0` and the `ALLOW_*` switches: `POST` with `CONTAINERS` on would also allow creating and deleting containers. The executor then lists and inspects through a read-only proxy (`docker_read_url`). |
 | An ntfy topic for approvals | With a token of its own and read access for you alone. A one-tap approval is exactly as strong as this channel. |
 | One public path | `https://<somewhere>/act/` routed to the executor, **without** single sign-on: the phone's button has no session, the signed link is the proof. Route nothing else there. |
 
@@ -37,6 +37,7 @@ actions:
   executor_url: http://paeon-executor:8081
   public_url: https://paeon-act.example.org
   docker_url: http://dockerproxy-act:2375
+  docker_read_url: http://dockerproxy:2375
   lock_dir: /locks
   ntfy: { url: https://ntfy.example.org, topic: incidents, token_env: PAEON_ACTIONS_NTFY_TOKEN }
   catalog:

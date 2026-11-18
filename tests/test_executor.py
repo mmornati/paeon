@@ -457,3 +457,58 @@ def test_a_burst_hits_the_rate_limit_before_any_plan_has_finished(tmp_path: Path
     again = bench.executor.propose(proposal(("restart_container", "vpn"), incident=1), T0)
     assert again["level"] == "suggest"
     assert "plan.completed" not in bench.kinds()
+
+
+def test_reading_and_acting_can_go_through_two_proxies(tmp_path: Path) -> None:
+    """The proxy that may act allows only the actions; listing goes through the read one."""
+    import httpx2 as httpx
+
+    from paeon.executor import DockerActuator
+
+    docker = FakeDocker(worker={})
+    seen: list[str] = []
+
+    def write_only(request: httpx.Request) -> httpx.Response:
+        seen.append(f"write {request.method} {request.url.path}")
+        return httpx.Response(403) if request.method == "GET" else docker.handle(request)
+
+    def read_only(request: httpx.Request) -> httpx.Response:
+        seen.append(f"read {request.method} {request.url.path.rsplit('/', 1)[-1]}")
+        return docker.handle(request) if request.method == "GET" else httpx.Response(403)
+
+    actuator = DockerActuator(
+        httpx.Client(base_url="http://act", transport=httpx.MockTransport(write_only)),
+        httpx.Client(base_url="http://read", transport=httpx.MockTransport(read_only)),
+    )
+    bench = Bench(tmp_path, docker=docker, policies=[{"level": "auto"}])
+    bench.executor._docker = actuator
+    try:
+        bench.executor.propose(proposal(), T0)
+    finally:
+        actuator.close()
+    assert bench.last("plan.completed")["outcome"] == "verified"
+    assert [line for line in seen if line.startswith("write")] == [
+        f"write POST /containers/{'a' * 64}/restart"
+    ]
+    assert seen[0] == "read GET json"
+
+
+def test_a_listing_the_proxy_refuses_fails_the_step_and_says_so(tmp_path: Path) -> None:
+    import httpx2 as httpx
+
+    from paeon.executor import DockerActuator
+
+    actuator = DockerActuator(
+        httpx.Client(
+            base_url="http://act", transport=httpx.MockTransport(lambda r: httpx.Response(403))
+        )
+    )
+    bench = Bench(tmp_path, policies=[{"level": "auto"}])
+    bench.executor._docker = actuator
+    try:
+        bench.executor.propose(proposal(), T0)
+    finally:
+        actuator.close()
+    assert bench.last("action.failed")["reason"] == (
+        "docker: docker answered HTTP 403 to the listing"
+    )

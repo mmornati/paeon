@@ -197,7 +197,8 @@ own and read access for you alone. A one-tap approval is exactly as strong as th
 
 - [ ] The executor has its own copy of the rules file, read-only, from git.
 - [ ] `PAEON_SIGNING_KEY` is set on the executor only, and is not in the core's environment.
-- [ ] The executor's Docker proxy allows start, stop and restart, and nothing else.
+- [ ] The executor's Docker proxy allows start, stop and restart, and nothing else: not
+      "POST on containers", which also means create, delete and exec.
 - [ ] Only `/act/` is routed to the executor from outside, over TLS.
 - [ ] The approvals topic has its own token; only you can read it.
 - [ ] The catalog denies your identity provider, reverse proxy, tunnel, databases and Paeon.

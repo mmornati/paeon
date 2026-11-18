@@ -167,9 +167,10 @@ actions:
   # reachable without single sign-on. Without it there are no buttons, and no plan goes
   # above `suggest`.
   # public_url: https://paeon-act.example.org
-  # Executor only: a Docker socket proxy that allows start, stop and restart. Not the one
-  # the investigator reads through.
+  # Executor only: a Docker socket proxy that allows start, stop and restart and nothing
+  # else, and the read-only one it lists and inspects containers through.
   docker_url: http://dockerproxy-act:2375
+  docker_read_url: http://dockerproxy:2375
   # One lock file per container. Point your own repair scripts at the same files
   # (flock /locks/<container>.lock ...) and two automations never restart the same thing.
   lock_dir: /locks

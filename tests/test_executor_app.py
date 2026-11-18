@@ -105,6 +105,7 @@ def env(tmp_path: Path, **more: str) -> dict[str, str]:
     rules = tmp_path / "paeon.yaml"
     rules.write_text(
         "actions:\n  enabled: true\n  docker_url: http://dockerproxy-act:2375\n"
+        "  docker_read_url: http://dockerproxy:2375\n"
         "  ntfy: {url: 'https://ntfy.example.org', topic: incidents, token_env: NTFY}\n"
     )
     return {
@@ -131,7 +132,7 @@ def test_executor_settings(tmp_path: Path) -> None:
         assert built.killed()
         assert built.state(__import__("support").T0)["can_act"] is True
     finally:
-        built._docker._http.close()  # type: ignore[union-attr]
+        built._docker.close()  # type: ignore[union-attr]
         store.close()
     assert load_executor(env(tmp_path)).signing_key is None
 

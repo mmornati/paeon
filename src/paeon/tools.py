@@ -406,7 +406,12 @@ def sql_streams(sql: str) -> set[str] | None:
     for index, (kind, text) in enumerate(tokens):
         following = tokens[index + 1] if index + 1 < len(tokens) else ("end", "")
         if kind == "word" and index and tokens[index - 1] == ("mark", "."):
-            continue  # `t.where`, `t.from`: a column, whatever it is called
+            # `t.where`: a column, whatever it is called. Only after a real qualifier, though:
+            # in `1.from x` the engine reads the number `1.` and then a from clause.
+            qualifier = tokens[index - 2][0] if index >= 2 else "start"
+            if text in ("from", "join") or qualifier not in ("word", "quoted"):
+                return None
+            continue
         if kind == "mark" and text == "(":
             depth += 1
         elif kind == "mark" and text == ")":

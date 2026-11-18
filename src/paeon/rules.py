@@ -445,7 +445,12 @@ class Actions(_Rule):
     )
     docker_url: str | None = Field(
         default=None,
-        description="Executor only: a Docker socket proxy that allows POST on containers.",
+        description="Executor only: a Docker socket proxy that allows start, stop and restart.",
+    )
+    docker_read_url: str | None = Field(
+        default=None,
+        description="Executor only: where it lists and inspects containers, when the proxy"
+        " above allows nothing but the actions. Defaults to `docker_url`.",
     )
     lock_dir: str = Field(
         default="locks", description="One lock file per container, shared with other repairers."

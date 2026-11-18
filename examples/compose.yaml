@@ -63,7 +63,7 @@ services:
       - paeon_executor_token
       - paeon_signing_key
       - paeon_actions_ntfy_token
-    networks: [monitoring, docker-act, paeon-internal]
+    networks: [monitoring, docker-act, docker-read, paeon-internal]
 
   # Only needed for the investigator's Docker tools. It exposes container listing, inspection
   # and logs over GET and nothing else; Paeon never gets the socket.
@@ -79,18 +79,21 @@ services:
     networks: [docker-read]
 
   # Only with `actions.enabled`: what the executor acts through. Start, stop and restart of
-  # containers, and nothing else. Check the variable names against the documentation of the
-  # proxy version you pin; `unpause_container` needs POST: 1, which opens more, so leave that
-  # action out of the catalog unless you accept it.
+  # containers, and nothing else. In this proxy POST is a global switch, and with CONTAINERS
+  # on it would also allow creating and deleting containers: so CONTAINERS stays off here,
+  # and the executor lists and inspects through the read-only proxy above
+  # (`actions.docker_read_url`). Checked against the image tagged `latest` on 2026-11-18.
   dockerproxy-act:
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     environment:
-      CONTAINERS: 1
-      POST: 0
+      POST: 1
+      CONTAINERS: 0
       ALLOW_START: 1
       ALLOW_STOP: 1
-      ALLOW_RESTARTS: 1
+      ALLOW_RESTARTS: 1     # also allows kill
+      # ALLOW_PAUSE: 1      # with ALLOW_UNPAUSE, for unpause_container and its Undo
+      # ALLOW_UNPAUSE: 1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [docker-act]
