@@ -85,6 +85,7 @@ def test_approve_asks_and_go_runs_verifies_and_reports(tmp_path: Path) -> None:
         "action.verified",
         "plan.completed",
         "notification.sent",
+        "notification.sent",  # the tap is acknowledged
     ]
     done = bench.last("plan.completed")
     assert done["outcome"] == "verified"
@@ -95,10 +96,62 @@ def test_approve_asks_and_go_runs_verifies_and_reports(tmp_path: Path) -> None:
     # A restart has no inverse: no Undo, but always a way to say it was wrong.
     assert [a["label"] for a in result["actions"]] == ["This was wrong", "Stop automation"]
 
+    # The tap itself is answered: a button gives no sign of its own that it arrived.
+    received = bench.sent[2]
+    assert received["title"] == "Incident #1: Go received"
+    assert "1. Restart a container (worker)" in received["message"]
+    assert received["actions"] == []
+
     # A link works once, and No-go is dead once Go was given.
     assert bench.executor.act(go, LATER).message == "this link was already used"
     assert "no longer waiting" in bench.executor.act(bench.link("No-go", 0), LATER).message
     assert bench.docker.posts == ["restart worker"]
+    # A dead button says so, once: tapping it five times is one message, not five.
+    assert bench.executor.act(go, LATER).message == "this link was already used"
+    assert bench.titles()[3:] == [
+        "Incident #1: that button did nothing",
+        "Incident #1: that button did nothing",
+    ]
+    assert bench.sent[3]["message"].startswith("This link was already used.")
+    assert "This plan is no longer waiting (it is done)." in bench.sent[4]["message"]
+    assert "Nothing was run. Look for a newer message" in bench.sent[4]["message"]
+
+
+def test_a_forged_link_gets_no_answer_and_an_expired_one_does(tmp_path: Path) -> None:
+    bench = Bench(tmp_path)
+    bench.executor.propose(proposal(), T0)
+    go = bench.link("Go")
+    body, _, signature = go.partition(".")
+    for forged in (f"{body}.{signature[:-2]}xx", "x.y", ""):
+        assert bench.executor.act(forged, LATER).message == "this link is not valid"
+    assert bench.titles() == ["Incident #1: run this fix?"]  # nobody of ours is waiting
+    assert bench.executor.act(go, T0 + timedelta(hours=2)).message == "this link has expired"
+    assert bench.titles()[-1] == "Incident #1: that button did nothing"
+    assert bench.sent[-1]["message"].startswith("This link has expired.")
+    assert bench.docker.posts == []
+
+
+def test_every_kind_of_tap_is_acknowledged(tmp_path: Path) -> None:
+    bench = Bench(tmp_path)
+    bench.executor.propose(proposal(), T0)
+    bench.executor.act(bench.link("No-go"), LATER)
+    assert (bench.titles()[-1], bench.sent[-1]["message"]) == (
+        "Incident #1: No-go received",
+        "Declined. Nothing was run.",
+    )
+    vote = bench.executor.vote_links(7, "triage", T0)["up"].removeprefix(
+        "https://act.example.org/act/"
+    )
+    bench.executor.act(vote, LATER)
+    assert (bench.titles()[-1], bench.sent[-1]["priority"]) == ("Incident #7: feedback recorded", 1)
+
+    auto = Bench(tmp_path / "auto", policies=[{"level": "auto"}])
+    auto.executor.propose(proposal(), T0)
+    auto.executor.act(auto.link("This was wrong"), LATER)
+    assert auto.titles()[-1] == "Incident #1: recorded as wrong"
+    auto.executor.act(auto.link("Stop automation"), LATER)
+    assert auto.titles()[-1] == "Paeon: automation stopped"
+    assert auto.sent[-1]["click"] == "https://paeon.example.org/ui/actions"
 
 
 def test_no_go_expiry_and_cancel_run_nothing(tmp_path: Path) -> None:

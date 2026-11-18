@@ -24,6 +24,8 @@ earn autonomy.
   `suggest`, `approve`, `auto`.
 - Go / No-go as signed, single-use, expiring links bound to the plan, sent by the executor to
   ntfy. A GET shows a confirmation page and never applies.
+- Every tap is answered with a short notification: what was received, or why the button did
+  nothing. The executor's access log no longer holds the links, nor a line per poll.
 - Execution with a lock per container, a pre-check, verification, rollback where an action has
   an inverse, and one automated attempt per incident.
 - Runbooks: a known alert and a ladder of steps, with no model call. A runbook that fails hands

@@ -51,8 +51,8 @@ class Signer:
         body = _encode(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode())
         return f"{body}.{self._sign(body)}"
 
-    def read(self, token: str, now: datetime) -> dict[str, Any]:
-        """The payload of a link that is authentic and not expired."""
+    def authentic(self, token: str) -> dict[str, Any]:
+        """The payload of a link this key signed, whether or not it is still in time."""
         body, _, signature = token.partition(".")
         if not body or not hmac.compare_digest(signature, self._sign(body)):
             raise LinkError("this link is not valid")
@@ -62,6 +62,11 @@ class Signer:
             raise LinkError("this link is not valid") from exc
         if not isinstance(payload, dict) or not isinstance(payload.get("exp"), int):
             raise LinkError("this link is not valid")  # pragma: no cover - same
+        return payload
+
+    def read(self, token: str, now: datetime) -> dict[str, Any]:
+        """The payload of a link that is authentic and not expired."""
+        payload = self.authentic(token)
         if now.timestamp() > payload["exp"]:
             raise LinkError("this link has expired")
         return payload

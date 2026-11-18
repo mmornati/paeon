@@ -68,6 +68,32 @@ class VoteLinks(BaseModel):
     about: Literal["triage", "root_cause"]
 
 
+class _QuietAccess(logging.Filter):
+    """Keeps the access log fit to keep: no link, and no line per poll.
+
+    The path of a button is the link itself. It works once and expires, but a log is copied,
+    shipped and kept: the link is cut out of it. The core's journal poll and the health check
+    answer every few seconds and say nothing when they succeed.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if not isinstance(args, tuple) or len(args) < 5 or not isinstance(args[2], str):
+            return True
+        path = args[2]
+        if args[4] == 200 and path.split("?")[0] in ("/journal", "/healthz"):
+            return False
+        if path.startswith("/act/"):
+            record.args = (*args[:2], "/act/[link]", *args[3:])
+        return True
+
+
+def quiet_access_log() -> None:
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(known, _QuietAccess) for known in access.filters):
+        access.addFilter(_QuietAccess())
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -137,6 +163,7 @@ def create_executor_app(settings: ExecutorSettings, executor: Executor) -> FastA
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
 
+    quiet_access_log()
     app = FastAPI(
         title="Paeon executor", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
     )

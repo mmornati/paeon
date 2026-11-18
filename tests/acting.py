@@ -212,9 +212,13 @@ class Bench:
     def last(self, kind: str) -> dict[str, Any]:
         return next(self.store.events(kind=kind, newest_first=True, limit=1)).payload
 
-    def link(self, label: str, message: int = -1) -> str:
-        """The token behind a button of a notification."""
-        button = next(a for a in self.sent[message]["actions"] if a["label"] == label)
+    def link(self, label: str, message: int | None = None) -> str:
+        """The token behind a button: of one notification, or of the latest that has it."""
+        found = self.sent[::-1] if message is None else [self.sent[message]]
+        button = next(a for sent in found for a in sent["actions"] if a["label"] == label)
         assert button["action"] == "http"
         assert button["method"] == "POST"
         return str(button["url"]).removeprefix("https://act.example.org/act/")
+
+    def titles(self) -> list[str]:
+        return [str(sent["title"]) for sent in self.sent]

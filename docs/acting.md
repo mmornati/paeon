@@ -121,6 +121,9 @@ Start with `approve` on one alert and one container.
    exact plan. Opening one in a browser shows what it would do and a Confirm button; only the
    POST behind the button applies. A new plan for the same incident, the incident resolving, or
    the kill switch kills them. With no answer nothing happens, and one reminder says so.
+   A button gives no sign of its own that the tap arrived, so every tap is answered: "Go
+   received" at once, before the result, and for a button that no longer works a message
+   saying why it did nothing (once per button). A forged link gets no answer.
 4. **It runs.** Per step: lock the container, check the world is still as assumed, apply,
    verify. A failed step is rolled back where there is an inverse, and the plan stops.
 5. **You are told** what was done and whether it verified. A failure is a high-priority
