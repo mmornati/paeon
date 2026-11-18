@@ -193,7 +193,10 @@ class OpenObserveTools(_Rule):
     streams: tuple[str, ...] = Field(
         default=(), description="Log streams that may be searched. Nothing else is readable."
     )
-    metrics: bool = Field(default=False, description="Allow PromQL range queries.")
+    metrics: tuple[str, ...] = Field(
+        default=(),
+        description="Metric name patterns (fnmatch) that PromQL queries may read. Empty: none.",
+    )
     max_rows: int = Field(default=100, ge=1, le=1000)
 
 
@@ -252,6 +255,12 @@ class Postmortems(_Rule):
     enabled: bool = False
     dir: str = Field(default="postmortems", min_length=1)
     model: str = Field(default="postmortem", description="An alias from `models`.")
+    daily_budget: float | None = Field(
+        default=None,
+        ge=0,
+        description="Counts every model call of the day, all stages. Spent: the draft is"
+        " written without the model's prose.",
+    )
 
 
 class Rules(_Rule):

@@ -182,6 +182,26 @@ def test_draft_is_still_written_when_the_model_fails(store: Store, tmp_path: Pat
     ]
 
 
+def test_spent_budget_writes_the_draft_without_a_model_call(store: Store, tmp_path: Path) -> None:
+    config = rules(tmp_path / "pm").model_copy(deep=True)
+    config = parse_rules(
+        {
+            **config.model_dump(mode="json"),
+            "postmortems": {"enabled": True, "dir": str(tmp_path / "pm"), "daily_budget": 0.01},
+        }
+    )
+    investigated_incident(store, config)
+    store.append("model.call", {"cost": 0.02})  # today's spend, from any stage
+    model = Writer(json.dumps(NARRATIVE))
+    from datetime import UTC, datetime
+
+    PostmortemWriter(store, config, model).draft(store.incidents()[0], datetime.now(UTC))
+    assert model.inputs == []
+    [path] = list((tmp_path / "pm").glob("*.md"))
+    assert f"## Summary\n\n{TODO}" in path.read_text()
+    assert next(iter(store.events(kind="postmortem.drafted"))).payload["narrative"] is False
+
+
 def test_open_incidents_are_not_drafted(store: Store, tmp_path: Path) -> None:
     config = rules(tmp_path / "pm")
     Recorder(store, Correlator(store, config)).observe(alert(Status.FIRING, 0))

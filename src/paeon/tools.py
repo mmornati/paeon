@@ -238,6 +238,43 @@ _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _FORBIDDEN = re.compile(r";|--|/\*|\b(select|union|join|from|into)\b", re.IGNORECASE)
 
 
+_PROMQL_STRING = re.compile(r'"(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\'|`[^`]*`')
+_PROMQL_GROUPING = re.compile(
+    r"\b(by|without|on|ignoring|group_left|group_right)\s*\([^()]*\)", re.IGNORECASE
+)
+_PROMQL_NAME = re.compile(r"(?<![\w:.])([A-Za-z_:][\w:]*)(\s*\()?")
+_PROMQL_WORDS = frozenset(
+    {"and", "or", "unless", "offset", "bool", "inf", "nan", "start", "end", "group_left",
+     "group_right", "by", "without", "on", "ignoring"}
+)  # fmt: skip
+
+
+def metric_names(promql: str) -> set[str]:
+    """Every metric a PromQL expression reads. Raises ToolError when that cannot be told.
+
+    Strings, label matchers, durations and grouping clauses are removed; of what is left, a word
+    followed by `(` is a function and anything else is a metric. An expression that selects by
+    `__name__`, or that does not reduce cleanly, is refused rather than guessed at.
+    """
+    if "__name__" in promql:
+        raise ToolError("selecting by __name__ is not allowed; name the metric")
+    text = _PROMQL_STRING.sub(" ", promql)
+    if any(quote in text for quote in "\"'`"):
+        raise ToolError("the query has an unterminated string")
+    previous = None
+    while previous != text:  # matchers and ranges do not nest, but strip until stable
+        previous = text
+        text = re.sub(r"\{[^{}]*\}|\[[^\[\]]*\]", " ", text)
+    if any(bracket in text for bracket in "{}[]"):
+        raise ToolError("the query has unbalanced braces or brackets")
+    text = _PROMQL_GROUPING.sub(" ", text)
+    return {
+        match.group(1)
+        for match in _PROMQL_NAME.finditer(text)
+        if not match.group(2) and match.group(1).lower() not in _PROMQL_WORDS
+    }
+
+
 def openobserve_tools(client: Telemetry, config: OpenObserveTools) -> list[Tool]:
     def search_logs(args: dict[str, Any]) -> Any:
         stream = _string(args, "stream")
@@ -267,6 +304,17 @@ def openobserve_tools(client: Telemetry, config: OpenObserveTools) -> list[Tool]
 
     def query_metrics(args: dict[str, Any]) -> Any:
         promql = _string(args, "promql")
+        names = metric_names(promql)
+        refused = sorted(
+            name
+            for name in names
+            if not any(fnmatch.fnmatchcase(name, pattern) for pattern in config.metrics)
+        )
+        if refused or not names:
+            raise ToolError(
+                f"not readable: {refused or 'no metric name found'};"
+                f" readable metrics: {list(config.metrics)}"
+            )
         minutes = _integer(args, "since_minutes", 60, low=1, high=7 * 24 * 60)
         step = _integer(args, "step_seconds", max(minutes * 60 // 60, 15), low=15, high=3600)
         now = datetime.now(UTC)
@@ -349,26 +397,47 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
             raise ToolError(f"docker answered HTTP {response.status_code}")
         return response
 
-    def name_of(args: dict[str, Any]) -> str:
+    def containers() -> list[dict[str, Any]]:
+        return [e for e in get("/containers/json", all="true").json() if isinstance(e, dict)]
+
+    def names_of(entry: dict[str, Any]) -> list[str]:
+        return [str(name).lstrip("/") for name in entry.get("Names") or []]
+
+    def resolve(args: dict[str, Any]) -> tuple[str, str]:
+        """The canonical name and full id of the container an argument names.
+
+        Docker also accepts an id or an id prefix where a name is expected. The argument is
+        therefore never passed to it: it must equal a container's name, the allow-lists are
+        checked against that name, and the request is made with the container's id.
+        """
         name = _string(args, "name")
         if not _CONTAINER.fullmatch(name):
             raise ToolError("name must be a container name")
-        return name
+        for entry in containers():
+            container_id = entry.get("Id")
+            if name in names_of(entry) and isinstance(container_id, str) and container_id:
+                if not re.fullmatch(r"[0-9a-f]{12,64}", container_id):
+                    raise ToolError("docker returned an unexpected container id")
+                return name, container_id
+        raise ToolError("no such container; use list_containers for the names")
+
+    def logs_readable(name: str) -> bool:
+        return any(fnmatch.fnmatchcase(name, pattern) for pattern in config.logs)
 
     def list_containers(args: dict[str, Any]) -> Any:
         return [
             {
-                "name": str((entry.get("Names") or ["?"])[0]).lstrip("/"),
+                "name": (names_of(entry) or ["?"])[0],
                 "image": entry.get("Image"),
                 "state": entry.get("State"),
                 "status": entry.get("Status"),
             }
-            for entry in get("/containers/json", all="true").json()
-            if isinstance(entry, dict)
+            for entry in containers()
         ]
 
     def inspect_container(args: dict[str, Any]) -> Any:
-        data = get(f"/containers/{name_of(args)}/json").json()
+        name, container_id = resolve(args)
+        data = get(f"/containers/{container_id}/json").json()
         state = data.get("State") or {}
         host = data.get("HostConfig") or {}
         container = data.get("Config") or {}
@@ -377,7 +446,7 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
         labels = container.get("Labels") or {}
         # A projection: the environment, the command line and unlisted labels hold credentials.
         return {
-            "name": str(data.get("Name", "")).lstrip("/"),
+            "name": name,
             "image": container.get("Image"),
             "created": data.get("Created"),
             "restart_count": data.get("RestartCount"),
@@ -397,13 +466,16 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
             "health": {
                 "status": health.get("Status"),
                 "failing_streak": health.get("FailingStreak"),
-                "last_output": last_check.get("Output"),
+                # The check's output is written by the container, like its logs: same gate.
+                "last_output": last_check.get("Output") if logs_readable(name) else "[not shown]",
             },
             "restart_policy": (host.get("RestartPolicy") or {}).get("Name"),
             "memory_limit": host.get("Memory"),
             "networks": {
-                name: {"ip": net.get("IPAddress"), "aliases": net.get("Aliases")}
-                for name, net in ((data.get("NetworkSettings") or {}).get("Networks") or {}).items()
+                network: {"ip": net.get("IPAddress"), "aliases": net.get("Aliases")}
+                for network, net in (
+                    (data.get("NetworkSettings") or {}).get("Networks") or {}
+                ).items()
             },
             "mounts": [
                 {
@@ -420,8 +492,8 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
         }
 
     def container_logs(args: dict[str, Any]) -> Any:
-        name = name_of(args)
-        if not any(fnmatch.fnmatchcase(name, pattern) for pattern in config.logs):
+        name, container_id = resolve(args)
+        if not logs_readable(name):
             raise ToolError(f"the logs of {name!r} are not readable")
         tail = _integer(args, "tail", 100, low=1, high=config.max_log_lines)
         minutes = _integer(args, "since_minutes", 0, low=0, high=7 * 24 * 60)
@@ -429,7 +501,7 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
         params["tail"] = str(tail)
         if minutes:
             params["since"] = str(int((datetime.now(UTC) - timedelta(minutes=minutes)).timestamp()))
-        lines = demux_logs(get(f"/containers/{name}/logs", **params).content).splitlines()
+        lines = demux_logs(get(f"/containers/{container_id}/logs", **params).content).splitlines()
         return {"lines": lines[-tail:]}
 
     readable = ", ".join(config.logs) or "none"
@@ -446,7 +518,8 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
             ToolSpec(
                 "inspect_container",
                 "State of one container: running or not, exit code, OOM kill, restart count,"
-                " health check, networks, mounts. The environment is never returned.",
+                " health check, networks, mounts. The environment is never returned. Use the"
+                " exact name from list_containers.",
                 _schema({"name": {"type": "string"}}, ["name"]),
             ),
             inspect_container,

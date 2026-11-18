@@ -151,11 +151,11 @@ class PostmortemWriter:
                 continue
             if now - incident.resolved_at < quiet:
                 continue  # it may still reopen
-            self.draft(incident)
+            self.draft(incident, now)
             written += 1
         return written
 
-    def draft(self, incident: Incident) -> Path | None:
+    def draft(self, incident: Incident, now: datetime) -> Path | None:
         events = list(self._store.events(incident_id=incident.id))
         findings = next(
             (
@@ -165,7 +165,12 @@ class PostmortemWriter:
             ),
             None,
         )
-        narrative, model = self._narrative(incident, events, findings)
+        budget = self._rules.postmortems.daily_budget
+        if budget is not None and ledger.spent_today(self._store, now) >= budget:
+            # The budget is spent: the draft is still worth having, without the model's prose.
+            narrative, model = None, None
+        else:
+            narrative, model = self._narrative(incident, events, findings)
         text = self.render(incident, events, findings, narrative)
         directory = Path(self._rules.postmortems.dir)
         try:

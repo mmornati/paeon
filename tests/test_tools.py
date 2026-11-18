@@ -211,13 +211,52 @@ def test_search_logs_refuses_everything_else(args: dict[str, Any]) -> None:
     assert telemetry.sql == []
 
 
-def test_query_metrics_when_enabled() -> None:
+def test_query_metrics_reads_only_listed_metrics() -> None:
     telemetry = FakeTelemetry()
-    toolbox = box(openobserve_tools(telemetry, OpenObserveTools(metrics=True)))
+    config = OpenObserveTools(metrics=("container_*", "up"))
+    toolbox = box(openobserve_tools(telemetry, config))
     assert [spec.name for spec in toolbox.specs] == ["query_metrics"]
-    result, is_error = toolbox.call("query_metrics", {"promql": "up", "since_minutes": 120})
-    assert (result, is_error) == ({"resultType": "matrix", "result": []}, False)
-    assert telemetry.promql == [("up", 120)]
+    allowed = [
+        "up",
+        'sum by (name) (rate(container_cpu_usage_seconds_total{name="api"}[5m]))',
+        "container_memory_usage_bytes / on (name) group_left container_spec_memory_limit_bytes",
+        'max_over_time(up{job="x and node_secret"}[1h] offset 5m) > bool 0',
+    ]
+    for promql in allowed:
+        result, is_error = toolbox.call("query_metrics", {"promql": promql, "since_minutes": 120})
+        assert (result, is_error) == ({"resultType": "matrix", "result": []}, False), promql
+    assert [query for query, _ in telemetry.promql] == allowed
+    assert telemetry.promql[0][1] == 120
+
+
+@pytest.mark.parametrize(
+    "promql",
+    [
+        "finance_balance",
+        "up + finance_balance",
+        "sum(rate(finance_transactions_total[5m]))",
+        'up or {__name__=~"finance.*"}',
+        '{job="bank"}',
+        'up{job="x',
+        "up[5m",
+        "42",
+    ],
+)
+def test_query_metrics_refuses_everything_else(promql: str) -> None:
+    telemetry = FakeTelemetry()
+    toolbox = box(openobserve_tools(telemetry, OpenObserveTools(metrics=("container_*", "up"))))
+    _, is_error = toolbox.call("query_metrics", {"promql": promql})
+    assert is_error, promql
+    assert telemetry.promql == []
+
+
+def test_metric_names() -> None:
+    from paeon.tools import metric_names
+
+    assert metric_names("histogram_quantile(0.9, sum by (le) (rate(http_seconds_bucket[5m])))") == {
+        "http_seconds_bucket"
+    }
+    assert metric_names("a:b:rate5m unless on (x) c") == {"a:b:rate5m", "c"}
 
 
 # --- Docker ---------------------------------------------------------------------------------------
@@ -261,6 +300,10 @@ INSPECT = {
 }
 
 
+API_ID = "a1" * 32
+DB_ID = "b2" * 32
+
+
 def frame(stream: int, text: str) -> bytes:
     payload = text.encode()
     return bytes([stream, 0, 0, 0]) + len(payload).to_bytes(4, "big") + payload
@@ -275,29 +318,32 @@ def docker(seen: list[httpx.Request]) -> httpx.Client:
                 200,
                 json=[
                     {
+                        "Id": API_ID,
                         "Names": ["/api"],
                         "Image": "api:2.1",
                         "State": "restarting",
                         "Status": "Restarting (137)",
                     },
                     {
+                        "Id": DB_ID,
                         "Names": ["/db"],
                         "Image": "postgres:17",
                         "State": "running",
                         "Status": "Up 3 days",
                     },
+                    {"Id": "not-an-id/../x", "Names": ["/odd"]},
                 ],
             )
-        if path == "/containers/api/json":
+        if path == f"/containers/{API_ID}/json":
             return httpx.Response(200, json=INSPECT)
-        if path == "/containers/api/logs":
+        if path == f"/containers/{DB_ID}/json":
+            return httpx.Response(500)
+        if path == f"/containers/{API_ID}/logs":
             return httpx.Response(
                 200,
                 content=frame(1, "2026-11-18T07:59:08Z starting\n")
                 + frame(2, "2026-11-18T07:59:09Z Killed\n"),
             )
-        if path == "/containers/down/json":
-            return httpx.Response(500)
         return httpx.Response(404, json={"message": "No such container"})
 
     return httpx.Client(base_url="http://dockerproxy:2375", transport=httpx.MockTransport(handler))
@@ -311,7 +357,7 @@ def test_docker_list_and_inspect_never_show_the_environment() -> None:
     seen: list[httpx.Request] = []
     toolbox = docker_box(seen, labels=("com.example.team",), mount_sources=("/srv/data",))
     listed, _ = toolbox.call("list_containers", {})
-    assert [c["name"] for c in listed] == ["api", "db"]
+    assert [c["name"] for c in listed] == ["api", "db", "odd"]
 
     inspected, is_error = toolbox.call("inspect_container", {"name": "api"})
     assert not is_error
@@ -321,8 +367,10 @@ def test_docker_list_and_inspect_never_show_the_environment() -> None:
     assert inspected["health"] == {
         "status": "unhealthy",
         "failing_streak": 4,
-        "last_output": "curl: (7) refused",
+        "last_output": "[not shown]",  # written by the container: shown only where logs are
     }
+    with_logs = docker_box([], logs=("api",)).call("inspect_container", {"name": "api"})[0]
+    assert with_logs["health"]["last_output"] == "curl: (7) refused"
     assert inspected["labels"] == {"com.example.team": "home"}
     assert inspected["mounts"] == [
         {"destination": "/data", "type": "bind", "read_write": True, "source": "/srv/data/api"},
@@ -342,13 +390,31 @@ def test_docker_logs_only_for_listed_containers() -> None:
     )
     assert not is_error
     assert result == {"lines": ["2026-11-18T07:59:08Z starting", "2026-11-18T07:59:09Z Killed"]}
-    assert seen[0].url.params["tail"] == "50"  # capped
-    assert "since" in seen[0].url.params
+    listing, logs = seen
+    assert listing.url.path == "/containers/json"
+    assert logs.url.path == f"/containers/{API_ID}/logs"  # by id, never by the argument
+    assert logs.url.params["tail"] == "50"  # capped
+    assert "since" in logs.url.params
 
     refused, is_error = toolbox.call("container_logs", {"name": "db"})
     assert is_error
     assert "not readable" in refused["error"]
-    assert len(seen) == 1  # no request was made for it
+    assert [r.url.path for r in seen[2:]] == ["/containers/json"]  # resolved, logs never asked
+
+
+def test_docker_accepts_exact_names_only() -> None:
+    """Docker resolves an id or an id prefix where a name is expected: the tool must not."""
+    seen: list[httpx.Request] = []
+    toolbox = docker_box(seen, logs=("*",))
+    for argument in (DB_ID, DB_ID[:12], "b2b2", "ap"):
+        for tool in ("container_logs", "inspect_container"):
+            result, is_error = toolbox.call(tool, {"name": argument})
+            assert is_error
+            assert "no such container" in result["error"]
+    assert {r.url.path for r in seen} == {"/containers/json"}
+    odd, is_error = toolbox.call("inspect_container", {"name": "odd"})
+    assert is_error
+    assert odd == {"error": "docker returned an unexpected container id"}
 
 
 @pytest.mark.parametrize("name", ["../../secrets", "api/json?x=1", "", "a b", 7])
@@ -363,11 +429,10 @@ def test_docker_refuses_names_that_are_not_names(name: Any) -> None:
 def test_docker_errors_do_not_carry_the_url() -> None:
     seen: list[httpx.Request] = []
     toolbox = docker_box(seen)
-    assert toolbox.call("inspect_container", {"name": "ghost"}) == (
-        {"error": "no such container"},
-        True,
-    )
-    assert toolbox.call("inspect_container", {"name": "down"}) == (
+    ghost, is_error = toolbox.call("inspect_container", {"name": "ghost"})
+    assert is_error
+    assert "no such container" in ghost["error"]
+    assert toolbox.call("inspect_container", {"name": "db"}) == (
         {"error": "docker answered HTTP 500"},
         True,
     )

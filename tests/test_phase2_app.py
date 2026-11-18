@@ -133,7 +133,10 @@ def test_the_real_toolbox_is_built_from_the_rules(store: Store, tmp_path: Path) 
             "model": "strong",
             "tools": {
                 "docker": {"url": "http://dockerproxy:2375", "logs": ["media-*"]},
-                "openobserve": {"streams": ["traefik"]},  # no OpenObserve account: left out
+                "openobserve": {
+                    "streams": ["traefik"],
+                    "metrics": ["up"],
+                },  # no OpenObserve account: left out
                 "knowledge": {"paths": [str(tmp_path)]},
             },
         },

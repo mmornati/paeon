@@ -98,7 +98,7 @@ investigation:
     # leave out anything private (finance, health, shell or assistant transcripts).
     openobserve:
       streams: [traefik, docker]
-      metrics: true
+      metrics: ["container_*", "node_*", "up"]   # metric names PromQL may read
     # A Docker socket proxy limited to GET (for example tecnativa/docker-socket-proxy with
     # CONTAINERS=1 and everything else off). Never the socket itself.
     docker:
@@ -119,3 +119,4 @@ postmortems:
   enabled: false
   dir: /data/postmortems
   model: postmortem
+  daily_budget: 2.0

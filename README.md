@@ -56,7 +56,7 @@ What exists:
   for a person to carry out. Every tool call is recorded with its full redacted result.
 - **Tools**: Paeon's own record (open and past incidents, the change calendar, keyword search in
   runbooks and postmortems), OpenObserve (log search on an allow-list of streams, PromQL if you
-  enable it), Docker through a socket proxy (list, inspect without the environment, logs for an
+  allow-list metric names), Docker through a socket proxy (list, inspect without the environment, logs for an
   allow-list of containers).
 - **Postmortem drafts** (`paeon.postmortem`): markdown with YAML front matter, written to a
   directory when an investigated incident has stayed resolved. The front matter, the timeline and
@@ -119,7 +119,7 @@ of secret-shaped strings:
 
 - triage: alert titles, descriptions and labels. No raw payload, no log line.
 - investigation: the same, plus what its tools return: rows of the log streams you listed,
-  metrics, container state without the environment, log lines of the containers you listed, and
+  listed metrics, container state without the environment, log lines of the containers you listed, and
   excerpts of your runbooks and postmortems.
 - postmortems: the incident's timeline and the investigation's findings.
 
