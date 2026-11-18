@@ -243,9 +243,15 @@ _PROMQL_GROUPING = re.compile(
     r"\b(by|without|on|ignoring|group_left|group_right)\s*\([^()]*\)", re.IGNORECASE
 )
 _PROMQL_NAME = re.compile(r"(?<![\w:.])([A-Za-z_:][\w:]*)(\s*\()?")
+# Operators and modifiers: never a metric, wherever they stand.
 _PROMQL_WORDS = frozenset(
-    {"and", "or", "unless", "offset", "bool", "inf", "nan", "start", "end", "group_left",
-     "group_right", "by", "without", "on", "ignoring"}
+    {"and", "or", "unless", "atan2", "offset", "bool", "inf", "nan", "start", "end",
+     "by", "without", "on", "ignoring", "group_left", "group_right"}
+)  # fmt: skip
+# Aggregations are functions in every valid use; before a `{` they cannot be a metric either.
+_PROMQL_RESERVED = _PROMQL_WORDS | frozenset(
+    {"sum", "min", "max", "avg", "group", "stddev", "stdvar", "count", "count_values",
+     "bottomk", "topk", "quantile", "limitk", "limit_ratio"}
 )  # fmt: skip
 
 
@@ -273,7 +279,7 @@ def metric_names(promql: str) -> set[str]:
         raise ToolError("comments are not allowed in the query")
     for selector in _PROMQL_SELECTOR.finditer(text):
         name, matchers = selector.group(1), selector.group(2)
-        if name is None or name.lower() in _PROMQL_WORDS:
+        if name is None or name.lower() in _PROMQL_RESERVED:
             raise ToolError("every {...} matcher must follow a metric name")
         if matchers.strip().startswith(_STRING_MARK):
             raise ToolError("name the metric before the braces, not inside them")
