@@ -156,6 +156,9 @@ colleague you do not know yet. Allow keys such as limits; think twice about `ima
   or the kill switch leaves old links pointing at a plan that is no longer waiting.
 - A GET never applies: link previews, crawlers and a mis-tap in a browser get a page with a
   Confirm button.
+- A tap is answered with a notification only if the link carries this executor's signature,
+  and once per link: a forged link cannot be used to make the phone ring.
+- The link is the path of the request, so the executor cuts it out of its access log.
 
 **Residual risk:** whoever can read the ntfy topic can press Go. Give the topic a token of its
 own and read access for you alone. A one-tap approval is exactly as strong as that channel.

@@ -556,13 +556,17 @@ class Executor:
         # An `http` action: the phone POSTs the link. Opening it (a GET) only shows a page.
         return {"action": "http", "label": label, "url": url, "method": "POST", "clear": True}
 
-    def _details(self, incident_id: int) -> str | None:
+    def _details(self, incident_id: int | None) -> str | None:
         base = self._rules.ui.public_url
-        return None if base is None else f"{base.rstrip('/')}/ui/incidents/{incident_id}"
+        if base is None:
+            return None
+        if incident_id is None:
+            return f"{base.rstrip('/')}/ui/actions"
+        return f"{base.rstrip('/')}/ui/incidents/{incident_id}"
 
     def _notify(
         self,
-        incident_id: int,
+        incident_id: int | None,
         about: str,
         *,
         title: str,
@@ -665,12 +669,86 @@ class Executor:
         return found[0]
 
     def act(self, token: str, now: datetime) -> Outcome:
-        """Apply a link. Only a POST reaches this."""
+        """Apply a link. Only a POST reaches this.
+
+        A button in a notification gives no sign of its own that the tap arrived, so every
+        tap is answered with a short notification: what was received, or why the button did
+        nothing. A forged link gets no answer: only one this process signed does.
+        """
         try:
             with self._lock:
-                return self._act(token, now)
+                outcome = self._act(token, now)
         except LinkError as exc:
+            self._answer_refusal(token, str(exc), now)
             return Outcome(False, str(exc))
+        self._acknowledge(token, outcome)
+        return outcome
+
+    def _subject(self, payload: dict[str, Any]) -> tuple[int | None, list[str]]:
+        """The incident a link is about, and the steps of its plan if it has one."""
+        found = self._store.proposals(proposal_id=int(payload.get("p") or 0))
+        if found:
+            return found[0].incident_id, _plain(found[0].proposal.steps)
+        incident = payload.get("i")
+        return (incident if isinstance(incident, int) else None), []
+
+    def _acknowledge(self, token: str, outcome: Outcome) -> None:
+        if self._signer is None:  # pragma: no cover - a link was just accepted
+            return
+        payload = self._signer.authentic(token)
+        kind = str(payload.get("k"))
+        incident, steps = self._subject(payload)
+        where = "Paeon" if incident is None else f"Incident #{incident}"
+        title = {
+            "go": "Go received",
+            "nogo": "No-go received",
+            "undo": "Undo received",
+            "wrong": "recorded as wrong",
+            "kill": "automation stopped",
+            "vote": "feedback recorded",
+        }.get(kind, "received")
+        lines = [outcome.message]
+        if kind == "go":
+            lines = ["Running now:", *steps, "", "The result follows in a moment."]
+        self._notify(
+            incident,
+            "acknowledgement",
+            title=f"{where}: {title}",
+            message="\n".join(lines),
+            actions=[],
+            # A vote is small talk; the others answer a decision and should be seen.
+            priority=1 if kind == "vote" else 3,
+            tags=("ok_hand",),
+        )
+
+    def _answer_refusal(self, token: str, reason: str, now: datetime) -> None:
+        """Say why a button did nothing. Once per link, and only for a link that is ours."""
+        if self._signer is None:
+            return
+        try:
+            payload = self._signer.authentic(token)
+        except LinkError:
+            return  # forged or mangled: nobody of ours is waiting for an answer
+        if not self._store.use_link(f"refused:{payload.get('n')}", now):
+            return
+        incident, steps = self._subject(payload)
+        where = "Paeon" if incident is None else f"Incident #{incident}"
+        self._notify(
+            incident,
+            "refusal",
+            title=f"{where}: that button did nothing",
+            message="\n".join(
+                [
+                    reason[:1].upper() + reason[1:] + ".",
+                    *(["", "It was for:", *steps] if steps else []),
+                    "",
+                    "Nothing was run. Look for a newer message about this incident.",
+                ]
+            ),
+            actions=[],
+            priority=3,
+            tags=("no_entry_sign",),
+        )
 
     def _act(self, token: str, now: datetime) -> Outcome:
         payload = self._read(token, now)

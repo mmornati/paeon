@@ -75,7 +75,7 @@ def test_propose_approve_by_link_and_mirror(tmp_path: Path) -> None:
         assert "This link is not valid." in client.post("/act/forged.link").text
 
         journal = client.get("/journal", headers=AUTH).json()["events"]
-        assert journal[-2]["kind"] == "plan.completed"
+        assert "plan.completed" in [entry["kind"] for entry in journal]
         after = journal[-1]["id"]
         assert client.get("/journal", params={"after": after}, headers=AUTH).json() == {
             "events": [],
@@ -160,3 +160,29 @@ def test_the_example_catalog_is_the_one_in_the_tests() -> None:
         "start_container",
         "unpause_container",
     ]
+
+
+def test_the_access_log_keeps_no_link_and_no_poll() -> None:
+    import logging
+
+    from paeon.executor_app import _QuietAccess
+
+    def line(method: str, path: str, status: int) -> logging.LogRecord:
+        return logging.LogRecord(
+            "uvicorn.access", logging.INFO, "", 0, '%s - "%s %s HTTP/%s" %d',
+            ("10.0.0.9:1", method, path, "1.1", status), None,
+        )  # fmt: skip
+
+    keep = _QuietAccess()
+    tap = line("POST", "/act/eyJleHAiOjE3OTUwMTIyODQsImsiOiJnbyJ9.c2lnbmF0dXJl", 200)
+    assert keep.filter(tap)
+    assert tap.getMessage() == '10.0.0.9:1 - "POST /act/[link] HTTP/1.1" 200'
+    assert not keep.filter(line("GET", "/journal?after=12", 200))
+    assert not keep.filter(line("GET", "/healthz", 200))
+    assert keep.filter(line("GET", "/journal?after=12", 401))  # a failure is worth a line
+    assert keep.filter(line("POST", "/proposals", 200))
+    odd = logging.LogRecord("uvicorn.access", logging.INFO, "", 0, "started", None, None)
+    assert keep.filter(odd)
+    assert (
+        sum(isinstance(f, _QuietAccess) for f in logging.getLogger("uvicorn.access").filters) <= 1
+    )
