@@ -345,36 +345,86 @@ def metric_names(promql: str) -> set[str]:
     }
 
 
-_SQL_STRING = re.compile(r"'(?:[^']|'')*'")
-_SQL_KEYWORD = re.compile(r"\b(?:from|join)\b", re.IGNORECASE)
-_SQL_TABLE = re.compile(
-    r"\b(?:from|join)\s*(?:\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))", re.I
+_SQL_TOKEN = re.compile(
+    r"""\s+
+      | (?P<string>'(?:[^']|'')*')
+      | (?P<quoted>"[^"]*")
+      | (?P<word>[A-Za-z_][A-Za-z0-9_]*)
+      | (?P<number>[0-9][0-9A-Za-z_.]*)
+      | (?P<mark>.)""",
+    re.VERBOSE | re.DOTALL,
 )
-_SQL_SUBQUERY = re.compile(r"\b(?:from|join)\s*\(", re.IGNORECASE)
-_SQL_COMMA_JOIN = re.compile(
-    r"\b(?:from|join)\s*\"?[A-Za-z_][A-Za-z0-9_]*\"?(?:\s+(?:as\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s*,",
-    re.IGNORECASE,
+_SQL_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_SQL_REFUSED = frozenset(";\\`[]{}#$@'\"")  # as a mark: outside any string or identifier
+_SQL_CLAUSE_END = frozenset(
+    {"where", "group", "order", "limit", "having", "union", "intersect", "except", "offset"}
 )
+
+
+def _sql_tokens(sql: str) -> list[tuple[str, str]] | None:
+    """A query as (kind, text) tokens, read once from left to right, or None if it has a
+    comment, a backslash, or anything else this reader does not account for.
+
+    Strings and quoted identifiers are told apart in the same scan, so a quote inside one can
+    never open the other."""
+    if "--" in sql or "/*" in sql or "\\" in sql:
+        return None
+    tokens: list[tuple[str, str]] = []
+    for match in _SQL_TOKEN.finditer(sql):
+        kind = match.lastgroup
+        if kind is None:  # whitespace
+            continue
+        text = match.group(kind)
+        if kind == "mark" and text in _SQL_REFUSED:
+            return None  # includes a quote that opens nothing: an unterminated string
+        if kind == "quoted":
+            text = text[1:-1]
+            if _SQL_NAME.fullmatch(text) is None:
+                return None
+        tokens.append((kind, text.lower() if kind == "word" else text))
+    return tokens
 
 
 def sql_streams(sql: str) -> set[str] | None:
     """Every stream a SQL query reads, or None when that cannot be told for certain.
 
-    Not a SQL parser, so it refuses what it cannot account for: a comment, a second statement,
-    a comma join, and any `from` or `join` that is followed by neither a plain table name nor a
-    sub-query (whose own tables are then found in turn). `extract(x from y)` is refused too:
-    a query that is not re-run costs a tool call, one that reads an unlisted stream leaks it.
+    Not a SQL parser, so it refuses what it cannot account for. Every `from` and `join` must be
+    followed by a sub-query (whose own tables are found in turn) or by one plain table name,
+    and that name must not go on as `schema.table`, a function call or anything else. A comma
+    in a from clause (a comma join) is refused. `extract(x from y)` makes `y` a table, which
+    the allow-list then refuses: a query that is not re-run costs a tool call, one that reads
+    an unlisted stream leaks it.
     """
-    text = _SQL_STRING.sub("''", sql)
-    if "'" in text.replace("''", "") or any(mark in text for mark in (";", "--", "/*", "`")):
+    tokens = _sql_tokens(sql)
+    if tokens is None:
         return None
-    if _SQL_COMMA_JOIN.search(text):
-        return None
-    tables = [quoted or bare for quoted, bare in _SQL_TABLE.findall(text)]
-    accounted = len(tables) + len(_SQL_SUBQUERY.findall(text))
-    if not tables or accounted != len(_SQL_KEYWORD.findall(text)):
-        return None
-    return set(tables)
+    tables: set[str] = set()
+    depth = 0
+    from_at: set[int] = set()  # paren depths at which a from clause is open
+    for index, (kind, text) in enumerate(tokens):
+        following = tokens[index + 1] if index + 1 < len(tokens) else ("end", "")
+        if kind == "mark" and text == "(":
+            depth += 1
+        elif kind == "mark" and text == ")":
+            from_at.discard(depth)
+            depth -= 1
+            if depth < 0:
+                return None
+        elif kind == "mark" and text == "," and depth in from_at:
+            return None
+        elif kind == "word" and text in _SQL_CLAUSE_END:
+            from_at.discard(depth)
+        elif kind == "word" and text in ("from", "join"):
+            from_at.add(depth)
+            if following == ("mark", "("):
+                continue
+            after = tokens[index + 2] if index + 2 < len(tokens) else ("end", "")
+            if following[0] not in ("word", "quoted") or after[0] in ("quoted", "string"):
+                return None
+            if after[0] == "mark" and after[1] in ".(:":
+                return None
+            tables.add(following[1])
+    return tables if tables and depth == 0 else None
 
 
 def openobserve_tools(
