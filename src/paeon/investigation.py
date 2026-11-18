@@ -357,6 +357,15 @@ class Investigator:
                 "alias": config.model,
                 "prompt_version": PROMPT_VERSION,
                 "tools": [spec.name for spec in specs],
+                # Kept so that the investigation can be replayed with the tools as they were.
+                "specs": [
+                    {
+                        "name": spec.name,
+                        "description": spec.description,
+                        "input_schema": spec.input_schema,
+                    }
+                    for spec in specs
+                ],
                 "input": pack,
             },
             incident_id=incident.id,
