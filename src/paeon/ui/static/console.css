@@ -1,0 +1,1264 @@
+/* Paeon console. One world: a strip board.
+   The ground is the rack, an incident is a printed strip in a holder, and a bay is a stage.
+   Two voices: what code recorded is printed ink; what a model said is pen blue.
+   What left the server carries a reversed tag. */
+
+:root {
+  --rack: #c5cfcb;
+  --well: #b4bfbb;
+  --strip: #f4f6f2;
+  --edge: #8a9793;
+  --rule: #c3ccc8;
+  --ink: #101820;
+  --ink-2: #3a474e;
+  --pen: #1b3fa8;
+  --pen-2: #3d58a6;
+  --bar: #101820;
+  --bar-ink: #f4f6f2;
+  --bar-dim: #a9b6b2;
+  --sev-critical: #b3261e;
+  --sev-critical-ink: #ffffff;
+  --sev-warning: #d9a400;
+  --sev-warning-ink: #101820;
+  --sev-info: #1d6f5c;
+  --sev-info-ink: #ffffff;
+  --sev-unknown: #5d6b70;
+  --sev-unknown-ink: #ffffff;
+
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --t-label: 0.6875rem;
+  --t-small: 0.8125rem;
+  --t-body: 0.9375rem;
+  --t-lead: 1.0625rem;
+  --t-title: 1.375rem;
+  --gutter: 0.75rem;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rack: #0f1613;
+    --well: #080d0b;
+    --strip: #1c2622;
+    --edge: #38443e;
+    --rule: #2c3933;
+    --ink: #e8eeea;
+    --ink-2: #a3b3ac;
+    --pen: #9db8ff;
+    --pen-2: #8ea2d6;
+    --bar: #050907;
+    --bar-ink: #e8eeea;
+    --bar-dim: #8d9c99;
+    --sev-critical: #ef6a5e;
+    --sev-critical-ink: #0f1613;
+    --sev-warning: #e6b422;
+    --sev-warning-ink: #0f1613;
+    --sev-info: #49b79b;
+    --sev-info-ink: #0f1613;
+    --sev-unknown: #8d9ca0;
+    --sev-unknown-ink: #0f1613;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scrollbar-color: var(--edge) transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--rack);
+  color: var(--ink);
+  font: 400 var(--t-body) / 1.45 var(--sans);
+  font-variant-numeric: tabular-nums;
+  accent-color: var(--pen);
+  caret-color: var(--pen);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+::selection {
+  background: var(--pen);
+  color: var(--strip);
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+ol,
+dl,
+dd,
+pre {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip {
+  position: absolute;
+  left: var(--gutter);
+  top: -4rem;
+  z-index: 2;
+  background: var(--strip);
+  color: var(--ink);
+  padding: 0.5rem 0.75rem;
+}
+
+.skip:focus {
+  top: 0.5rem;
+}
+
+/* The model's voice: one rule, everywhere. Blue and slanted, so it never rests on colour alone. */
+.pen {
+  color: var(--pen);
+  font-style: italic;
+}
+
+.dim-pen {
+  color: var(--pen-2);
+}
+
+.dim {
+  color: var(--ink-2);
+}
+
+/* --- the bar ------------------------------------------------------------------------------ */
+
+.bar {
+  background: var(--bar);
+  color: var(--bar-ink);
+  padding: 0 var(--gutter);
+}
+
+.bar-line {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mark {
+  font-weight: 700;
+  font-size: var(--t-lead);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.nav {
+  display: flex;
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font-size: var(--t-small);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--bar-dim);
+  transition:
+    color 160ms var(--ease),
+    background-color 160ms var(--ease);
+}
+
+.nav a:hover {
+  color: var(--bar-ink);
+}
+
+.nav a[aria-current] {
+  background: var(--rack);
+  color: var(--ink);
+}
+
+.bar :focus-visible {
+  outline-color: var(--bar-ink);
+  outline-offset: -3px;
+}
+
+.stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.875rem;
+  padding: 0.3125rem 0 0.4375rem;
+  border-top: 1px solid color-mix(in srgb, var(--bar-ink) 22%, transparent);
+  font-size: var(--t-label);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bar-dim);
+}
+
+.stage b {
+  color: var(--bar-ink);
+  font-weight: 700;
+}
+
+.stage-off b {
+  color: var(--bar-dim);
+  font-weight: 600;
+}
+
+/* --- page --------------------------------------------------------------------------------- */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 54rem;
+  margin: 0 auto;
+  padding: 1rem var(--gutter) 2.5rem;
+}
+
+.page-wide {
+  max-width: 96rem;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+h1 {
+  font-size: var(--t-title);
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.live {
+  font-size: var(--t-small);
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+
+.live[data-stale] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.back {
+  font-size: var(--t-small);
+  margin-bottom: 0.625rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.back a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  font-weight: 600;
+}
+
+.foot {
+  padding: 0.75rem var(--gutter) 1rem;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+  border-top: 1px solid var(--edge);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 1.5rem;
+}
+
+/* --- the board ---------------------------------------------------------------------------- */
+
+.board {
+  display: grid;
+  gap: 1.125rem;
+}
+
+.bay {
+  min-width: 0;
+}
+
+.bay-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.1875rem;
+}
+
+.bay-name {
+  font-size: var(--t-small);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.bay-count {
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  font-weight: 600;
+}
+
+.bay-strips {
+  display: grid;
+  gap: 0.3125rem;
+  padding: 0.3125rem;
+  background: var(--well);
+  min-height: 3rem;
+  align-content: start;
+}
+
+.bay-empty {
+  padding: 0.4375rem 0.375rem;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.legend {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 1.25rem;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+/* --- a strip ------------------------------------------------------------------------------ */
+
+.strip {
+  --holder: var(--sev-unknown);
+  --holder-ink: var(--sev-unknown-ink);
+  position: relative;
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr);
+  background: var(--strip);
+  border: 1px solid var(--edge);
+  transition: border-color 160ms var(--ease);
+}
+
+.sev-critical {
+  --holder: var(--sev-critical);
+  --holder-ink: var(--sev-critical-ink);
+}
+
+.sev-warning {
+  --holder: var(--sev-warning);
+  --holder-ink: var(--sev-warning-ink);
+}
+
+.sev-info {
+  --holder: var(--sev-info);
+  --holder-ink: var(--sev-info-ink);
+}
+
+.holder {
+  background: var(--holder);
+  color: var(--holder-ink);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.125rem 0.375rem;
+  font-family: var(--mono);
+}
+
+.holder-id {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.holder-sev {
+  font-family: var(--sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* A resolved strip is turned over: the holder keeps its colour as a frame only. */
+.is-resolved .holder {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 3px var(--holder);
+}
+
+.strip-title {
+  padding: 0.4375rem 0.625rem 0;
+  font-size: var(--t-body);
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+h1.strip-title {
+  font-size: var(--t-title);
+  padding-top: 0.5625rem;
+}
+
+.strip-title a {
+  text-decoration: none;
+}
+
+.strip-title a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.strip:has(.strip-title a:hover) {
+  border-color: var(--ink);
+}
+
+.strip:has(.strip-title a:hover) .strip-title a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.strip:has(.strip-title a:focus-visible) {
+  outline: 2px solid var(--pen);
+  outline-offset: 2px;
+}
+
+.strip-title a:focus-visible {
+  outline: none;
+}
+
+.strip-standing {
+  padding: 0.0625rem 0.625rem 0.4375rem;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.flag {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0 0.3125rem;
+  border: 1px solid var(--ink-2);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  border-top: 1px solid var(--rule);
+  overflow: hidden;
+}
+
+.cell {
+  min-width: 0;
+  padding: 0.25rem 0.625rem 0.375rem;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  margin: 0 -1px -1px 0;
+}
+
+.cell dt,
+.findings dt,
+.field span,
+.table th,
+.budget-name {
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.cell dd {
+  font-size: 0.875rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.cell dd.pen {
+  font-weight: 500;
+}
+
+/* On the board a strip is a fixed form: two columns of boxes, one line in each. */
+.strip-fixed .cells {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.strip-fixed .strip-title,
+.strip-fixed .cell dd {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* When and for how long is never the part that gives way: the flag is. */
+.strip-fixed .strip-standing {
+  display: flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.strip-fixed .standing-when {
+  flex: none;
+}
+
+/* Tags in that line are whole words and add nothing to its height. */
+.strip-fixed .flag,
+.changed {
+  flex: none;
+  margin: -0.25rem 0;
+  line-height: 1.25;
+}
+
+.strip-fixed .strip-title {
+  padding-bottom: 0.0625rem;
+}
+
+/* A strip that changed is cocked out of line until someone touches it. */
+.strip.is-changed {
+  translate: 0.5rem 0;
+}
+
+.changed {
+  padding: 0 0.3125rem;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* --- blocks of an incident ---------------------------------------------------------------- */
+
+.block {
+  margin-top: 1.75rem;
+}
+
+.block h2,
+.empty p:first-child {
+  font-size: var(--t-small);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.1875rem;
+  margin-bottom: 0.625rem;
+}
+
+.block h3 {
+  font-size: var(--t-small);
+  font-weight: 700;
+  margin: 1.125rem 0 0.3125rem;
+}
+
+.block > p,
+.block > form,
+.block > dl {
+  max-width: 70ch;
+}
+
+.lead {
+  font-size: var(--t-lead);
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.lead + p {
+  margin-top: 0.375rem;
+}
+
+.facts,
+.note {
+  margin-top: 0.5rem;
+  font-size: var(--t-small);
+  color: var(--ink-2);
+}
+
+.note {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.figure {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.alerts,
+.evidence,
+.plan,
+.budgets,
+.tally,
+.findings {
+  background: var(--strip);
+  border: 1px solid var(--edge);
+}
+
+.alert-line,
+.evidence li,
+.plan li,
+.budgets li,
+.tally > div,
+.findings > div {
+  padding: 0.4375rem 0.625rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.alert-line:last-child,
+.evidence li:last-child,
+.plan li:last-child,
+.budgets li:last-child,
+.tally > div:last-child,
+.findings > div:last-child {
+  border-bottom: 0;
+}
+
+.alert-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.625rem;
+  overflow-wrap: anywhere;
+}
+
+.state,
+.risk,
+.cite {
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.state {
+  min-width: 4.25rem;
+}
+
+.state-firing {
+  color: var(--ink);
+}
+
+.state-resolved {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.findings {
+  margin-top: 0.75rem;
+}
+
+.findings dd {
+  margin-top: 0.125rem;
+}
+
+.evidence li,
+.plan li {
+  overflow-wrap: anywhere;
+}
+
+.plan {
+  counter-reset: step;
+}
+
+.plan li {
+  counter-increment: step;
+  padding-left: 2.25rem;
+  position: relative;
+}
+
+.plan li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0.625rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.cite {
+  font-family: var(--mono);
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 1.75rem;
+  margin-left: 0.25rem;
+  padding: 0 0.4375rem;
+  border: 1px solid var(--ink-2);
+  color: var(--ink);
+  font-style: normal;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+a.cite:hover {
+  background: var(--ink);
+  color: var(--strip);
+}
+
+.cite-missing {
+  font-family: var(--sans);
+  text-transform: uppercase;
+  border-style: dashed;
+}
+
+.risk {
+  margin-left: 0.25rem;
+  color: var(--ink-2);
+}
+
+.risk-high {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+/* --- feedback ----------------------------------------------------------------------------- */
+
+.vote {
+  margin-top: 0.875rem;
+  padding: 0.625rem;
+  background: var(--strip);
+  border: 1px solid var(--edge);
+}
+
+.vote-ask {
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 0.1875rem;
+  margin-top: 0.625rem;
+}
+
+.field input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--rack);
+  border: 1px solid var(--edge);
+  border-radius: 0;
+  padding: 0.5rem 0.5625rem;
+  min-height: 2.75rem;
+  width: 100%;
+}
+
+.field input:hover {
+  border-color: var(--ink-2);
+}
+
+.field input:focus-visible {
+  outline-offset: 0;
+  border-color: var(--pen);
+}
+
+.vote-buttons,
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  font: 600 var(--t-small) / 1 var(--sans);
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--strip);
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.btn:hover,
+.btn[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--strip);
+}
+
+.btn:active {
+  background: var(--ink-2);
+  color: var(--strip);
+}
+
+.btn:disabled {
+  border-color: var(--edge);
+  color: var(--ink-2);
+  cursor: default;
+  background: transparent;
+}
+
+.vote-buttons .btn {
+  flex: 1 1 10rem;
+}
+
+/* --- the record --------------------------------------------------------------------------- */
+
+.record {
+  background: var(--strip);
+  border: 1px solid var(--edge);
+}
+
+.row-day {
+  padding: 0.25rem 0.625rem;
+  background: var(--well);
+  border-bottom: 1px solid var(--rule);
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 4.125rem 2.875rem minmax(0, 1fr);
+  column-gap: 0.375rem;
+  align-items: baseline;
+  padding: 0.375rem 0.625rem 0.4375rem;
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: 0.5rem;
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row:target,
+.row:has(:target) {
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+
+.row-time {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.row-tag {
+  justify-self: start;
+  font-size: var(--t-label);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.voice-model .row-tag {
+  color: var(--pen);
+}
+
+.voice-out .row-tag {
+  background: var(--ink);
+  color: var(--strip);
+  padding: 0 0.25rem;
+}
+
+.row-text {
+  font-size: 0.875rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.row-note {
+  font-size: var(--t-small);
+  font-weight: 600;
+}
+
+.row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.row-links {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.row-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+}
+
+.payload summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  list-style: none;
+}
+
+.payload summary::-webkit-details-marker {
+  display: none;
+}
+
+.payload summary::after {
+  content: "Show payload";
+}
+
+.payload[open] summary::after {
+  content: "Hide payload";
+}
+
+.payload pre,
+.payload-open {
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--rack);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  max-height: 26rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+}
+
+.payload-open {
+  max-height: none;
+  margin-top: 0.5rem;
+}
+
+/* --- log filters -------------------------------------------------------------------------- */
+
+.chips {
+  display: flex;
+  gap: 0.3125rem;
+  margin: 0 calc(var(--gutter) * -1) 0.75rem;
+  padding: 0.125rem var(--gutter);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chips a {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.6875rem;
+  font-size: var(--t-small);
+  font-weight: 600;
+  text-decoration: none;
+  background: var(--strip);
+  border: 1px solid var(--edge);
+  transition:
+    background-color 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.chips a:hover {
+  border-color: var(--ink);
+}
+
+.chips a[aria-current] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--strip);
+}
+
+.empty {
+  background: var(--strip);
+  border: 1px solid var(--edge);
+  padding: 0.75rem 0.75rem 0.875rem;
+  max-width: 44rem;
+}
+
+.empty p + p {
+  margin-top: 0.375rem;
+}
+
+p.empty {
+  font-size: var(--t-body);
+}
+
+/* --- the ledger --------------------------------------------------------------------------- */
+
+.budgets li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.budgets .meter,
+.budgets .note {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.meter {
+  display: block;
+  width: 100%;
+  height: 0.375rem;
+}
+
+.meter-track {
+  fill: var(--rule);
+}
+
+.meter-fill {
+  fill: var(--ink);
+}
+
+.table .wide {
+  display: none;
+}
+
+.table tr.narrow td {
+  overflow-wrap: anywhere;
+  padding-top: 0;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 400;
+  white-space: normal;
+  border-top: 0;
+}
+
+/* The tokens line belongs to the row above it. */
+.table tr:has(+ .narrow) > * {
+  border-bottom: 0;
+  padding-bottom: 0.0625rem;
+}
+
+.table .model {
+  width: 100%;
+  max-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--strip);
+  border: 1px solid var(--edge);
+  font-size: var(--t-small);
+}
+
+.table th,
+.table td {
+  padding: 0.3125rem 0.625rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+}
+
+.table td {
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.table td:first-child {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table tfoot th,
+.table tfoot td {
+  border-top: 2px solid var(--ink);
+  border-bottom: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.meter-cell {
+  width: 38%;
+  vertical-align: middle;
+}
+
+.tally > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tally dd {
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+/* --- wider than a phone ------------------------------------------------------------------- */
+
+@media (min-width: 44rem) {
+  :root {
+    --gutter: 1.5rem;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  .bar-line {
+    gap: 2rem;
+  }
+
+  .stages {
+    border-top: 0;
+    padding: 0;
+  }
+
+  .board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .row {
+    grid-template-columns: 4.5rem 3.25rem minmax(0, 1fr);
+    column-gap: 0.625rem;
+  }
+
+  .table .wide {
+    display: table-cell;
+  }
+
+  .table .narrow,
+  .table .narrow-inline {
+    display: none;
+  }
+}
+
+@media (min-width: 78rem) {
+  .board {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .bay-strips {
+    min-height: 60vh;
+  }
+}
+
+/* --- motion: a strip slides from bay to bay on refresh ------------------------------------- */
+
+::view-transition-group(*) {
+  animation-duration: 420ms;
+  animation-timing-function: var(--ease);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+@media print {
+  .bar,
+  .foot,
+  .vote,
+  .chips,
+  .pager {
+    display: none;
+  }
+
+  :root {
+    --rack: #ffffff;
+    --well: #eef1ef;
+    --strip: #ffffff;
+    --edge: #8a9793;
+    --rule: #c3ccc8;
+    --ink: #101820;
+    --ink-2: #3a474e;
+    --pen: #1b3fa8;
+    --pen-2: #3d58a6;
+  }
+}

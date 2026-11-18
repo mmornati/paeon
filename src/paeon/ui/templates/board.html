@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Board{% endblock %}
+{% block layout %}page page-wide{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Board</h1>
+  <p class="live" data-live-status role="status">Refreshes every 10 seconds.</p>
+</div>
+<div class="board" data-live="/ui/board">
+{% include "_bays.html" %}
+</div>
+<p class="legend">
+  <span class="legend-item">Printed: recorded by code.</span>
+  <span class="legend-item pen">Blue, slanted: said by a model.</span>
+  <span class="legend-item">A strip sits in the bay of the stage it is waiting for, and stands out of line when it has changed.</span>
+</p>
+{% endblock %}

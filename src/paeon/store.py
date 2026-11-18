@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -172,7 +172,9 @@ class Store:
         self,
         *,
         after_id: int = 0,
+        before_id: int | None = None,
         kind: str | None = None,
+        kinds: Sequence[str] | None = None,
         source: str | None = None,
         fingerprint: str | None = None,
         incident_id: int | None = None,
@@ -185,7 +187,11 @@ class Store:
             " FROM events WHERE id > ?"
         )
         params: list[Any] = [after_id]
+        if kinds is not None:
+            sql += f" AND kind IN ({', '.join('?' * len(kinds))})" if kinds else " AND 0"
+            params += kinds
         for clause, value in (
+            (" AND id < ?", before_id),
             (" AND kind = ?", kind),
             (" AND source = ?", source),
             (" AND fingerprint = ?", fingerprint),

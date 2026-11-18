@@ -1,0 +1,32 @@
+{% macro rows(items, linked=false) %}
+<ol class="record">
+  {% for r in items -%}
+  {% if loop.changed(r.at|day) %}<li class="row-day">{{ r.at|day }}</li>{% endif %}
+  <li class="row voice-{{ r.voice }}" id="e{{ r.id }}">
+    <time class="row-time" datetime="{{ r.at.isoformat() }}">{{ r.at|clock }}</time>
+    <span class="row-tag">{{ r.tag }}</span>
+    <div class="row-main">
+      <p class="row-text{% if r.pen %} pen{% endif %}"{% if r.call %} id="call-{{ r.call }}"{% endif %}>{{ r.text }}</p>
+      {% if r.note %}<p class="row-note">{{ r.note }}</p>{% endif %}
+      <p class="row-meta">
+        <span>{{ r.kind }}</span>
+        {%- if r.cost is not none %} <span>cost {{ r.cost|money }}</span>{% endif %}
+        {%- if r.duration_ms is not none %} <span>{{ r.duration_ms }} ms</span>{% endif %}
+      </p>
+      {% if linked -%}
+      <p class="row-links">
+        {% if r.incident_id %}<a href="/ui/incidents/{{ r.incident_id }}#e{{ r.id }}">Incident {{ r.incident_id }}</a>{% endif %}
+        <a href="/ui/events/{{ r.id }}">Payload<span class="sr"> of event {{ r.id }}</span></a>
+      </p>
+      {%- endif %}
+      {% if r.detail -%}
+      <details class="payload">
+        <summary><span class="sr">Payload of event {{ r.id }}</span></summary>
+        <pre tabindex="0">{{ r.detail }}</pre>
+      </details>
+      {%- endif %}
+    </div>
+  </li>
+  {% endfor -%}
+</ol>
+{% endmacro %}

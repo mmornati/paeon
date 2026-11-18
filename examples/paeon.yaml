@@ -120,3 +120,10 @@ postmortems:
   dir: /data/postmortems
   model: postmortem
   daily_budget: 2.0
+
+# The console under /ui. No login of its own: enable it only behind a reverse proxy that
+# authenticates, and do not publish Paeon's port.
+ui:
+  enabled: false
+  # A header the proxy sets after authentication. A request without it is refused.
+  # require_header: X-authentik-username

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_rows.html" import rows as record %}
+{% block title %}Ledger{% endblock %}
+{% macro bar(share) %}<svg class="meter" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="meter-track" width="100" height="6"/><rect class="meter-fill" width="{{ "%.1f"|format(share) }}" height="6"/></svg>{% endmacro %}
+{% block main %}
+<div class="head">
+  <h1>Ledger</h1>
+  <p class="live">Every model call is an event with its tokens and its cost. Budgets are read from the same events.</p>
+</div>
+
+<section class="block" aria-labelledby="h-today">
+  <h2 id="h-today">Today</h2>
+  <p class="lead"><span class="figure">{{ ledger.today|money }}</span> spent since midnight UTC, all stages.</p>
+  {% if ledger.budgets %}
+  <p class="facts">Each stage stops calling a model when this total, not its own share, reaches its stop.</p>
+  <ul class="budgets">
+    {% for b in ledger.budgets -%}
+    <li>
+      <span class="budget-name">{{ b.stage }} stops at {{ b.limit|money }}</span>
+      <span class="figure">{{ "reached" if b.exhausted else (b.left|money) ~ " left" }}</span>
+      {{ bar(b.share) }}
+      {% if b.exhausted %}<span class="note">Spent. {{ {"triage": "Incidents are treated as real, without a model call", "investigation": "New incidents are not investigated", "postmortems": "Drafts are written without the model's prose"}[b.stage] }} until midnight UTC.</span>{% endif %}
+    </li>
+    {% endfor -%}
+  </ul>
+  {% else %}
+  <p class="note">No daily budget is set for a stage that is on.</p>
+  {% endif %}
+</section>
+
+{% if ledger.total.calls %}
+<section class="block" aria-labelledby="h-models">
+  <h2 id="h-models">By stage and model, last {{ ledger.days }} days</h2>
+  <table class="table">
+    <thead><tr><th class="wide">Stage</th><th>Model that answered</th><th class="num">Calls</th><th class="num wide">Failed</th><th class="num wide">In</th><th class="num wide">Cached</th><th class="num wide">Out</th><th class="num">Cost</th></tr></thead>
+    <tbody>
+      {% for stage, model, t in ledger.by_model -%}
+      <tr><td class="wide">{{ stage }}</td><td class="model" title="{{ model }}">{{ model }}</td><td class="num">{{ t.calls }}</td><td class="num wide">{{ t.errors }}</td><td class="num wide">{{ t.input_tokens }}</td><td class="num wide">{{ t.cached_tokens }}</td><td class="num wide">{{ t.output_tokens }}</td><td class="num">{{ t.cost|money }}</td></tr>
+      <tr class="narrow"><td colspan="8">{{ stage }}: {{ t.input_tokens }} in, {{ t.cached_tokens }} cached, {{ t.output_tokens }} out, {{ t.errors }} failed</td></tr>
+      {% endfor -%}
+    </tbody>
+    <tfoot><tr><th class="wide">All</th><th><span class="narrow-inline">All</span></th><td class="num">{{ ledger.total.calls }}</td><td class="num wide">{{ ledger.total.errors }}</td><td class="num wide">{{ ledger.total.input_tokens }}</td><td class="num wide">{{ ledger.total.cached_tokens }}</td><td class="num wide">{{ ledger.total.output_tokens }}</td><td class="num">{{ ledger.total.cost|money }}</td></tr>
+      <tr class="narrow"><td colspan="8">{{ ledger.total.input_tokens }} in, {{ ledger.total.cached_tokens }} cached, {{ ledger.total.output_tokens }} out, {{ ledger.total.errors }} failed</td></tr></tfoot>
+  </table>
+</section>
+
+<section class="block" aria-labelledby="h-days">
+  <h2 id="h-days">By day</h2>
+  <table class="table table-days">
+    <thead><tr><th>Day, UTC</th><th class="num">Calls</th><th class="num">Cost</th><th><span class="sr">Share of the dearest day</span></th></tr></thead>
+    <tbody>
+      {% for day, t, share in ledger.by_day -%}
+      <tr><td>{{ day }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ t.cost|money }}</td><td class="meter-cell">{{ bar(share) }}</td></tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  {% set quiet = ledger.days - ledger.by_day|length %}
+  {% if quiet %}<p class="facts">No model call on the other {{ quiet }} day{{ "" if quiet == 1 else "s" }} of the last {{ ledger.days }}.</p>{% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-triage">
+  <h2 id="h-triage">Triage record, last {{ ledger.days }} days</h2>
+  {% if ledger.verdicts or ledger.fail_open %}
+  <dl class="tally">
+    {% for verdict, count in ledger.verdicts -%}
+    <div><dt class="pen">{{ verdict }}</dt><dd>{{ count }}</dd></div>
+    {% endfor -%}
+    {% for reason, count in ledger.fail_open -%}
+    <div><dt>failed open ({{ reason }})</dt><dd>{{ count }}</dd></div>
+    {% endfor -%}
+  </dl>
+  <p class="facts">{% if ledger.rated %}You rated {{ ledger.rated }} incident{{ "" if ledger.rated == 1 else "s" }}: triage was right on {{ ledger.right }}.{% else %}You have rated no verdict yet. Open an incident to say whether triage was right.{% endif %}</p>
+  {% else %}
+  <p class="note">No verdict in this period.</p>
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-recent">
+  <h2 id="h-recent">Latest calls</h2>
+  {{ record(ledger.recent, linked=true) }}
+</section>
+{% else %}
+<div class="empty">
+  <p>No model was called in the last {{ ledger.days }} days.</p>
+  <p>The stages that call one are off until you enable them: <code>triage</code>, <code>investigation</code> and <code>postmortems</code> in the rules file named by <code>PAEON_CONFIG</code>.</p>
+</div>
+{% endif %}
+{% endblock %}

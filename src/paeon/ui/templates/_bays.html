@@ -1,0 +1,12 @@
+{% from "_strip.html" import strip %}
+{% for bay in bays -%}
+<section class="bay" data-bay="{{ bay.key }}" aria-labelledby="bay-{{ bay.key }}">
+  <header class="bay-head">
+    <h2 class="bay-name" id="bay-{{ bay.key }}">{{ bay.name }}</h2>
+    <span class="bay-count">{{ bay.strips|length }}</span>
+  </header>
+  <div class="bay-strips">
+    {% for s in bay.strips %}{{ strip(s) }}{% else %}<p class="bay-empty">{{ bay.empty }}</p>{% endfor %}
+  </div>
+</section>
+{% endfor %}
