@@ -9,6 +9,13 @@ earn autonomy.
 
 ### Acting (new, off by default)
 
+- Six actions in the closed catalog. Besides the three on a container's state:
+  `reattach_network_alias`, `coolify_restart`, and `config_change`, which is never applied: one
+  existing value of one allow-listed YAML file becomes a branch and a pull request on the
+  deployment repository, and merging it is the approval.
+- The executor acts through one Docker proxy and reads through another
+  (`actions.docker_read_url`), so that the one it acts through allows nothing but the actions.
+
 - A second process, `paeon executor`, with its own database, credentials and port. The core
   proposes plans; the executor checks them against its own rules and decides.
 - A closed catalog of three container actions (`restart_container`, `start_container`,
@@ -25,6 +32,12 @@ earn autonomy.
   failed verification, an Undo or a "This was wrong".
 - A kill switch: notification button, console, `paeon stop`, `PAEON_KILL_SWITCH`.
 
+### Replay and traces
+
+- `paeon replay triage|investigation`: recorded incidents against the model and prompts of
+  today, compared with the recorded outcome and with your feedback. Exits 1 on a regression.
+- `telemetry.otlp_endpoint`: one OpenTelemetry trace per incident, without any content.
+
 ### Investigation
 
 - New read-only tools: `alert_query` (an OpenObserve alert's definition, and its query re-run
@@ -38,6 +51,8 @@ earn autonomy.
 ### Triage and postmortems
 
 - Triage is given the past postmortems and runbooks that match the alert.
+- After the digest, one short message per triage verdict with Right / Wrong buttons
+  (`digest.feedback`).
 - Postmortem drafts can be committed and pushed to a git repository (`postmortems.git`), and are
   written for incidents Paeon acted on as well as those it investigated.
 

@@ -48,6 +48,9 @@ services:
       PAEON_EXECUTOR_TOKEN_FILE: /run/secrets/paeon_executor_token
       PAEON_SIGNING_KEY_FILE: /run/secrets/paeon_signing_key
       PAEON_ACTIONS_NTFY_TOKEN_FILE: /run/secrets/paeon_actions_ntfy_token
+      # Only if the rules name them: `actions.coolify` and `actions.repository.github`.
+      # PAEON_COOLIFY_TOKEN_FILE: /run/secrets/paeon_coolify_token
+      # PAEON_GITHUB_TOKEN_FILE: /run/secrets/paeon_github_token
       PAEON_CONFIG: /config/paeon.yaml
       PAEON_EXECUTOR_DB: /data/executor.sqlite
       PAEON_EXECUTOR_HOST: 0.0.0.0
@@ -59,6 +62,8 @@ services:
       - ./paeon.yaml:/config/paeon.yaml:ro
       # Shared with your own repair scripts, so that two automations never act on one container.
       - /var/lock/paeon:/locks
+      # Only for `config_change`: a clone of the deployment repository that is Paeon's own.
+      # - paeon-repo:/repo
     secrets:
       - paeon_executor_token
       - paeon_signing_key

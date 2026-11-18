@@ -133,6 +133,21 @@ policy and trigger that policy's action on that policy's container, up to `max_p
 That is the price of `auto`: grant it only to actions you would let a stranger trigger. It can
 also read whatever the core's read credentials reach, and spend the model budget.
 
+### A change to configuration
+
+*The model proposes `privileged: true`, or a new image, as a "fix".*
+
+- `config_change` is never applied: it ends as a pull request a person reads and merges.
+- It can reach one file the owner named, one key matching the owner's pattern (matched one
+  segment at a time), with a value matching the owner's expression; the key must already exist.
+- The edit replaces the value's own characters, found by parsing the file, and the result is
+  parsed again: an edit that changes anything else, or breaks the file, is dropped. A value is a
+  single plain token, so it cannot carry a second key, a comment or a new line.
+- The clone is the executor's, the deploy key and the forge token are the executor's.
+
+**Residual risk:** a pull request that looks routine and is wrong. Review it like one from a
+colleague you do not know yet. Allow keys such as limits; think twice about `image`.
+
 ### A forged, replayed or misdirected approval
 
 - Links are HMAC-SHA256 over their payload, compared in constant time (`paeon.links`).
@@ -197,6 +212,8 @@ own and read access for you alone. A one-tap approval is exactly as strong as th
 
 - [ ] The executor has its own copy of the rules file, read-only, from git.
 - [ ] `PAEON_SIGNING_KEY` is set on the executor only, and is not in the core's environment.
+- [ ] The deploy key writes to the deployment repository only, the forge token only opens pull
+      requests there, and the branch protection of `main` does not let either merge.
 - [ ] The executor's Docker proxy allows start, stop and restart, and nothing else: not
       "POST on containers", which also means create, delete and exec.
 - [ ] Only `/act/` is routed to the executor from outside, over TLS.

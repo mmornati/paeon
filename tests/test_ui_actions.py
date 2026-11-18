@@ -276,3 +276,46 @@ def test_every_executor_event_has_a_line(store: Store) -> None:
             assert (plan.state, plan.waiting) == (state, False)
         finally:
             fresh.close()
+
+
+def test_a_proposed_change_is_shown_with_its_pull_request(
+    store: Store, seeded: dict[str, int], tmp_path: Path
+) -> None:
+    media = seeded["media"]
+    label = "config_change(compose: services.media-server.mem_limit = 2g)"
+    store.append(
+        "plan.proposed",
+        {
+            "proposal": 12,
+            "kind": "change",
+            "level": "approve",
+            "origin": "investigation",
+            "steps": [label],
+        },
+        source="executor",
+        incident_id=media,
+    )
+    for url in ("https://github.com/example/deployment/pull/7", "javascript:alert(1)", None):
+        store.append(
+            "change.proposed",
+            {"proposal": 12, "steps": [label], "branch": "paeon/incident-3-abc", "url": url},
+            source="executor",
+            incident_id=media,
+        )
+    page = client(store, tmp_path).get(f"/ui/incidents/{media}").text
+    assert "Changes proposed" in page
+    assert page.count('href="https://github.com/example/deployment/pull/7"') == 1
+    assert "javascript:" not in page.replace("javascript:alert(1)&#34;", "")  # never as a link
+    assert 'href="javascript' not in page
+    assert page.count("branch pushed") == 2
+    assert "Merging the pull request is your approval." in page
+    # The plan that waits for Go is still the incident's plan: the change does not hide it.
+    assert "Waiting for your Go or No-go" in page
+    lines = {e.kind: views.describe(e) for e in store.events(incident_id=media)}
+    assert lines["change.proposed"].startswith("Change proposed, nothing applied:")
+    store.append("change.failed", {"proposal": 12, "reason": "git push failed"}, incident_id=media)
+    failed = views.plan_of(
+        [e for e in store.events(incident_id=media) if e.payload.get("proposal") == 12]
+    )
+    assert failed is not None
+    assert (failed.state, failed.waiting) in {("proposed", False), ("failed", False)}

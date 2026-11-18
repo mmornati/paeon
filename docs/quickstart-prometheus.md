@@ -28,6 +28,9 @@ echo none > secrets/anthropic_api_key
 docker compose up --build -d
 ```
 
+If port 8080 or 9090 is taken on your machine, change the left side of the `ports` lines in
+`compose.yaml` first.
+
 That starts five containers: `demo-app` (the thing you will break), Prometheus, Alertmanager,
 Paeon, and a Docker socket proxy. The console is at <http://127.0.0.1:8080/ui> and Prometheus at
 <http://127.0.0.1:9090>. Both are bound to localhost.
