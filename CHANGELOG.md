@@ -26,6 +26,9 @@ earn autonomy.
   ntfy. A GET shows a confirmation page and never applies.
 - Every tap is answered with a short notification: what was received, or why the button did
   nothing. The executor's access log no longer holds the links, nor a line per poll.
+- `actions.buttons: page` makes a button open the executor's page (what the link does, Confirm,
+  then the outcome) instead of sending the link in the background, for phones whose push is
+  slow: the answer is on screen.
 - Execution with a lock per container, a pre-check, verification, rollback where an action has
   an inverse, and one automated attempt per incident.
 - Runbooks: a known alert and a ladder of steps, with no model call. A runbook that fails hands

@@ -313,6 +313,21 @@ def together(store: Store, bench: Bench, tmp_path: Path) -> tuple[TestClient, Te
     return TestClient(create_app(settings, store, executor=client)), executor_app
 
 
+def test_page_buttons_open_the_link_instead_of_posting_it(store: Store) -> None:
+    config = rules(actions={**ACTIONS, "buttons": "page"})
+    recorder, remediator, _ = setup(store, config)
+    recorder.observe(alert(Status.FIRING, 0, title="worker_down"))
+    incident = store.incident(1)
+    assert incident is not None
+    assert remediator.extras(incident).actions[0] == {
+        "action": "view",
+        "label": "Cause is right",
+        "url": "https://act.example.org/act/up1",
+        "clear": True,
+    }
+    remediator.stop()
+
+
 def test_alert_to_fix_through_both_processes(store: Store, tmp_path: Path) -> None:
     bench = Bench(tmp_path)
     core, _ = together(store, bench, tmp_path)

@@ -565,3 +565,20 @@ def test_a_listing_the_proxy_refuses_fails_the_step_and_says_so(tmp_path: Path) 
     assert bench.last("action.failed")["reason"] == (
         "docker: docker answered HTTP 403 to the listing"
     )
+
+
+def test_page_buttons_show_the_page_and_the_page_runs_the_plan(tmp_path: Path) -> None:
+    bench = Bench(tmp_path, buttons="page")
+    bench.executor.propose(proposal(), T0)
+    go, nogo = bench.sent[0]["actions"]
+    assert (go["action"], go["label"], nogo["label"]) == ("view", "Go", "No-go")
+    assert "method" not in go  # the phone opens it: a GET, which changes nothing
+    token = str(go["url"]).removeprefix("https://act.example.org/act/")
+    assert bench.executor.describe(token, LATER).startswith("Run the plan of incident #1")
+    assert bench.docker.posts == []
+    assert bench.executor.act(token, LATER).message.startswith("Approved.")
+    assert bench.docker.posts == ["restart worker"]
+    # The buttons of the result open a page too.
+    later = [a for sent in bench.sent[1:] for a in sent["actions"]]
+    assert later
+    assert {a["action"] for a in later} == {"view"}

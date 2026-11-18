@@ -124,6 +124,10 @@ Start with `approve` on one alert and one container.
    A button gives no sign of its own that the tap arrived, so every tap is answered: "Go
    received" at once, before the result, and for a button that no longer works a message
    saying why it did nothing (once per button). A forged link gets no answer.
+   That answer is a notification, so it is only as prompt as your phone's push. If yours is
+   slow or unreliable (ntfy on iOS with a self-hosted server depends on a relay), set
+   `actions.buttons: page`: a button then opens that page in the browser, Confirm applies it,
+   and the page says what happened. Two taps instead of one, and an answer on screen.
 4. **It runs.** Per step: lock the container, check the world is still as assumed, apply,
    verify. A failed step is rolled back where there is an inverse, and the plan stops.
 5. **You are told** what was done and whether it verified. A failure is a high-priority
