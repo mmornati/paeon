@@ -435,9 +435,19 @@ class RepoFile(_Rule):
     )
 
     def allows(self, key: str, value: str) -> bool:
-        return (
-            any(fnmatch.fnmatchcase(key, pattern) for pattern in self.keys)
-            and re.fullmatch(self.values, value) is not None
+        # Segment by segment: `services.*.mem_limit` is one name deep, and its `*` must not
+        # swallow dots and reach `services.x.labels.mem_limit`.
+        parts = key.split(".")
+
+        def matches(pattern: str) -> bool:
+            wanted = pattern.split(".")
+            return len(wanted) == len(parts) and all(
+                fnmatch.fnmatchcase(part, segment)
+                for part, segment in zip(parts, wanted, strict=True)
+            )
+
+        return any(matches(pattern) for pattern in self.keys) and (
+            re.fullmatch(self.values, value) is not None
         )
 
 

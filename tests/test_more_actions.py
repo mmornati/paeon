@@ -366,6 +366,9 @@ def test_a_change_and_a_plan_of_actions_do_not_cancel_each_other(tmp_path: Path)
     [
         ({"key": "services.worker.image", "value": "evil/image"}, "is not a change compose allows"),
         ({"key": "services.worker.mem_limit", "value": "1g; rm"}, "is not a change compose allows"),
+        # The wildcard is one name: it does not reach a deeper key that ends the same way.
+        ({"key": "services.worker.labels.mem_limit", "value": "1g"}, "is not a change compose"),
+        ({"key": "services.mem_limit", "value": "1g"}, "is not a change compose allows"),
         ({"key": "services.worker.mem_limit"}, "config_change takes ['key', 'value']"),
         ({**CHANGE, "path": "/etc/passwd"}, "config_change takes ['key', 'value']"),
     ],
