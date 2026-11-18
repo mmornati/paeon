@@ -468,3 +468,12 @@ def test_demux_logs_with_and_without_a_tty() -> None:
     assert demux_logs(frame(1, "out\n") + frame(2, "err\n")) == "out\nerr\n"
     assert demux_logs(b"plain tty output\n") == "plain tty output\n"
     assert demux_logs(b"") == ""
+
+
+def test_mount_sources_match_whole_path_components() -> None:
+    from paeon.tools import _under
+
+    assert _under("/srv/data", ("/srv/data/",))
+    assert _under("/srv/data/api", ("/srv/data",))
+    assert not _under("/srv/data-private/api", ("/srv/data",))
+    assert not _under("/home/owner/.ssh", ("/srv/data",))

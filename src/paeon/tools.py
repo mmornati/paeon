@@ -392,6 +392,13 @@ def openobserve_tools(client: Telemetry, config: OpenObserveTools) -> list[Tool]
 _CONTAINER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}")
 
 
+def _under(source: str, roots: Sequence[str]) -> bool:
+    """Whether a mount source is one of the roots or below it, compared on whole path components."""
+    return any(
+        source == root.rstrip("/") or source.startswith(root.rstrip("/") + "/") for root in roots
+    )
+
+
 def demux_logs(raw: bytes) -> str:
     """Docker log bytes as text. Without a TTY the stream is framed: 8-byte header, payload."""
     if len(raw) >= 8 and raw[0] in (0, 1, 2) and raw[1:4] == b"\x00\x00\x00":
@@ -503,7 +510,7 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
                     "type": mount.get("Type"),
                     "read_write": mount.get("RW"),
                     "source": mount.get("Source")
-                    if any(str(mount.get("Source", "")).startswith(p) for p in config.mount_sources)
+                    if _under(str(mount.get("Source", "")), config.mount_sources)
                     else "[not shown]",
                 }
                 for mount in data.get("Mounts") or []

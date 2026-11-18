@@ -33,6 +33,7 @@ services:
   # Only needed for the investigator's Docker tools. It exposes container listing, inspection
   # and logs over GET and nothing else; Paeon never gets the socket.
   dockerproxy:
+    # Pin a version (and ideally a digest) before you rely on it: this container holds the socket.
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     environment:

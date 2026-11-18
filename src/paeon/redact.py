@@ -22,11 +22,12 @@ _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}"), rf"\1 {MASK}"),
     # key = value, key: value, "key": "value", key=value in a query string. A quoted value is
     # masked up to its closing quote (it may hold spaces), or to the end of the line without one;
-    # a bare value runs to the next space or separator, quotes inside it included.
+    # a bare value runs to the next space or separator, quotes inside it included. The key's
+    # prefix and suffix are bounded: unbounded, a long run of word characters costs quadratic time.
     (
         re.compile(
-            r"(?i)\b([\w-]*(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|credential)"
-            r"[\w-]*)([\"']?\s*[:=]\s*)"
+            r"(?i)\b([\w-]{0,64}(?:password|passwd|pwd|secret|token|api[_-]?key|apikey|credential)"
+            r"[\w-]{0,64})([\"']?\s*[:=]\s*)"
             r"(\"[^\"\n]*\"?|'[^'\n]*'?|[^\s\"'&,;][^\s&,;]*)"
         ),
         rf"\1\2{MASK}",

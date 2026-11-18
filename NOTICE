@@ -1,0 +1,9 @@
+Paeon
+Copyright 2026 Marco Mornati and the Paeon contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The container image and the installed package bundle third-party software under
+their own licences (MIT, BSD, Apache-2.0, PSF-2.0), among them: anthropic,
+FastAPI, Starlette, httpx2, pydantic, PyYAML, tzdata and uvicorn. Their licence
+texts ship inside each package's metadata.
