@@ -7,6 +7,7 @@ events, and they are the labelled data that tells whether triage can be trusted.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -124,7 +125,7 @@ def _line(line: DigestLine) -> str:
     return f"{text}\n    {line.reason}" if line.reason else text
 
 
-def render(digest: Digest) -> str:
+def render(digest: Digest, *, console: bool = False) -> str:
     """Plain text, for a terminal or a notification."""
     if not digest.lines:
         return "No incident in the period."
@@ -138,7 +139,12 @@ def render(digest: Digest) -> str:
         parts += ["", "Would have been demoted:", *(_line(line) for line in demoted)]
     if kept:
         parts += ["", "Kept:", *(_line(line) for line in kept)]
-    parts += ["", "Was triage right? paeon feedback <id> up|down"]
+    parts += [
+        "",
+        "Was triage right? Tap to open the console and say so on each incident."
+        if console
+        else "Was triage right? paeon feedback <id> up|down",
+    ]
     return "\n".join(parts)
 
 
@@ -150,17 +156,27 @@ def publish_ntfy(
     message: str,
     priority: int = 2,
     tags: tuple[str, ...] = ("clipboard",),
+    click: str | None = None,
+    actions: Sequence[dict[str, Any]] = (),
     transport: httpx.BaseTransport | None = None,
 ) -> None:
-    """Publish to an ntfy topic. Raises RuntimeError without the URL or the token in it."""
+    """Publish to an ntfy topic. Raises RuntimeError without the URL or the token in it.
+
+    `click` is the page a tap on the notification opens; `actions` are its buttons (three at
+    most, ntfy's limit), each a `view` or an `http` action in ntfy's own format.
+    """
     headers = {"Authorization": f"Bearer {token}"} if token else {}
-    body = {
+    body: dict[str, Any] = {
         "topic": ntfy.topic,
         "title": title[:200],
-        "message": message[:3500],  # ntfy refuses bodies over 4096 bytes
+        "message": message[:3000],  # ntfy refuses bodies over 4096 bytes, buttons included
         "priority": priority,
         "tags": list(tags),
     }
+    if click:
+        body["click"] = click
+    if actions:
+        body["actions"] = list(actions)[:3]
     try:
         with httpx.Client(timeout=15, transport=transport) as http:
             status = http.post(ntfy.url, json=body, headers=headers).status_code

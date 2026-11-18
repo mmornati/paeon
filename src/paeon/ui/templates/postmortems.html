@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Postmortems{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Postmortems</h1>
+  <p class="live">Drafts written from the event log once an incident has stayed resolved. A draft is yours to correct: set <code>status: reviewed</code> in the file when you have.</p>
+</div>
+{% if drafts %}
+<table class="table">
+  <thead><tr><th>Day</th><th>What broke</th><th class="num wide">Open items</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for d in drafts -%}
+    <tr><td>{{ d.detected_at[:10] or "?" }}</td><td class="prose"><a href="/ui/postmortems/{{ d.name }}">{{ d.title }}</a></td><td class="num wide">{{ d.open_items|length }}</td><td><span class="outcome outcome-{{ d.status }}">{{ d.status }}</span></td></tr>
+    {% endfor -%}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">
+  <p>No postmortem has been written yet.</p>
+  <p>A draft is written when an incident that was investigated, or acted on, has stayed resolved.</p>
+</div>
+{% endif %}
+{% endblock %}

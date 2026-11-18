@@ -1,9 +1,12 @@
-"""The service: ingestion, correlation, shadow triage, investigation, postmortem drafts, digest.
+"""The core: ingestion, correlation, shadow triage, investigation, postmortem drafts, digest.
 
-Paeon observes and advises. It records, groups alerts into incidents, and when the stages are
-enabled asks a model for a triage verdict (recorded, never acted on), investigates with tools
-that only read, and drafts a postmortem. What it can send: the analysis of an investigation and
-the daily digest, each only if an ntfy topic is configured for it. It takes no action.
+The core observes and advises. It records, groups alerts into incidents, and when the stages
+are enabled asks a model for a triage verdict (recorded, never acted on), investigates with
+tools that only read, and drafts a postmortem. What it can send: the analysis of an
+investigation and the daily digest, each only if an ntfy topic is configured for it.
+
+It cannot act. With `actions.enabled` it hands plans made of catalog actions to the executor
+(`paeon executor`, another process with other credentials), which decides and acts by itself.
 """
 
 from __future__ import annotations
@@ -21,18 +24,30 @@ import httpx2 as httpx
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from paeon import autonomy
 from paeon import digest as digests
+from paeon import postmortem as postmortems
 from paeon.config import Settings
 from paeon.correlation import Correlator
 from paeon.investigation import Investigator
 from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
+from paeon.remediation import ExecutorApi, ExecutorClient, Remediator, pending_approvals
 from paeon.schema import Change, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
-from paeon.tools import Tool, Toolbox, docker_tools, openobserve_tools, paeon_tools
+from paeon.tools import (
+    Tool,
+    Toolbox,
+    docker_tools,
+    git_tools,
+    openobserve_tools,
+    paeon_tools,
+    ssh_tools,
+    uptime_kuma_tools,
+)
 from paeon.triage import Triager
 from paeon.ui import mount_ui
 
@@ -42,6 +57,7 @@ TRIAGE_TICK_SECONDS = 15
 INVESTIGATION_TICK_SECONDS = 15
 POSTMORTEM_TICK_SECONDS = 60
 DIGEST_TICK_SECONDS = 300
+REMEDIATION_TICK_SECONDS = 5
 
 
 class Feedback(BaseModel):
@@ -72,8 +88,10 @@ def create_app(
     openobserve: OpenObserveSource | None = None,
     model_clients: Mapping[str, ModelClient] | None = None,
     toolbox: Toolbox | None = None,
+    executor: ExecutorApi | None = None,
 ) -> FastAPI:
-    """Build the app. `model_clients` (by alias) and `toolbox` replace the real ones in tests."""
+    """Build the app. `model_clients` (by alias), `toolbox` and `executor` replace the real
+    ones in tests."""
     rules = settings.rules
     recorder = Recorder(store, Correlator(store, rules))
     closers: list[Callable[[], None]] = []
@@ -97,33 +115,61 @@ def create_app(
         client = HttpSearchClient(oo.url, oo.org, oo.user, oo.password)
         closers.append(client.close)
     if openobserve is None and settings.openobserve is not None and client is not None:
-        openobserve = OpenObserveSource(client, store, recorder, base_url=settings.openobserve.url)
+        openobserve = OpenObserveSource(
+            client,
+            store,
+            recorder,
+            base_url=settings.openobserve.url,
+            definitions=client.alert_definition,
+        )
 
+    knowledge_paths = [*rules.investigation.tools.knowledge.paths]
+    if rules.postmortems.enabled:
+        knowledge_paths.append(rules.postmortems.dir)
     triager = (
-        Triager(store, rules, model_client(rules.triage.model)) if rules.triage.enabled else None
+        Triager(store, rules, model_client(rules.triage.model), knowledge_paths=knowledge_paths)
+        if rules.triage.enabled
+        else None
     )
+
+    remediator: Remediator | None = None
+    if rules.actions.enabled:
+        if executor is None:
+            remote = ExecutorClient(rules.actions.executor_url, settings.executor_token or "")
+            closers.append(remote.close)
+            executor = remote
+        remediator = Remediator(store, rules, executor)
 
     investigator: Investigator | None = None
     if rules.investigation.enabled:
         if toolbox is None:
             wanted = rules.investigation.tools
-            knowledge_paths = [*wanted.knowledge.paths]
-            if rules.postmortems.enabled:
-                knowledge_paths.append(rules.postmortems.dir)
             tools: list[Tool] = paeon_tools(store, knowledge_paths)
             if wanted.openobserve is not None and client is not None:
-                tools += openobserve_tools(client, wanted.openobserve)
+                tools += openobserve_tools(client, wanted.openobserve, client.alert_definition)
             if wanted.docker is not None:
                 docker = httpx.Client(base_url=wanted.docker.url.rstrip("/"), timeout=20)
                 closers.append(docker.close)
                 tools += docker_tools(docker, wanted.docker)
+            if wanted.uptime_kuma is not None:
+                kuma = httpx.Client(base_url=wanted.uptime_kuma.url.rstrip("/"), timeout=20)
+                closers.append(kuma.close)
+                tools += uptime_kuma_tools(kuma, settings.uptime_kuma_key)
+            if wanted.git is not None:
+                tools += git_tools(wanted.git)
+            if wanted.ssh is not None:
+                tools += ssh_tools(wanted.ssh)
             toolbox = Toolbox(tools, max_result_chars=rules.investigation.max_result_chars)
+        fallback = rules.investigation.fallback_model
         investigator = Investigator(
             store,
             rules,
             model_client(rules.investigation.model),
             toolbox,
             ntfy_token=settings.investigation_ntfy_token,
+            fallback=None if fallback is None else model_client(fallback),
+            extras=None if remediator is None else remediator.extras,
+            after=None if remediator is None else remediator.on_findings,
         )
     writer = (
         PostmortemWriter(store, rules, model_client(rules.postmortems.model))
@@ -176,6 +222,11 @@ def create_app(
             return
         await asyncio.to_thread(writer.run_pending, _now())
 
+    async def run_remediation() -> None:
+        if remediator is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(remediator.run_pending, _now())
+
     def send_digest(now: datetime) -> bool:
         ntfy = rules.digest.ntfy
         if ntfy is None:  # pragma: no cover - not scheduled
@@ -186,9 +237,18 @@ def create_app(
             return False
         report = digests.build(store, since=now - timedelta(hours=24), until=now)
         if report.lines:  # a quiet day sends nothing
-            digests.publish_ntfy(
-                ntfy, settings.ntfy_token, title="Paeon digest", message=digests.render(report)
-            )
+            base = rules.ui.public_url
+            text = digests.render(report, console=base is not None)
+            if base is None:
+                digests.publish_ntfy(ntfy, settings.ntfy_token, title="Paeon digest", message=text)
+            else:  # the notification opens the console: that is where feedback is given
+                digests.publish_ntfy(
+                    ntfy,
+                    settings.ntfy_token,
+                    title="Paeon digest",
+                    message=text,
+                    click=f"{base.rstrip('/')}/ui",
+                )
             store.append("digest.sent", {"date": today, "incidents": len(report.lines)})
         store.set_cursor("digest", today)
         return bool(report.lines)
@@ -222,6 +282,12 @@ def create_app(
             )
         if rules.digest.ntfy is not None:
             tasks.append(asyncio.create_task(_every(DIGEST_TICK_SECONDS, "digest", run_digest)))
+        if remediator is not None:
+            tasks.append(
+                asyncio.create_task(
+                    _every(REMEDIATION_TICK_SECONDS, "remediation", run_remediation)
+                )
+            )
         try:
             yield
         finally:
@@ -310,9 +376,63 @@ def create_app(
         report = digests.build(store, since=now - timedelta(hours=hours), until=now)
         return {**report.as_dict(), "text": digests.render(report)}
 
-    if rules.ui.enabled:
-        mount_ui(app, store, rules, now=_now)
+    @app.get("/postmortems", dependencies=[Depends(authorized)])
+    def list_postmortems() -> list[dict[str, Any]]:
+        return [draft.as_dict() for draft in postmortems.drafts(rules.postmortems.dir)]
 
+    @app.get("/autonomy", dependencies=[Depends(authorized)])
+    def get_autonomy() -> dict[str, Any]:
+        events = list(store.events(kinds=autonomy.KINDS))
+        switch = store.events(kinds=("killswitch.engaged", "killswitch.released"))
+        return {
+            "kill_switch": autonomy.killed(switch),
+            "tuples": [
+                {
+                    "alert": r.alert,
+                    "action": r.action,
+                    "target": r.target,
+                    "policy": r.policy,
+                    "effective": r.effective,
+                    "demoted": r.demoted,
+                    "runs": r.runs,
+                    "verified": r.verified,
+                    "failed": r.failed,
+                    "undone": r.undone,
+                    "wrong": r.wrong,
+                    "streak": r.streak,
+                    "proposal": r.proposal,
+                }
+                for r in autonomy.matrix(events, rules.actions, _now())
+            ],
+        }
+
+    @app.get("/brief", dependencies=[Depends(authorized)])
+    def brief() -> dict[str, Any]:
+        """What a daily brief needs (the Horae source plugin reads this): what is open, what
+        waits for an answer, what waits for a review."""
+        files = postmortems.drafts(rules.postmortems.dir) if rules.postmortems.enabled else []
+        return {
+            "open_incidents": [
+                {
+                    "id": incident.id,
+                    "title": incident.title,
+                    "severity": incident.severity.value,
+                    "host": incident.host,
+                    "opened_at": incident.opened_at.isoformat(),
+                }
+                for incident in store.incidents(status=IncidentStatus.OPEN)
+            ],
+            "pending_approvals": pending_approvals(store, _now()),
+            "postmortems_to_review": [d.as_dict() for d in files if d.status != "reviewed"],
+            "open_action_items": [
+                {"postmortem": d.name, "item": item} for d in files for item in d.open_items
+            ],
+        }
+
+    if rules.ui.enabled:
+        mount_ui(app, store, rules, now=_now, stop=None if remediator is None else remediator.stop)
+
+    app.state.remediator = remediator
     app.state.triager = triager
     app.state.investigator = investigator
     app.state.postmortems = writer

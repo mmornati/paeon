@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ draft.title }}{% endblock %}
+{% block main %}
+<p class="back"><a href="/ui/postmortems">Postmortems</a>{% if draft.incident %} <a href="/ui/incidents/{{ draft.incident }}">Incident {{ draft.incident }}</a>{% endif %}</p>
+<div class="head">
+  <h1>{{ draft.title }}</h1>
+  <p class="live">{{ draft.name }}, <span class="outcome outcome-{{ draft.status }}">{{ draft.status }}</span>. Shown as written, with secrets masked; edit the file itself.</p>
+</div>
+<pre class="payload-open sheet" tabindex="0">{{ text }}</pre>
+{% endblock %}

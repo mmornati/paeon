@@ -29,6 +29,7 @@
     {% endif %}
     <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
     <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
+    {% if v.matched_postmortem %}<p class="facts">The model matched it to <span class="pen">{{ v.matched_postmortem }}</span>.</p>{% endif %}
     <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/feedback">
       <p class="vote-ask">{% if view.feedback == "up" %}You said triage was right.{% elif view.feedback == "down" %}You said triage was wrong.{% else %}Was triage right? Your answer is what decides whether it can be trusted later.{% endif %}</p>
       <label class="field"><span>Note, optional</span><input type="text" name="note" maxlength="1000" autocomplete="off"></label>
@@ -37,6 +38,8 @@
         <button class="btn" name="vote" value="down"{% if view.feedback == "down" %} aria-pressed="true"{% endif %}>Triage was wrong</button>
       </div>
     </form>
+  {% elif view.triage_skip == "runbook" %}
+    <p class="lead">Not sent to a model: a runbook matched this alert.</p>
   {% elif view.triage_skip %}
     <p class="lead">Not sent to a model ({{ view.triage_skip }}). Treated as real.</p>
   {% elif i.triage.value == "pending" %}
@@ -81,10 +84,10 @@
     {% if f.plan %}
     <ol class="plan">
       {% for step in f.plan -%}
-      <li><span class="pen">{{ step.action }}</span> <span class="risk risk-{{ step.risk }}">{{ step.risk }} risk</span>{% if step.why %}<br><span class="pen dim-pen">{{ step.why }}</span>{% endif %}</li>
+      <li><span class="pen">{{ step.action }}</span> <span class="risk risk-{{ step.risk }}">{{ step.risk }} risk</span>{% if step.catalog_action %} <span class="typed">{{ step.catalog_action }}({{ step.target }})</span>{% endif %}{% if step.why %}<br><span class="pen dim-pen">{{ step.why }}</span>{% endif %}</li>
       {% endfor -%}
     </ol>
-    <p class="note">Advice only. Paeon runs none of it.</p>
+    <p class="note">{% if acting %}Advice. Only a step that names a catalog action can be run, and only as the plan below says.{% else %}Advice only. Paeon runs none of it.{% endif %}</p>
     {% else %}<p class="pen">No action needed.</p>{% endif %}
   {% elif view.failure %}
     <p class="lead">{{ view.failure }}.</p>
@@ -96,6 +99,27 @@
   {% endif %}
   {% if view.postmortem %}<p class="facts">Postmortem draft written to {{ view.postmortem }}.</p>{% endif %}
 </section>
+
+{% if acting or view.plan %}
+<section class="block" id="plan" aria-labelledby="h-plan">
+  <h2 id="h-plan">Plan and action</h2>
+  {% if view.plan %}
+    {% set p = view.plan %}
+    <p class="lead">{{ p.story }}</p>
+    {% if p.steps %}
+    <ol class="plan">
+      {% for step in p.steps -%}
+      <li><span class="typed">{{ step }}</span></li>
+      {% endfor -%}
+    </ol>
+    {% endif %}
+    <p class="facts">From the {{ p.origin }}. Level {{ p.level }}{% if p.held_back_by %}, held back because {{ p.held_back_by|join("; ") }}{% endif %}.</p>
+    <p class="note">The executor checked this plan against its own catalog and policies. {% if p.waiting %}The console cannot approve it: Go is a signed link on your phone.{% else %}Each step it took is in the record below.{% endif %}</p>
+  {% else %}
+    <p class="lead">No plan: nothing in the analysis was a catalog action, and no runbook matched.</p>
+  {% endif %}
+</section>
+{% endif %}
 
 <section class="block" id="record" aria-labelledby="h-record">
   <h2 id="h-record">Record</h2>

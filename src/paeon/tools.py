@@ -25,11 +25,12 @@ from typing import Any, Protocol
 
 import httpx2 as httpx
 
-from paeon import knowledge
+from paeon import knowledge, proc
 from paeon.models import ToolSpec
 from paeon.redact import redact
-from paeon.rules import DockerTools, OpenObserveTools
+from paeon.rules import DockerTools, GitTools, OpenObserveTools, SshTools
 from paeon.schema import IncidentStatus, to_micros
+from paeon.sources.openobserve import AlertDefinition
 from paeon.store import Store
 
 
@@ -175,7 +176,40 @@ def paeon_tools(store: Store, knowledge_paths: Sequence[Path | str]) -> list[Too
     def search_knowledge(args: dict[str, Any]) -> Any:
         query = _string(args, "query")
         hits = knowledge.search(knowledge_paths, query, limit=5)
-        return [{"path": h.path, "title": h.title, "excerpt": h.excerpt} for h in hits]
+        return [
+            {"path": h.path, "title": h.title, "section": h.heading, "excerpt": h.excerpt}
+            for h in hits
+        ]
+
+    def alert_history(args: dict[str, Any]) -> Any:
+        text = _string(args, "text").lower()
+        days = _integer(args, "days", 7, low=1, high=90)
+        since = datetime.now(UTC) - timedelta(days=days)
+        found: dict[tuple[str, str], dict[str, Any]] = {}
+        for event in store.events(
+            kinds=("alert.firing", "alert.resolved"), recorded_since=since, newest_first=True
+        ):
+            title = str(event.payload.get("title") or "")
+            if text not in title.lower():
+                continue
+            key = (str(event.source), str(event.fingerprint))
+            if key not in found and len(found) >= 10:
+                continue
+            entry = found.setdefault(
+                key, {"source": event.source, "title": title, "changes": [], "firings": 0}
+            )
+            entry["firings"] += int(event.kind == "alert.firing")
+            if len(entry["changes"]) < 20:
+                entry["changes"].append(
+                    {
+                        "at": event.payload.get("observed_at"),
+                        "status": event.kind.removeprefix("alert."),
+                    }
+                )
+        for (source, fingerprint), entry in found.items():
+            state = store.alert_state(source, fingerprint)
+            entry["now"] = None if state is None else state.status
+        return list(found.values())
 
     return [
         Tool(
@@ -219,6 +253,22 @@ def paeon_tools(store: Store, knowledge_paths: Sequence[Path | str]) -> list[Too
                 _schema({"query": {"type": "string"}}, ["query"]),
             ),
             search_knowledge,
+        ),
+        Tool(
+            ToolSpec(
+                "alert_history",
+                "When the alerts and monitors whose title contains a text fired and recovered"
+                " in the last days, newest first, and whether each is firing now. Use it for"
+                " the history of an uptime-kuma monitor or of any other alert.",
+                _schema(
+                    {
+                        "text": {"type": "string", "description": "Part of the title."},
+                        "days": {"type": "integer", "description": "Default 7, at most 90."},
+                    },
+                    ["text"],
+                ),
+            ),
+            alert_history,
         ),
     ]
 
@@ -295,7 +345,97 @@ def metric_names(promql: str) -> set[str]:
     }
 
 
-def openobserve_tools(client: Telemetry, config: OpenObserveTools) -> list[Tool]:
+_SQL_STRING = re.compile(r"'(?:[^']|'')*'")
+_SQL_KEYWORD = re.compile(r"\b(?:from|join)\b", re.IGNORECASE)
+_SQL_TABLE = re.compile(
+    r"\b(?:from|join)\s*(?:\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))", re.I
+)
+_SQL_SUBQUERY = re.compile(r"\b(?:from|join)\s*\(", re.IGNORECASE)
+_SQL_COMMA_JOIN = re.compile(
+    r"\b(?:from|join)\s*\"?[A-Za-z_][A-Za-z0-9_]*\"?(?:\s+(?:as\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s*,",
+    re.IGNORECASE,
+)
+
+
+def sql_streams(sql: str) -> set[str] | None:
+    """Every stream a SQL query reads, or None when that cannot be told for certain.
+
+    Not a SQL parser, so it refuses what it cannot account for: a comment, a second statement,
+    a comma join, and any `from` or `join` that is followed by neither a plain table name nor a
+    sub-query (whose own tables are then found in turn). `extract(x from y)` is refused too:
+    a query that is not re-run costs a tool call, one that reads an unlisted stream leaks it.
+    """
+    text = _SQL_STRING.sub("''", sql)
+    if "'" in text.replace("''", "") or any(mark in text for mark in (";", "--", "/*", "`")):
+        return None
+    if _SQL_COMMA_JOIN.search(text):
+        return None
+    tables = [quoted or bare for quoted, bare in _SQL_TABLE.findall(text)]
+    accounted = len(tables) + len(_SQL_SUBQUERY.findall(text))
+    if not tables or accounted != len(_SQL_KEYWORD.findall(text)):
+        return None
+    return set(tables)
+
+
+def openobserve_tools(
+    client: Telemetry,
+    config: OpenObserveTools,
+    definitions: Callable[[str], AlertDefinition | None] | None = None,
+) -> list[Tool]:
+    def readable_metrics(promql: str) -> bool:
+        names = metric_names(promql)
+        return bool(names) and all(
+            any(fnmatch.fnmatchcase(name, pattern) for pattern in config.metrics) for name in names
+        )
+
+    def alert_query(args: dict[str, Any]) -> Any:
+        """The alert's own definition and, where its data is readable, its query re-run."""
+        if definitions is None:  # pragma: no cover - the tool is not offered without them
+            raise ToolError("alert definitions are not available")
+        key = _string(args, "alert")
+        try:
+            definition = definitions(key)
+        except Exception as exc:
+            raise ToolError(f"the alert definitions were not read: {type(exc).__name__}") from None
+        if definition is None:
+            raise ToolError("no alert with this name or id")
+        minutes = _integer(args, "since_minutes", 120, low=1, high=7 * 24 * 60)
+        now = datetime.now(UTC)
+        start = now - timedelta(minutes=minutes)
+        answer: dict[str, Any] = {"definition": definition.as_dict()}
+        # The query was written by the operator, but what it returns goes to the model: the
+        # same allow-lists decide, on every stream and every metric the query names.
+        if definition.kind == "promql" and definition.promql:
+            try:
+                allowed = readable_metrics(definition.promql)
+            except ToolError:
+                allowed = False
+            if not allowed:
+                answer["not_run"] = "the query reads a metric that is not on the allow-list"
+            else:
+                step = max(minutes * 60 // 60, 15)
+                answer["result"] = client.query_range(
+                    definition.promql, int(start.timestamp()), int(now.timestamp()), step
+                )
+        elif definition.kind == "sql" and definition.sql and definition.stream_type == "logs":
+            streams = sql_streams(definition.sql)
+            if streams is None:
+                answer["not_run"] = (
+                    "the streams this query reads cannot be told for certain;"
+                    " use search_logs on its stream"
+                )
+            elif not streams | {definition.stream} <= set(config.streams):
+                unlisted = sorted((streams | {definition.stream}) - set(config.streams))
+                answer["not_run"] = f"the query reads {unlisted}, which is not on the allow-list"
+            else:
+                rows = client.search(definition.sql, to_micros(start), to_micros(now), 50)
+                answer["result"] = {"rows": rows[:50], "count": len(rows[:50])}
+        else:
+            answer["not_run"] = (
+                "this alert is a set of conditions, not a query; use search_logs on its stream"
+            )
+        return answer
+
     def search_logs(args: dict[str, Any]) -> Any:
         stream = _string(args, "stream")
         if stream not in config.streams:
@@ -382,6 +522,25 @@ def openobserve_tools(client: Telemetry, config: OpenObserveTools) -> list[Tool]
                     ),
                 ),
                 query_metrics,
+            )
+        )
+    if definitions is not None:
+        tools.append(
+            Tool(
+                ToolSpec(
+                    "alert_query",
+                    "What an OpenObserve alert watches (its query, threshold and period) and,"
+                    " when the data it reads is on the allow-list, the result of that query"
+                    " over a wider window. `alert` is the alert's name or its id.",
+                    _schema(
+                        {
+                            "alert": {"type": "string"},
+                            "since_minutes": {"type": "integer", "description": "Default 120."},
+                        },
+                        ["alert"],
+                    ),
+                ),
+                alert_query,
             )
         )
     return tools
@@ -566,4 +725,160 @@ def docker_tools(http: httpx.Client, config: DockerTools) -> list[Tool]:
             ),
             container_logs,
         ),
+    ]
+
+
+# --- uptime-kuma ----------------------------------------------------------------------------------
+
+_METRIC_LINE = re.compile(r"^(monitor_[a-z_]+)\{(.*)\}\s+(-?[0-9.eE+]+|NaN)$")
+_METRIC_LABEL = re.compile(r'([a-z_]+)="((?:[^"\\]|\\.)*)"')
+_MONITOR_STATES = {0: "down", 1: "up", 2: "pending", 3: "maintenance"}
+
+
+def parse_monitors(text: str) -> list[dict[str, Any]]:
+    """uptime-kuma's `/metrics` as one entry per monitor. The monitored URL is left out."""
+    monitors: dict[str, dict[str, Any]] = {}
+    for line in text.splitlines():
+        match = _METRIC_LINE.match(line.strip())
+        if match is None:
+            continue
+        labels = dict(_METRIC_LABEL.findall(match.group(2)))
+        name = labels.get("monitor_name")
+        if not name or match.group(3) == "NaN":
+            continue
+        entry = monitors.setdefault(name, {"name": name, "type": labels.get("monitor_type")})
+        value = float(match.group(3))
+        if match.group(1) == "monitor_status":
+            entry["status"] = _MONITOR_STATES.get(int(value), "unknown")
+        elif match.group(1) == "monitor_response_time":
+            entry["response_ms"] = value
+        elif match.group(1) == "monitor_cert_days_remaining":
+            entry["certificate_days_left"] = value
+    return sorted(monitors.values(), key=lambda entry: str(entry["name"]))
+
+
+def uptime_kuma_tools(http: httpx.Client, api_key: str | None) -> list[Tool]:
+    def monitor_status(args: dict[str, Any]) -> Any:
+        text = _string(args, "text", required=False).lower()
+        try:
+            response = http.get("/metrics", auth=("", api_key) if api_key else None)
+        except httpx.HTTPError as exc:
+            raise ToolError(f"uptime-kuma is unreachable: {type(exc).__name__}") from None
+        if response.status_code >= 400:
+            raise ToolError(f"uptime-kuma answered HTTP {response.status_code}")
+        monitors = [m for m in parse_monitors(response.text) if text in str(m["name"]).lower()]
+        return {"monitors": monitors[:200], "count": len(monitors)}
+
+    return [
+        Tool(
+            ToolSpec(
+                "monitor_status",
+                "The state of the uptime-kuma monitors right now: up, down, pending or in"
+                " maintenance, with the last response time. Use alert_history for the past.",
+                _schema({"text": {"type": "string", "description": "Part of a monitor name."}}),
+            ),
+            monitor_status,
+        )
+    ]
+
+
+# --- git and other hosts --------------------------------------------------------------------------
+
+_COMMIT = "\x1e%h\x1f%cI\x1f%s"
+
+
+def git_tools(config: GitTools, run: proc.Runner = proc.run) -> list[Tool]:
+    def recent_commits(args: dict[str, Any]) -> Any:
+        repo = _string(args, "repo")
+        if repo not in config.repos:
+            raise ToolError(f"repo {repo!r} is not readable; readable: {sorted(config.repos)}")
+        hours = _integer(args, "since_hours", 48, low=1, high=24 * 90)
+        limit = _integer(args, "limit", 15, low=1, high=config.max_commits)
+        argv = [
+            *proc.GIT, "-C", config.repos[repo], "log", f"--since={hours} hours ago",
+            f"--max-count={limit}", f"--pretty=format:{_COMMIT}", "--name-only", "--no-color",
+        ]  # fmt: skip
+        try:
+            code, output = run(argv, timeout=20, env=proc.GIT_ENV)
+        except Exception as exc:
+            raise ToolError(f"git could not be run: {type(exc).__name__}") from None
+        if code != 0:
+            raise ToolError("git could not read this repository")
+        commits = []
+        for block in output.split("\x1e")[1:]:
+            head, _, files = block.partition("\n")
+            parts = head.split("\x1f")
+            if len(parts) != 3:
+                continue
+            names = [line for line in files.splitlines() if line.strip()]
+            commits.append(
+                {"commit": parts[0], "at": parts[1], "subject": parts[2], "files": names[:40]}
+            )
+        return {"commits": commits, "count": len(commits)}
+
+    if not config.repos:
+        return []
+    return [
+        Tool(
+            ToolSpec(
+                "recent_commits",
+                "The last commits of a repository of this server (its configuration, for"
+                " example): when, the subject line and the files changed. Authors are not"
+                f" returned. Readable repositories: {', '.join(sorted(config.repos))}.",
+                _schema(
+                    {
+                        "repo": {"type": "string", "enum": sorted(config.repos)},
+                        "since_hours": {"type": "integer", "description": "Default 48."},
+                        "limit": {"type": "integer"},
+                    },
+                    ["repo"],
+                ),
+            ),
+            recent_commits,
+        )
+    ]
+
+
+def ssh_tools(config: SshTools, run: proc.Runner = proc.run) -> list[Tool]:
+    def host_command(args: dict[str, Any]) -> Any:
+        host = _string(args, "host")
+        name = _string(args, "command")
+        entry = config.hosts.get(host)
+        if entry is None or name not in entry.commands:
+            raise ToolError(
+                "unknown host or command; available: "
+                + json.dumps({h: sorted(e.commands) for h, e in config.hosts.items()})
+            )
+        # The command line is the operator's, word for word: the model only chose its name.
+        argv = [
+            *proc.ssh_command(config.identity_file, config.known_hosts_file),
+            "-p", str(entry.port), "--", entry.target, entry.commands[name],
+        ]  # fmt: skip
+        try:
+            code, output = run(argv, timeout=config.timeout_seconds)
+        except Exception as exc:
+            raise ToolError(f"the host was not reached: {type(exc).__name__}") from None
+        return {"exit_code": code, "lines": output.splitlines()[-200:]}
+
+    if not config.hosts:
+        return []
+    listing = "; ".join(
+        f"{host}: {', '.join(sorted(entry.commands))}" for host, entry in config.hosts.items()
+    )
+    return [
+        Tool(
+            ToolSpec(
+                "host_command",
+                "Run one of the read-only commands the owner prepared on another host, and"
+                f" return its output. You choose a name; you cannot write a command. {listing}.",
+                _schema(
+                    {
+                        "host": {"type": "string", "enum": sorted(config.hosts)},
+                        "command": {"type": "string"},
+                    },
+                    ["host", "command"],
+                ),
+            ),
+            host_command,
+        )
     ]

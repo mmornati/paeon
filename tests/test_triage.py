@@ -92,7 +92,7 @@ def test_verdict_is_recorded_in_shadow_mode_with_its_cost(store: Store) -> None:
         "matched_postmortem": None,
         "model": "answered-by",
         "attempts": 1,
-        "prompt_version": "triage-1",
+        "prompt_version": "triage-2",
     }
     [call] = list(store.events(kind="model.call"))
     assert call.incident_id == 1

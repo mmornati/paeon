@@ -130,6 +130,10 @@ class Correlator:
         investigation = (
             TriageState.PENDING if self._rules.investigation.enabled else TriageState.OFF
         )
+        # A known signature with a known fix skips both models: fast, free and deterministic.
+        book = self._rules.actions.runbook_for(alert)
+        if book is not None:
+            triage = investigation = TriageState.SKIPPED
         incident_id = self._store.open_incident(
             title=alert.title,
             severity=alert.severity,
@@ -152,6 +156,22 @@ class Correlator:
             incident_id=incident_id,
         )
         log.info("incident %d opened: %s", incident_id, alert.title)
+        if book is not None:
+            self._store.append(
+                "runbook.matched",
+                {
+                    "runbook": book.name,
+                    "mode": book.mode,
+                    "steps": [f"{step.action}({step.target})" for step in book.steps],
+                },
+                incident_id=incident_id,
+            )
+            for stage in ("triage", "investigation"):
+                self._store.append(
+                    f"{stage}.skipped",
+                    {"skip": "runbook", "effective_verdict": "real"},
+                    incident_id=incident_id,
+                )
         return incident_id
 
     def _join(self, incident: Incident, alert: Alert, reason: str) -> None:

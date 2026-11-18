@@ -41,6 +41,22 @@ class Settings:
     model_keys: Mapping[str, str] = field(default_factory=dict)  # by model alias
     ntfy_token: str | None = None  # the digest's
     investigation_ntfy_token: str | None = None
+    executor_token: str | None = None  # how the core proves itself to the executor
+    uptime_kuma_key: str | None = None
+
+
+@dataclass(frozen=True)
+class ExecutorSettings:
+    """`paeon executor`: its own file, its own port, and the only place the signing key is."""
+
+    db_path: Path
+    host: str
+    port: int
+    token: str
+    rules: Rules
+    signing_key: str | None
+    ntfy_token: str | None
+    kill_switch: bool
 
 
 def _secret(env: Mapping[str, str], name: str) -> str:
@@ -110,6 +126,15 @@ def load(env: Mapping[str, str]) -> Settings:
         _secret(env, analysis.token_env) if analysis is not None and analysis.token_env else ""
     )
 
+    executor_token = _secret(env, "PAEON_EXECUTOR_TOKEN")
+    if rules.actions.enabled and len(executor_token) < 24:
+        raise ConfigError(
+            "actions.enabled is set: PAEON_EXECUTOR_TOKEN (or _FILE) is required, 24 characters"
+            " or more, the same as the executor's"
+        )
+    kuma = rules.investigation.tools.uptime_kuma
+    kuma_key = _secret(env, kuma.api_key_env) if kuma is not None and kuma.api_key_env else ""
+
     port = int(_number(env, "PAEON_PORT", 8080, minimum=1))
     return Settings(
         db_path=Path(env.get("PAEON_DB", "").strip() or "paeon.sqlite"),
@@ -123,4 +148,37 @@ def load(env: Mapping[str, str]) -> Settings:
         model_keys=model_keys,
         ntfy_token=ntfy_token or None,
         investigation_ntfy_token=analysis_token or None,
+        executor_token=executor_token or None,
+        uptime_kuma_key=kuma_key or None,
+    )
+
+
+def load_executor(env: Mapping[str, str]) -> ExecutorSettings:
+    token = _secret(env, "PAEON_EXECUTOR_TOKEN")
+    if len(token) < 24:
+        raise ConfigError("PAEON_EXECUTOR_TOKEN (or _FILE) is required, 24 characters or more")
+    rules_path = env.get("PAEON_CONFIG", "").strip()
+    if not rules_path:
+        # Without its own catalog the executor would have nothing to check a plan against.
+        raise ConfigError("PAEON_CONFIG is required: the executor reads its own rules file")
+    try:
+        rules = load_rules(Path(rules_path))
+    except RulesError as exc:
+        raise ConfigError(f"PAEON_CONFIG: {exc}") from exc
+    key = _secret(env, "PAEON_SIGNING_KEY")
+    if key and len(key) < 32:
+        raise ConfigError("PAEON_SIGNING_KEY (or _FILE) must be 32 characters or more")
+    if key and key == token:
+        raise ConfigError("PAEON_SIGNING_KEY must differ from PAEON_EXECUTOR_TOKEN")
+    ntfy = rules.actions.ntfy
+    ntfy_token = _secret(env, ntfy.token_env) if ntfy is not None and ntfy.token_env else ""
+    return ExecutorSettings(
+        db_path=Path(env.get("PAEON_EXECUTOR_DB", "").strip() or "executor.sqlite"),
+        host=env.get("PAEON_EXECUTOR_HOST", "").strip() or "127.0.0.1",
+        port=int(_number(env, "PAEON_EXECUTOR_PORT", 8081, minimum=1)),
+        token=token,
+        rules=rules,
+        signing_key=key or None,
+        ntfy_token=ntfy_token or None,
+        kill_switch=env.get("PAEON_KILL_SWITCH", "").strip().lower() in ("1", "true", "yes", "on"),
     )

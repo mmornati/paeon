@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Actions{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Actions</h1>
+  <p class="live">What the executor was asked, what you answered, and what it did. The console shows it; it cannot approve.</p>
+</div>
+
+<section class="block" aria-labelledby="h-switch">
+  <h2 id="h-switch">Kill switch</h2>
+  {% if stopped == "failed" %}<p class="lead">The executor did not answer: automation was not stopped from here. Run <code>paeon stop</code> next to it.</p>{% endif %}
+  {% if view.killed %}
+  <p class="lead">Engaged. Every plan is recorded and nothing else happens.</p>
+  <p class="note">Only you can release it: <code>paeon resume</code> next to the executor.</p>
+  {% else %}
+  <p class="lead">Off. Plans are handled at the level your policies give.</p>
+  {% if can_stop %}
+  <form class="vote" method="post" action="/ui/actions/stop">
+    <p class="vote-ask">Stopping cancels every plan that is waiting, and takes effect at once. The console cannot undo it.</p>
+    <div class="vote-buttons"><button class="btn btn-stop">Stop automation</button></div>
+  </form>
+  {% endif %}
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-waiting">
+  <h2 id="h-waiting">Waiting for your answer</h2>
+  {% if view.waiting %}
+  <table class="table">
+    <thead><tr><th>Incident</th><th>Plan</th><th class="num">Until</th></tr></thead>
+    <tbody>
+      {% for w in view.waiting -%}
+      <tr><td><a href="/ui/incidents/{{ w.incident }}#plan">{{ w.incident }}</a></td><td>{{ w.steps|join(", ") }}</td><td class="num">{{ w.expires_at[11:16] if w.expires_at else "?" }} UTC</td></tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  <p class="note">Answer on the notification. A plan nobody answers expires, and nothing runs.</p>
+  {% else %}
+  <p class="note">No plan is waiting.</p>
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-plans">
+  <h2 id="h-plans">Plans, last {{ view.days }} days</h2>
+  {% if view.plans %}
+  <table class="table">
+    <thead><tr><th>Incident</th><th>Plan</th><th class="wide">Level</th><th>Outcome</th></tr></thead>
+    <tbody>
+      {% for line in view.plans -%}
+      <tr><td><a href="/ui/incidents/{{ line.incident_id }}#plan" title="{{ line.title }}">{{ line.incident_id }}</a></td><td>{{ line.plan.steps|join(", ") }}</td><td class="wide">{{ line.plan.level }}</td><td><span class="outcome outcome-{{ line.plan.state|replace(" ", "-") }}">{{ line.plan.state }}</span></td></tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="note">No plan was proposed. One appears when an analysis names a catalog action, or when a runbook matches an alert.</p>
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-catalog">
+  <h2 id="h-catalog">Catalog</h2>
+  {% if catalog %}
+  <table class="table">
+    <thead><tr><th>Action</th><th>Containers</th><th>Never</th></tr></thead>
+    <tbody>
+      {% for name, entry in catalog.items() -%}
+      <tr><td>{{ name }}</td><td>{{ entry.targets|join(", ") }}</td><td>{{ entry.deny|join(", ") or "none" }}</td></tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  <p class="facts">As this process read it. The executor decides from its own copy of the rules file.</p>
+  {% else %}
+  <p class="note">The catalog is empty: no action can be proposed.</p>
+  {% endif %}
+  {% if runbooks %}
+  <h3>Runbooks</h3>
+  <ul class="evidence">
+    {% for book in runbooks -%}
+    <li><strong>{{ book.name }}</strong> {% for step in book.steps %}{{ step.action }} on {{ step.target }}{% if not loop.last %}, then {% endif %}{% endfor %}{% if book.mode == "escalate" and book.steps|length > 1 %}, stopping at the first that works{% endif %}</li>
+    {% endfor -%}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-policies">
+  <h2 id="h-policies">Policies</h2>
+  <table class="table">
+    <thead><tr><th>Alert</th><th>Action</th><th>Container</th><th>Level</th></tr></thead>
+    <tbody>
+      {% for policy in policies -%}
+      <tr><td>{{ policy.alert }}</td><td>{{ policy.action }}</td><td>{{ policy.target }}</td><td>{{ policy.level }}</td></tr>
+      {% endfor -%}
+      <tr><td colspan="3">Everything else</td><td>{{ default_level }}</td></tr>
+    </tbody>
+  </table>
+  <p class="facts">The first line that matches decides. Changing a level is a change to the rules file, in git.</p>
+</section>
+{% endblock %}

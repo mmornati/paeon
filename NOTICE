@@ -5,5 +5,10 @@ This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 The container image and the installed package bundle third-party software under
 their own licences (MIT, BSD, Apache-2.0, PSF-2.0), among them: anthropic,
-FastAPI, Starlette, httpx2, pydantic, PyYAML, tzdata and uvicorn. Their licence
-texts ship inside each package's metadata.
+FastAPI, Starlette, httpx2, Jinja2, MarkupSafe, pydantic, python-multipart,
+PyYAML, tzdata and uvicorn. Their licence texts ship inside each package's
+metadata.
+
+The container image is built on Debian and also contains, unmodified and as
+separate programs, git (GPL-2.0) and the OpenSSH client (BSD), with the other
+packages of the base image. Their licences are in /usr/share/doc of the image.

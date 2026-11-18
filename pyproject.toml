@@ -34,6 +34,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/mmornati/paeon"
 Documentation = "https://github.com/mmornati/paeon/blob/main/docs/llm-incident-response-architecture.md"
+Changelog = "https://github.com/mmornati/paeon/blob/main/CHANGELOG.md"
 Issues = "https://github.com/mmornati/paeon/issues"
 Security = "https://github.com/mmornati/paeon/security/policy"
 

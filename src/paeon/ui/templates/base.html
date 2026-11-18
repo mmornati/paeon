@@ -19,20 +19,22 @@
       <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>Board</a>
       <a href="/ui/log"{% if here == "log" %} aria-current="page"{% endif %}>Log</a>
       <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>Ledger</a>
+      {% if acting %}<a href="/ui/actions"{% if here == "actions" %} aria-current="page"{% endif %}>Actions</a>
+      <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>Autonomy</a>{% endif %}
+      {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>Postmortems</a>{% endif %}
     </nav>
   </div>
   <ul class="stages" aria-label="Stages">
     {% for name, state in stages -%}
-    <li class="stage{% if state == "off" %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
+    <li class="stage{% if state in ("off", "none") %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
     {% endfor -%}
-    <li class="stage">Actions <b>none</b></li>
   </ul>
 </header>
 <main id="main" class="{% block layout %}page{% endblock %}">
 {% block main %}{% endblock %}
 </main>
 <footer class="foot">
-  <p>Paeon {{ version }} records and advises. It takes no action on this server.</p>
+  <p>Paeon {{ version }} records and advises. {% if acting %}Only the executor acts: catalog actions, at the level your policies give.{% else %}It takes no action on this server.{% endif %}</p>
   <p>Times are in {{ zone }}. Budget days are UTC.</p>
 </footer>
 </body>

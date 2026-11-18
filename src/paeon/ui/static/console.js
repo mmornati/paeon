@@ -1,6 +1,9 @@
 // The board refreshes itself. A strip that moved to another bay slides there, and a strip that
 // changed keeps a "changed" tag until it is touched. Without this script the board is a page
 // you reload: nothing else depends on it.
+// On a phone the bar's links scroll sideways: bring the current one into view.
+document.querySelector(".nav [aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" });
+
 (() => {
   const board = document.querySelector("[data-live]");
   if (!board) return;

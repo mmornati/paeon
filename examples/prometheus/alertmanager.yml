@@ -1,0 +1,16 @@
+route:
+  receiver: paeon
+  group_wait: 5s
+  group_interval: 1m
+  repeat_interval: 4h
+
+receivers:
+  - name: paeon
+    webhook_configs:
+      # Add this receiver next to yours, never instead of it: Paeon is not a pager.
+      - url: http://paeon:8080/ingest/alertmanager
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager/paeon_token

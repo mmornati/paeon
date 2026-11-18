@@ -149,6 +149,7 @@ def test_the_real_toolbox_is_built_from_the_rules(store: Store, tmp_path: Path) 
         "past_incidents",
         "recent_changes",
         "search_knowledge",
+        "alert_history",
         "list_containers",
         "inspect_container",
         "container_logs",

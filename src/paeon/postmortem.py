@@ -6,8 +6,9 @@ automation review, the appendix); the model writes the prose sections from the s
 the file is marked `draft` until a person reviews it. If the model is unavailable the draft is
 still written, with the prose sections left to fill in.
 
-Drafts land in a directory (`postmortems.dir`). Committing them to a git repository is left to
-whatever syncs that directory: Paeon holds no git credential.
+Drafts land in a directory (`postmortems.dir`). With `postmortems.git` the directory is a git
+working copy and each draft is committed there, and pushed if asked, with the deploy key you
+name: a key that can write to that one repository and nothing else.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import logging
 import re
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -24,7 +26,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from paeon import ledger
+from paeon import autonomy, ledger, proc
 from paeon.models import ModelClient, ModelError, complete, cost_of
 from paeon.redact import redact
 from paeon.rules import Rules
@@ -121,6 +123,23 @@ _TIMELINE: dict[str, Callable[[dict[str, Any]], str]] = {
     "notification.sent": lambda p: f"Analysis sent ({p.get('channel')})",
     "incident.resolved": lambda p: "Incident resolved",
     "feedback.recorded": lambda p: f"Feedback: {p.get('vote')}",
+    "runbook.matched": lambda p: f"Runbook matched: {p.get('runbook')}",
+    "plan.proposed": lambda p: (
+        f"Plan proposed at level {p.get('level')}: {', '.join(p.get('steps') or [])}"
+    ),
+    "plan.refused": lambda p: f"Plan refused by the executor: {p.get('reason')}",
+    "approval.requested": lambda p: "Approval requested",
+    "approval.granted": lambda p: "Approved (Go)",
+    "approval.declined": lambda p: "Declined (No-go)",
+    "approval.expired": lambda p: "Approval expired without an answer",
+    "plan.cancelled": lambda p: f"Plan cancelled: {p.get('reason')}",
+    "action.started": lambda p: f"Action started: {p.get('step')}",
+    "action.verified": lambda p: f"Action verified: {p.get('step')}",
+    "action.failed": lambda p: f"Action failed: {p.get('step')} ({p.get('reason')})",
+    "action.rolled_back": lambda p: f"Rolled back: {p.get('step')}",
+    "action.undone": lambda p: f"Undone on request: {p.get('step')}",
+    "plan.completed": lambda p: f"Plan {p.get('outcome')}",
+    "autonomy.demoted": lambda p: f"Autonomy demoted to approve: {p.get('reason')}",
 }
 
 
@@ -137,10 +156,13 @@ def timeline(events: list[Event]) -> list[str]:
 
 
 class PostmortemWriter:
-    def __init__(self, store: Store, rules: Rules, client: ModelClient) -> None:
+    def __init__(
+        self, store: Store, rules: Rules, client: ModelClient, *, run: proc.Runner = proc.run
+    ) -> None:
         self._store = store
         self._rules = rules
         self._client = client
+        self._run = run
 
     def run_pending(self, now: datetime) -> int:
         """Draft the postmortem of every investigated incident that has stayed resolved."""
@@ -195,7 +217,49 @@ class PostmortemWriter:
         )
         self._store.set_stage(incident.id, "postmortem", StageState.DONE)
         log.info("incident %d: postmortem draft written to %s", incident.id, path.name)
+        self._commit(incident, path)
         return path
+
+    def _commit(self, incident: Incident, path: Path) -> None:
+        """Commit the draft, and push it, in the working copy that holds the directory."""
+        config = self._rules.postmortems.git
+        if config is None or not config.commit:
+            return
+        env = {
+            **proc.GIT_ENV,
+            "GIT_AUTHOR_NAME": config.author_name,
+            "GIT_AUTHOR_EMAIL": config.author_email,
+            "GIT_COMMITTER_NAME": config.author_name,
+            "GIT_COMMITTER_EMAIL": config.author_email,
+        }
+        if config.identity_file or config.known_hosts_file:
+            ssh = proc.ssh_command(config.identity_file, config.known_hosts_file)
+            env["GIT_SSH_COMMAND"] = " ".join(ssh)
+        git = [*proc.GIT, "-C", str(path.parent)]
+        steps = [
+            [*git, "add", "--", path.name],
+            [*git, "commit", "--quiet", "-m", f"Postmortem draft: incident {incident.id}"],
+        ]
+        if config.push:
+            steps.append([*git, "push", "--quiet"])
+        for argv in steps:
+            verb = argv[len(git)]
+            try:
+                code, _ = self._run(argv, timeout=60, env=env)
+            except Exception as exc:
+                code, verb = 1, f"{verb} ({type(exc).__name__})"
+            if code != 0:
+                # The file is written either way: a failed commit is noted, the draft is not lost.
+                self._store.append(
+                    "postmortem.commit_failed", {"step": verb}, incident_id=incident.id
+                )
+                log.warning("incident %d: git %s failed", incident.id, verb)
+                return
+        self._store.append(
+            "postmortem.committed",
+            {"path": path.name, "pushed": config.push},
+            incident_id=incident.id,
+        )
 
     def _narrative(
         self, incident: Incident, events: list[Event], findings: Any
@@ -272,7 +336,7 @@ class PostmortemWriter:
             "metrics": {"ttr_min": minutes},
             "flapping": incident.flapping,
             "maintenance_window": incident.maintenance,
-            "autonomy": "observe",
+            "autonomy": autonomy.level_in_force(events),
             "llm_cost": round(ledger.spent_on(self._store, incident.id), 6),
         }
         cause = (findings or {}).get("root_cause") or {}
@@ -295,9 +359,7 @@ class PostmortemWriter:
                 f" {sum(1 for e in evidence if e.get('verified'))} of {len(evidence)} claims"
                 " tied to a tool call. Correct at first attempt?"
             ),
-            "- Actions: none taken by Paeon (it observes and advises only)."
-            + (f" It suggested {len(plan)} steps." if plan else ""),
-            "- Could this be handled at a higher autonomy level next time?",
+            *autonomy.review(events, len(plan)),
         ]
         items = (
             "\n".join(f"- [ ] ({item.type}) {item.action}" for item in story.action_items) or TODO
@@ -335,3 +397,82 @@ class PostmortemWriter:
             ),
         ]
         return "\n\n".join(sections) + "\n"
+
+
+# --- reading them back ------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Draft:
+    """A postmortem file as the console, the API and the MCP server list it."""
+
+    name: str
+    title: str
+    status: str  # draft or reviewed, from the front matter
+    incident: int | None
+    severity: str
+    detected_at: str
+    open_items: tuple[str, ...]  # action items not ticked yet
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "title": self.title,
+            "status": self.status,
+            "incident": self.incident,
+            "severity": self.severity,
+            "detected_at": self.detected_at,
+            "open_action_items": list(self.open_items),
+        }
+
+
+_ITEM = re.compile(r"^- \[ \] (.+)$", re.MULTILINE)
+_FILE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,150}\.md")
+
+
+def read_draft(directory: Path | str, name: str) -> tuple[Draft, str] | None:
+    """One postmortem and its text. The name must be a plain file name of the directory."""
+    if _FILE.fullmatch(name) is None:
+        return None
+    path = Path(directory) / name
+    try:
+        if not path.is_file() or path.stat().st_size > 512_000:
+            return None
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    front: dict[str, Any] = {}
+    body = text
+    if text.startswith("---\n"):
+        head, _, rest = text[4:].partition("\n---")
+        try:
+            loaded = yaml.safe_load(head)
+        except yaml.YAMLError:
+            loaded = None
+        if isinstance(loaded, dict):
+            front, body = loaded, rest
+    title = next((line[2:].strip() for line in body.splitlines() if line.startswith("# ")), name)
+    incident = front.get("incident")
+    draft = Draft(
+        name=name,
+        title=title,
+        status=str(front.get("status") or "draft"),
+        incident=incident if isinstance(incident, int) else None,
+        severity=str(front.get("severity") or ""),
+        detected_at=str(front.get("detected_at") or ""),
+        open_items=tuple(_ITEM.findall(body)),
+    )
+    return draft, text
+
+
+def drafts(directory: Path | str) -> list[Draft]:
+    """Every postmortem of the directory, newest first."""
+    base = Path(directory)
+    if not base.is_dir():
+        return []
+    found = []
+    for path in sorted(base.glob("*.md"), reverse=True)[:500]:
+        read = read_draft(base, path.name)
+        if read is not None:
+            found.append(read[0])
+    return found

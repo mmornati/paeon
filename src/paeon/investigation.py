@@ -17,14 +17,17 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from paeon import digest, ledger
+from paeon.catalog import ACTIONS, TARGET_PATTERN
 from paeon.models import (
     ModelClient,
     ModelError,
@@ -37,14 +40,14 @@ from paeon.models import (
     cost_of,
 )
 from paeon.redact import redact
-from paeon.rules import Rules
+from paeon.rules import CatalogEntry, Rules
 from paeon.schema import Alert, Incident, StageState
 from paeon.store import Store
 from paeon.tools import Toolbox
 
 log = logging.getLogger(__name__)
 
-PROMPT_VERSION = "investigate-1"
+PROMPT_VERSION = "investigate-2"
 SUBMIT = "submit_findings"
 _EXTRA_TURNS = 4  # model turns allowed beyond the tool budget, to submit
 
@@ -77,6 +80,14 @@ class PlanStep(BaseModel):
     action: str = Field(min_length=1, max_length=1000)
     why: str = Field(default="", max_length=1000)
     risk: Literal["low", "medium", "high"] = "medium"
+    # Set when the step is exactly one action of the catalog on one container: only such a
+    # step can ever be run by code. Everything else is a sentence for a person.
+    catalog_action: str | None = Field(default=None, max_length=64)
+    target: str | None = Field(default=None, max_length=128)
+
+    @property
+    def typed(self) -> bool:
+        return self.catalog_action is not None and self.target is not None
 
 
 class Findings(BaseModel):
@@ -91,64 +102,90 @@ class Findings(BaseModel):
 
 
 _TEXT = {"type": "string"}
-SUBMIT_SPEC = ToolSpec(
-    SUBMIT,
-    "Hand in the result of the investigation. Call it exactly once, when you are done or when"
-    " you are told the budget is spent. Nothing else ends the investigation.",
-    {
-        "type": "object",
-        "additionalProperties": False,
-        "required": ["summary", "impact", "root_cause", "evidence", "hypotheses_rejected", "plan"],
-        "properties": {
-            "summary": {**_TEXT, "description": "What happened, in three sentences at most."},
-            "impact": {**_TEXT, "description": "Who or what is affected, and since when."},
-            "root_cause": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": ["statement", "confidence"],
-                "properties": {
-                    "statement": {**_TEXT, "description": "The mechanism, or 'not found'."},
-                    "confidence": {"type": "number", "description": "From 0 to 1."},
-                },
-            },
-            "evidence": {
-                "type": "array",
-                "items": {
+
+
+def submit_spec(catalog: Mapping[str, CatalogEntry] | None = None) -> ToolSpec:
+    """The tool that ends an investigation. With a catalog, a plan step may name an action."""
+    step: dict[str, Any] = {
+        "action": _TEXT,
+        "why": _TEXT,
+        "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+    }
+    if catalog:
+        step["catalog_action"] = {
+            "type": "string",
+            "enum": sorted(catalog),
+            "description": "Only when the step is exactly this action on one container.",
+        }
+        step["target"] = {**_TEXT, "description": "The container's exact name."}
+    return _submit_spec(step)
+
+
+def _submit_spec(step: dict[str, Any]) -> ToolSpec:
+    return ToolSpec(
+        SUBMIT,
+        "Hand in the result of the investigation. Call it exactly once, when you are done or when"
+        " you are told the budget is spent. Nothing else ends the investigation.",
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [
+                "summary",
+                "impact",
+                "root_cause",
+                "evidence",
+                "hypotheses_rejected",
+                "plan",
+            ],
+            "properties": {
+                "summary": {**_TEXT, "description": "What happened, in three sentences at most."},
+                "impact": {**_TEXT, "description": "Who or what is affected, and since when."},
+                "root_cause": {
                     "type": "object",
                     "additionalProperties": False,
-                    "required": ["claim", "call"],
+                    "required": ["statement", "confidence"],
                     "properties": {
-                        "claim": _TEXT,
-                        "call": {**_TEXT, "description": "The `call` id of the tool result."},
+                        "statement": {**_TEXT, "description": "The mechanism, or 'not found'."},
+                        "confidence": {"type": "number", "description": "From 0 to 1."},
                     },
                 },
-            },
-            "hypotheses_rejected": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["hypothesis", "reason"],
-                    "properties": {"hypothesis": _TEXT, "reason": _TEXT},
+                "evidence": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["claim", "call"],
+                        "properties": {
+                            "claim": _TEXT,
+                            "call": {**_TEXT, "description": "The `call` id of the tool result."},
+                        },
+                    },
                 },
-            },
-            "plan": {
-                "type": "array",
-                "description": "What a person should do, in order. Empty if nothing is needed.",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["action", "why", "risk"],
-                    "properties": {
-                        "action": _TEXT,
-                        "why": _TEXT,
-                        "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+                "hypotheses_rejected": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["hypothesis", "reason"],
+                        "properties": {"hypothesis": _TEXT, "reason": _TEXT},
+                    },
+                },
+                "plan": {
+                    "type": "array",
+                    "description": "What a person should do, in order. Empty if nothing is needed.",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["action", "why", "risk"],
+                        "properties": step,
                     },
                 },
             },
         },
-    },
-)
+    )
+
+
+SUBMIT_SPEC = submit_spec()
 
 SYSTEM_PROMPT = f"""\
 You investigate an incident on a small self-hosted server, for the person who runs it. They
@@ -180,6 +217,33 @@ rather than broad ones, and call several tools at once when the questions are in
 Finish by calling `{SUBMIT}`.
 """
 
+CATALOG_PROMPT = """
+A few fixes can be run by code for the owner, once they have approved them (you still cannot
+run anything). They are listed below with the containers each may be applied to. When a step of
+your plan is exactly one of them on one container, set `catalog_action` and `target` (the
+container's exact name) on that step. Leave both out for every other step, which stays advice
+for a person. Never bend the right fix into one of these because it is the one on offer, and
+never propose one unless your evidence says it addresses the cause.
+
+"""
+
+
+def catalog_prompt(catalog: Mapping[str, CatalogEntry]) -> str:
+    lines = [
+        f"- {name}: {ACTIONS[name].summary.lower()}; containers: {', '.join(entry.targets)}"
+        + (f"; never: {', '.join(entry.deny)}" if entry.deny else "")
+        for name, entry in sorted(catalog.items())
+    ]
+    return CATALOG_PROMPT + "\n".join(lines) + "\n"
+
+
+@dataclass(frozen=True)
+class Extras:
+    """What a notification carries besides its text: the page it opens, and its buttons."""
+
+    click: str | None = None
+    actions: tuple[dict[str, Any], ...] = ()
+
 
 class Investigator:
     def __init__(
@@ -191,13 +255,22 @@ class Investigator:
         *,
         ntfy_token: str | None = None,
         publish: Callable[..., None] = digest.publish_ntfy,
+        fallback: ModelClient | None = None,
+        extras: Callable[[Incident], Extras] | None = None,
+        after: Callable[[Incident, Findings], None] | None = None,
     ) -> None:
         self._store = store
         self._rules = rules
         self._client = client
+        self._fallback = fallback
         self._toolbox = toolbox
         self._ntfy_token = ntfy_token
         self._publish = publish
+        self._extras = extras
+        self._after = after
+        actions = rules.actions
+        self._catalog = dict(actions.catalog) if actions.enabled else {}
+        self._system = SYSTEM_PROMPT + (catalog_prompt(self._catalog) if self._catalog else "")
 
     # --- which incidents ----------------------------------------------------------------------
 
@@ -246,7 +319,7 @@ class Investigator:
 
     def investigate(self, incident: Incident, now: datetime) -> Findings | None:
         config = self._rules.investigation
-        specs = [*self._toolbox.specs, SUBMIT_SPEC]
+        specs = [*self._toolbox.specs, submit_spec(self._catalog)]
         pack = self.context_pack(incident, now)
         self._store.append(
             "investigation.started",
@@ -259,64 +332,26 @@ class Investigator:
             incident_id=incident.id,
         )
         started = time.monotonic()
-        turns: list[Turn] = [UserTurn(json.dumps(pack, indent=1, sort_keys=True))]
         calls: list[str] = []
-        nudges = 0
+        attempts: list[tuple[str, ModelClient]] = [(config.model, self._client)]
+        if config.fallback_model is not None and self._fallback is not None:
+            attempts.append((config.fallback_model, self._fallback))
         findings: Findings | None = None
         failure: str | None = None
         answered_by: str | None = None
-
-        for _ in range(config.max_tool_calls + _EXTRA_TURNS):
-            if time.monotonic() - started > config.max_seconds:
-                failure = "timeout"
+        for position, (alias_name, client) in enumerate(attempts):
+            findings, failure, answered_by = self._loop(
+                incident, alias_name, client, pack, specs, calls, started
+            )
+            last = position == len(attempts) - 1
+            if findings is not None or last or not (failure or "").startswith("model_error"):
                 break
-            if config.budget_per_incident is not None and (
-                ledger.spent_on(self._store, incident.id) >= config.budget_per_incident
-            ):
-                failure = "budget"
-                break
-            try:
-                reply = self._call(incident, turns, specs)
-            except ModelError as exc:
-                failure = f"model_error: {exc}"
-                break
-            answered_by = reply.model
-            turns.append(reply)
-            if not reply.tool_calls:
-                nudges += 1
-                if nudges > 2:
-                    failure = "no_findings"
-                    break
-                turns.append(UserTurn(f"Call `{SUBMIT}` with your findings to finish."))
-                continue
-            results: list[ToolResult] = []
-            for call in reply.tool_calls:
-                if call.name == SUBMIT:
-                    try:
-                        if call.error:
-                            raise ValueError(call.error)
-                        findings = Findings.model_validate(call.input)
-                    except (ValidationError, ValueError) as exc:
-                        results.append(ToolResult(call.id, _problems(exc), is_error=True))
-                    else:
-                        results.append(ToolResult(call.id, "accepted"))
-                elif call.error:
-                    results.append(ToolResult(call.id, call.error, is_error=True))
-                elif len(calls) >= config.max_tool_calls:
-                    results.append(
-                        ToolResult(
-                            call.id,
-                            f"The tool budget is spent. Call `{SUBMIT}` now with what you have.",
-                            is_error=True,
-                        )
-                    )
-                else:
-                    results.append(self._run_tool(incident, call.id, call.name, call.input, calls))
-            if findings is not None:
-                break
-            turns.append(ToolTurn(tuple(results)))
-        else:
-            failure = "no_findings"
+            # A tool loop stays on one model, so the other one starts again from the pack.
+            self._store.append(
+                "investigation.fallback",
+                {"from": alias_name, "to": attempts[position + 1][0], "reason": failure},
+                incident_id=incident.id,
+            )
 
         duration = round(time.monotonic() - started, 1)
         cost = round(ledger.spent_on(self._store, incident.id), 6)
@@ -354,6 +389,97 @@ class Investigator:
             findings.root_cause.confidence,
         )
         self._notify(incident, findings)
+        if self._after is not None:
+            try:
+                self._after(incident, findings)
+            except Exception:  # the analysis is recorded and sent: a failed hand-over is not fatal
+                log.exception("incident %d: the plan was not handed over", incident.id)
+        return findings
+
+    def _loop(
+        self,
+        incident: Incident,
+        alias_name: str,
+        client: ModelClient,
+        pack: Any,
+        specs: list[ToolSpec],
+        calls: list[str],
+        started: float,
+    ) -> tuple[Findings | None, str | None, str | None]:
+        """One conversation with one model. Returns the findings, or why there are none."""
+        config = self._rules.investigation
+        turns: list[Turn] = [UserTurn(json.dumps(pack, indent=1, sort_keys=True))]
+        nudges = 0
+        answered_by: str | None = None
+        for _ in range(config.max_tool_calls + _EXTRA_TURNS):
+            if time.monotonic() - started > config.max_seconds:
+                return None, "timeout", answered_by
+            if config.budget_per_incident is not None and (
+                ledger.spent_on(self._store, incident.id) >= config.budget_per_incident
+            ):
+                return None, "budget", answered_by
+            try:
+                reply = self._call(incident, alias_name, client, turns, specs)
+            except ModelError as exc:
+                return None, f"model_error: {exc}", answered_by
+            answered_by = reply.model
+            turns.append(reply)
+            if not reply.tool_calls:
+                nudges += 1
+                if nudges > 2:
+                    return None, "no_findings", answered_by
+                turns.append(UserTurn(f"Call `{SUBMIT}` with your findings to finish."))
+                continue
+            results: list[ToolResult] = []
+            findings: Findings | None = None
+            for call in reply.tool_calls:
+                if call.name == SUBMIT:
+                    try:
+                        if call.error:
+                            raise ValueError(call.error)
+                        findings = self._checked(Findings.model_validate(call.input))
+                    except (ValidationError, ValueError) as exc:
+                        findings = None
+                        results.append(ToolResult(call.id, _problems(exc), is_error=True))
+                    else:
+                        results.append(ToolResult(call.id, "accepted"))
+                elif call.error:
+                    results.append(ToolResult(call.id, call.error, is_error=True))
+                elif len(calls) >= config.max_tool_calls:
+                    results.append(
+                        ToolResult(
+                            call.id,
+                            f"The tool budget is spent. Call `{SUBMIT}` now with what you have.",
+                            is_error=True,
+                        )
+                    )
+                else:
+                    results.append(self._run_tool(incident, call.id, call.name, call.input, calls))
+            if findings is not None:
+                return findings, None, answered_by
+            turns.append(ToolTurn(tuple(results)))
+        return None, "no_findings", answered_by
+
+    def _checked(self, findings: Findings) -> Findings:
+        """Refuse a typed step the catalog does not allow, before anyone is shown it."""
+        for number, step in enumerate(findings.plan, 1):
+            if step.catalog_action is None and step.target is None:
+                continue
+            if not self._catalog:  # actions are off: a typed step is only its sentence
+                step.catalog_action = step.target = None
+                continue
+            entry = self._catalog.get(step.catalog_action or "")
+            target = step.target or ""
+            if entry is None or re.fullmatch(TARGET_PATTERN, target) is None:
+                raise ValueError(
+                    f"plan step {number}: catalog_action must be one of {sorted(self._catalog)}"
+                    " with the exact name of one container as target, or both left out"
+                )
+            if not entry.allows(target):
+                raise ValueError(
+                    f"plan step {number}: {step.catalog_action} is not allowed on {target!r};"
+                    " describe the step for a person instead and leave catalog_action out"
+                )
         return findings
 
     def context_pack(self, incident: Incident, now: datetime) -> Any:
@@ -407,12 +533,18 @@ class Investigator:
 
     # --- calls --------------------------------------------------------------------------------
 
-    def _call(self, incident: Incident, turns: list[Turn], specs: list[ToolSpec]) -> ModelReply:
-        config = self._rules.investigation
-        alias = self._rules.models[config.model]
+    def _call(
+        self,
+        incident: Incident,
+        alias_name: str,
+        client: ModelClient,
+        turns: list[Turn],
+        specs: list[ToolSpec],
+    ) -> ModelReply:
+        alias = self._rules.models[alias_name]
         record: dict[str, Any] = {
             "stage": "investigate",
-            "alias": config.model,
+            "alias": alias_name,
             "backend": alias.backend,
             "model_requested": alias.model,
             "prompt_version": PROMPT_VERSION,
@@ -420,7 +552,7 @@ class Investigator:
         }
         started = time.monotonic()
         try:
-            reply = self._client.converse(system=SYSTEM_PROMPT, turns=turns, tools=specs)
+            reply = client.converse(system=self._system, turns=turns, tools=specs)
         except ModelError as exc:
             record |= {"error": str(exc), "cost": 0.0}
             raise
@@ -468,6 +600,12 @@ class Investigator:
         ntfy = self._rules.investigation.ntfy
         if ntfy is None:
             return
+        extras = Extras()
+        if self._extras is not None:
+            try:
+                extras = self._extras(incident)
+            except Exception:  # no buttons is better than no analysis
+                log.exception("incident %d: the notification has no buttons", incident.id)
         try:
             self._publish(
                 ntfy,
@@ -476,6 +614,8 @@ class Investigator:
                 message=render(findings),
                 priority=3,
                 tags=("mag",),
+                click=extras.click,
+                actions=extras.actions,
             )
         except RuntimeError as exc:
             # The page already went out by the usual path: a lost analysis is recorded, no more.
@@ -514,6 +654,7 @@ def render(findings: Findings) -> str:
         parts += ["", "Suggested, for you to do:"]
         parts += [
             f"{number}. {step.action} [{step.risk} risk]"
+            + (f" (Paeon can run it: {step.catalog_action} on {step.target})" if step.typed else "")
             for number, step in enumerate(findings.plan, 1)
         ]
     unverified = sum(1 for item in findings.evidence if not item.verified)

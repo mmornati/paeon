@@ -80,6 +80,13 @@ jobs:
             echo "serve started without PAEON_INGEST_TOKEN" >&2
             exit 1
           fi
+          # The executor must refuse too, and the tools the image promises must be there.
+          if docker run --rm "${IMAGE}:edge" executor; then
+            echo "executor started without PAEON_EXECUTOR_TOKEN" >&2
+            exit 1
+          fi
+          docker run --rm --entrypoint git "${IMAGE}:edge" --version
+          docker run --rm --entrypoint ssh "${IMAGE}:edge" -V
       - name: Push (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:

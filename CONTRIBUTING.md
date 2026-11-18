@@ -10,6 +10,11 @@ negotiation in a pull request:
 
 - **The model proposes; code disposes.** No tool that writes, no shell, no free-form command for
   a model, in any stage.
+- **The core never acts and never approves.** Whatever changes something on the server lives in
+  the executor, is a typed action of the catalog in `paeon/catalog.py`, and is checked there
+  against the executor's own rules. A new action needs a pre-check, a verification and, where one
+  exists, an inverse. Nothing moves the signing key, or a way to release the kill switch, into
+  the core.
 - **Everything read is behind an allow-list**, and everything sent to a model is redacted first.
 - **Every decision is an event** in the append-only log. If a change makes Paeon decide something,
   it records it.
@@ -38,8 +43,10 @@ That line is what CI runs. Coverage must stay above 85 %, and `mypy` runs in str
 - **Never commit real data.** No real alert payload, log line, hostname, address, token or model
   answer from your own systems. Rewrite fixtures by hand with `example.org`, `server-1` and
   made-up values.
-- A change to an allow-list or to redaction needs tests for what must be refused, not only for
-  what is accepted.
+- A change to an allow-list, to redaction, to the catalog or to approvals needs tests for what
+  must be refused, not only for what is accepted.
+- `tests/acting.py` has a fake Docker and an executor around it; `python tests/ui_data.py <db>`
+  fills a database to look at the console with.
 
 ## Pull requests
 

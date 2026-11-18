@@ -18,7 +18,8 @@ it has already seen.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, Protocol
@@ -26,7 +27,7 @@ from typing import Any, Protocol
 import httpx2 as httpx
 
 from paeon.recorder import Recorder
-from paeon.schema import Alert, Status, from_micros, to_micros
+from paeon.schema import Alert, Severity, Status, from_micros, to_micros
 from paeon.store import Store
 
 log = logging.getLogger(__name__)
@@ -39,20 +40,123 @@ _SQL = (
 _PAGE = 5000
 
 
+_DEFINITIONS_TTL = 600.0
+
+
 class SearchClient(Protocol):
     def search(self, sql: str, start: int, end: int, size: int) -> list[dict[str, Any]]: ...
+
+
+@dataclass(frozen=True)
+class AlertDefinition:
+    """What an OpenObserve alert watches, without where it notifies (that holds credentials)."""
+
+    id: str
+    name: str
+    description: str = ""
+    stream: str = ""
+    stream_type: str = "logs"
+    kind: str = "custom"  # sql, promql or custom (conditions built in the UI)
+    sql: str = ""
+    promql: str = ""
+    conditions: Any = None
+    period_minutes: int | None = None
+    operator: str = ""
+    threshold: float | None = None
+    severity: Severity = Severity.UNKNOWN
+    enabled: bool = True
+
+    @property
+    def query(self) -> str | None:
+        return self.sql or self.promql or None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "stream": self.stream,
+            "stream_type": self.stream_type,
+            "type": self.kind,
+            "sql": self.sql or None,
+            "promql": self.promql or None,
+            "conditions": self.conditions,
+            "fires_when": f"{self.operator} {self.threshold:g}"
+            if self.operator and self.threshold is not None
+            else None,
+            "period_minutes": self.period_minutes,
+            "enabled": self.enabled,
+        }
+
+
+def _severity(raw: dict[str, Any]) -> Severity:
+    """A severity the operator wrote in the alert's context attributes, when there is one."""
+    context = raw.get("context_attributes")
+    value = context.get("severity") if isinstance(context, dict) else None
+    try:
+        return Severity(str(value).lower())
+    except ValueError:
+        return Severity.UNKNOWN
+
+
+def parse_definition(raw: Any) -> AlertDefinition | None:
+    """One alert as the alerts API returns it (v2 by id, or an entry of the v1 list)."""
+    if not isinstance(raw, dict):
+        return None
+    name = raw.get("name")
+    alert_id = raw.get("id") or raw.get("alert_id") or name
+    if not isinstance(name, str) or not name or not isinstance(alert_id, str):
+        return None
+    query = raw.get("query_condition")
+    query = query if isinstance(query, dict) else {}
+    trigger = raw.get("trigger_condition")
+    trigger = trigger if isinstance(trigger, dict) else {}
+    sql = str(query.get("sql") or "")
+    promql = str(query.get("promql") or "")
+    kind = str(query.get("type") or ("sql" if sql else "promql" if promql else "custom")).lower()
+    threshold = trigger.get("threshold")
+    period = trigger.get("period")
+    return AlertDefinition(
+        id=alert_id,
+        name=name,
+        description=str(raw.get("description") or ""),
+        stream=str(raw.get("stream_name") or ""),
+        stream_type=str(raw.get("stream_type") or "logs"),
+        kind=kind,
+        sql=sql,
+        promql=promql,
+        conditions=query.get("conditions"),
+        period_minutes=period if isinstance(period, int) and not isinstance(period, bool) else None,
+        operator=str(trigger.get("operator") or ""),
+        threshold=float(threshold)
+        if isinstance(threshold, int | float) and not isinstance(threshold, bool)
+        else None,
+        severity=_severity(raw),
+        enabled=raw.get("enabled") is not False,
+    )
 
 
 class HttpSearchClient:
     """OpenObserve's search API (`POST /api/{org}/_search`), with a read-only account."""
 
     def __init__(
-        self, base_url: str, org: str, user: str, password: str, *, timeout: float = 20.0
+        self,
+        base_url: str,
+        org: str,
+        user: str,
+        password: str,
+        *,
+        timeout: float = 20.0,
+        transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._org = org
         self._http = httpx.Client(
-            base_url=base_url.rstrip("/"), auth=(user, password), timeout=timeout
+            base_url=base_url.rstrip("/"),
+            auth=(user, password),
+            timeout=timeout,
+            transport=transport,
         )
+        self._definitions: dict[str, AlertDefinition] = {}
+        self._listed_at = float("-inf")
 
     def search(self, sql: str, start: int, end: int, size: int) -> list[dict[str, Any]]:
         response = self._http.post(
@@ -72,6 +176,37 @@ class HttpSearchClient:
         )
         response.raise_for_status()
         return response.json().get("data")
+
+    def _alert_list(self) -> list[dict[str, Any]]:
+        """Every alert, by the v2 API and, where that does not exist, by the older one."""
+        for path in (f"/api/v2/{self._org}/alerts", f"/api/{self._org}/alerts"):
+            response = self._http.get(path)
+            if response.status_code == 404:
+                continue
+            response.raise_for_status()
+            found = response.json().get("list", [])
+            return [entry for entry in found if isinstance(entry, dict)]
+        return []
+
+    def alert_definition(self, key: str) -> AlertDefinition | None:
+        """The definition of the alert with this id or this name. Cached for ten minutes."""
+        now = time.monotonic()
+        if now - self._listed_at > _DEFINITIONS_TTL:
+            self._definitions = {}
+            for entry in self._alert_list():
+                alert_id = entry.get("alert_id") or entry.get("id")
+                if isinstance(alert_id, str) and "query_condition" not in entry:
+                    # The v2 list is a summary: the query is in the alert itself.
+                    response = self._http.get(f"/api/v2/{self._org}/alerts/{alert_id}")
+                    if response.status_code < 400:
+                        entry = {**response.json(), "id": alert_id}
+                definition = parse_definition(entry)
+                if definition is not None:
+                    self._definitions[definition.id] = definition
+            self._listed_at = now
+        if key in self._definitions:
+            return self._definitions[key]
+        return next((d for d in self._definitions.values() if d.name == key), None)
 
     def close(self) -> None:
         self._http.close()
@@ -128,6 +263,7 @@ class OpenObserveSource:
         base_url: str | None = None,
         overlap: timedelta = timedelta(minutes=5),
         initial_lookback: timedelta = timedelta(hours=1),
+        definitions: Callable[[str], AlertDefinition | None] | None = None,
     ) -> None:
         self.name = name
         self._client = client
@@ -136,6 +272,7 @@ class OpenObserveSource:
         self._base_url = base_url
         self._overlap = overlap
         self._initial_lookback = initial_lookback
+        self._definitions = definitions
 
     def last_data_at(self) -> datetime | None:
         """Timestamp of the newest row ever read: what staleness is measured from."""
@@ -170,6 +307,41 @@ class OpenObserveSource:
         changes = 0
         for row in page:
             alert = row_to_alert(row, source=self.name, base_url=self._base_url)
-            if alert is not None and self._recorder.observe(alert) is not None:
+            if alert is None:
+                continue
+            if alert.status is Status.FIRING and self._starts_firing(alert):
+                alert = self._enriched(alert)
+            if self._recorder.observe(alert) is not None:
                 changes += 1
         return changes
+
+    def _starts_firing(self, alert: Alert) -> bool:
+        state = self._store.alert_state(alert.source, alert.fingerprint)
+        return state is None or state.status != Status.FIRING.value
+
+    def _enriched(self, alert: Alert) -> Alert:
+        """The alert with what its definition says: a `triggers` row has the name and id only.
+
+        Asked once per firing, not per evaluation row. A definition that cannot be fetched
+        changes nothing: the alert is recorded as it came.
+        """
+        if self._definitions is None:
+            return alert
+        try:
+            definition = self._definitions(alert.fingerprint)
+        except Exception as exc:
+            log.warning("openobserve: alert definition not read (%s)", type(exc).__name__)
+            return alert
+        if definition is None:
+            return alert
+        labels = dict(alert.labels)
+        if definition.stream:
+            labels["stream"] = definition.stream
+        return alert.model_copy(
+            update={
+                "description": definition.description,
+                "severity": definition.severity,
+                "query": definition.query,
+                "labels": labels,
+            }
+        )

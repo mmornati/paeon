@@ -18,17 +18,52 @@ services:
       PAEON_TRIAGE_API_KEY_FILE: /run/secrets/paeon_triage_api_key
       ANTHROPIC_API_KEY_FILE: /run/secrets/paeon_anthropic_api_key
       PAEON_NTFY_TOKEN_FILE: /run/secrets/paeon_ntfy_token
+      # Only with `actions.enabled`: how the core proves itself to the executor.
+      PAEON_EXECUTOR_TOKEN_FILE: /run/secrets/paeon_executor_token
     volumes:
       - paeon-data:/data
       - ./paeon.yaml:/config/paeon.yaml:ro
       - ./runbooks:/knowledge/runbooks:ro
     secrets:
       - paeon_anthropic_api_key
+      - paeon_executor_token
       - paeon_ingest_token
       - paeon_openobserve_password
       - paeon_triage_api_key
       - paeon_ntfy_token
-    networks: [monitoring, docker-read]
+    networks: [monitoring, docker-read, paeon-internal]
+
+  # Only with `actions.enabled`. The same image, another process, other credentials: this one
+  # holds the signing key and reaches the Docker proxy that can restart, and it has neither
+  # the model keys nor the alerts. Route https://paeon-act.example.org/act/ to it from your
+  # reverse proxy, WITHOUT single sign-on (the signed link is the proof) and nothing else.
+  paeon-executor:
+    image: ghcr.io/mmornati/paeon:edge
+    command: [executor]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      PAEON_EXECUTOR_TOKEN_FILE: /run/secrets/paeon_executor_token
+      PAEON_SIGNING_KEY_FILE: /run/secrets/paeon_signing_key
+      PAEON_ACTIONS_NTFY_TOKEN_FILE: /run/secrets/paeon_actions_ntfy_token
+      PAEON_CONFIG: /config/paeon.yaml
+      PAEON_EXECUTOR_DB: /data/executor.sqlite
+      PAEON_EXECUTOR_HOST: 0.0.0.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.build_opener(u.ProxyHandler({})).open('http://127.0.0.1:8081/healthz', timeout=5)"]
+      interval: 60s
+    volumes:
+      - paeon-executor-data:/data
+      - ./paeon.yaml:/config/paeon.yaml:ro
+      # Shared with your own repair scripts, so that two automations never act on one container.
+      - /var/lock/paeon:/locks
+    secrets:
+      - paeon_executor_token
+      - paeon_signing_key
+      - paeon_actions_ntfy_token
+    networks: [monitoring, docker-act, paeon-internal]
 
   # Only needed for the investigator's Docker tools. It exposes container listing, inspection
   # and logs over GET and nothing else; Paeon never gets the socket.
@@ -43,18 +78,46 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [docker-read]
 
+  # Only with `actions.enabled`: what the executor acts through. Start, stop and restart of
+  # containers, and nothing else. Check the variable names against the documentation of the
+  # proxy version you pin; `unpause_container` needs POST: 1, which opens more, so leave that
+  # action out of the catalog unless you accept it.
+  dockerproxy-act:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 0
+      ALLOW_START: 1
+      ALLOW_STOP: 1
+      ALLOW_RESTARTS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [docker-act]
+
 volumes:
   paeon-data:
+  paeon-executor-data:
 
 networks:
   monitoring:
     external: true
   docker-read:
     internal: true
+  docker-act:
+    internal: true
+  paeon-internal:
+    internal: true
 
 secrets:
   paeon_anthropic_api_key:
     file: ./secrets/anthropic_api_key
+  paeon_executor_token:
+    file: ./secrets/executor_token
+  paeon_signing_key:
+    file: ./secrets/signing_key
+  paeon_actions_ntfy_token:
+    file: ./secrets/actions_ntfy_token
   paeon_ingest_token:
     file: ./secrets/ingest_token
   paeon_openobserve_password:

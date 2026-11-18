@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from paeon import ledger
+from paeon import autonomy, ledger, remediation
+from paeon import postmortem as postmortems
 from paeon.redact import redact
 from paeon.rules import Rules
 from paeon.schema import Incident, IncidentStatus, StageState, Status
@@ -40,6 +41,7 @@ _VOICES: dict[str, Voice] = {
     "notification": "out",
     "digest": "out",
     "postmortem": "out",
+    "approval": "in",
 }
 _CODE_KINDS = {
     "triage.skipped",
@@ -48,6 +50,10 @@ _CODE_KINDS = {
     "investigation.failed",
     "notification.failed",
     "postmortem.failed",
+    "postmortem.commit_failed",
+    "approval.requested",
+    "approval.expired",
+    "investigation.fallback",
 }
 
 # The filters of the log page: the question each one answers, and the kinds behind it.
@@ -75,6 +81,32 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
         ("model.call", "triage.verdict", "investigation.completed"),
     ),
     "tool": ("Read by a tool", ("tool.call",)),
+    "act": (
+        "Plans and actions",
+        (
+            "runbook.matched",
+            "runbook.skipped",
+            "runbook.failed",
+            "plan.proposed",
+            "plan.refused",
+            "plan.not_proposed",
+            "plan.cancelled",
+            "plan.completed",
+            "approval.requested",
+            "approval.granted",
+            "approval.declined",
+            "approval.expired",
+            "action.started",
+            "action.verified",
+            "action.failed",
+            "action.rolled_back",
+            "action.undone",
+            "autonomy.demoted",
+            "autonomy.reinstated",
+            "killswitch.engaged",
+            "killswitch.released",
+        ),
+    ),
     "out": (
         "Left the server",
         (
@@ -83,6 +115,8 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
             "digest.sent",
             "postmortem.drafted",
             "postmortem.failed",
+            "postmortem.committed",
+            "postmortem.commit_failed",
         ),
     ),
     "feedback": ("Your feedback", ("feedback.recorded",)),
@@ -91,6 +125,7 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
 BAYS: tuple[tuple[str, str, str], ...] = (
     ("triage", "Triage", "No incident is waiting for a verdict."),
     ("investigation", "Investigation", "Nothing is being investigated."),
+    ("approval", "Your answer", "No plan is waiting for your Go."),
     ("open", "Open", "No open incident. What fires next lands here or in a bay above."),
     ("resolved", "Resolved", "Nothing was resolved in the last 7 days."),
 )
@@ -225,8 +260,76 @@ def describe(event: Event) -> str:
         case "feedback.recorded":
             right = "right" if p.get("vote") == "up" else "wrong"
             note = f": {p['note']}" if p.get("note") else ""
-            return f"You said triage was {right}{note}"
+            what = {"root_cause": "the root cause", "action": "the action"}.get(
+                str(p.get("about")), "triage"
+            )
+            return f"You said {what} was {right}{note}"
+        case "investigation.fallback":
+            return (
+                f"First model failed ({_text(p.get('reason'))}): starting again with"
+                f" {_text(p.get('to'))}"
+            )
+        case "postmortem.committed":
+            pushed = " and pushed" if p.get("pushed") else ""
+            return f"Postmortem draft committed{pushed}"
+        case "postmortem.commit_failed":
+            return f"Postmortem draft not committed (git {_text(p.get('step'))} failed)"
+        case "runbook.matched":
+            return f"Runbook {_text(p.get('runbook'))} matched: both models are skipped"
+        case "runbook.skipped":
+            return f"Runbook not run ({_text(p.get('reason'))})"
+        case "runbook.failed":
+            return f"Runbook gave up ({_text(p.get('reason'))})"
+        case "plan.proposed":
+            held = p.get("held_back_by")
+            why = f" ({'; '.join(map(str, held))})" if isinstance(held, list) and held else ""
+            return f"Plan at level {_text(p.get('level'))}: {_steps(p)}{why}"
+        case "plan.refused":
+            return f"The executor refused the plan: {_text(p.get('reason'))}"
+        case "plan.not_proposed":
+            return f"The plan did not reach the executor ({_text(p.get('reason'))})"
+        case "plan.cancelled":
+            return f"Plan cancelled: {_text(p.get('reason'))}"
+        case "plan.completed":
+            how = "without asking" if p.get("level") == "auto" else "after your Go"
+            if p.get("outcome") == "verified":
+                return f"Plan ran {how} and verified: {_steps(p)}"
+            return f"Plan ran {how} and failed ({_text(p.get('reason'))})"
+        case "approval.requested":
+            return "Go or No-go asked on your phone"
+        case "approval.granted":
+            return "You said Go"
+        case "approval.declined":
+            return "You said No-go"
+        case "approval.expired":
+            return "No answer in time: nothing was run"
+        case "action.started":
+            return f"Running {_text(p.get('step'))}"
+        case "action.verified":
+            return f"{_text(p.get('step'))} worked: the container is up and healthy"
+        case "action.failed":
+            return f"{_text(p.get('step'))} failed: {_text(p.get('reason'))}"
+        case "action.rolled_back":
+            return f"{_text(p.get('step'))} was rolled back"
+        case "action.undone":
+            return f"{_text(p.get('step'))} was undone at your request"
+        case "autonomy.demoted":
+            return (
+                f"{_text(p.get('action'))}({_text(p.get('target'))}) asks for approval from"
+                f" now on: {_text(p.get('reason'))}"
+            )
+        case "autonomy.reinstated":
+            return f"{_text(p.get('action'))}({_text(p.get('target'))}) is reinstated"
+        case "killswitch.engaged":
+            return f"Automation stopped (from the {_text(p.get('via'))})"
+        case "killswitch.released":
+            return f"Automation resumed (from the {_text(p.get('via'))})"
     return event.kind
+
+
+def _steps(payload: dict[str, Any]) -> str:
+    steps = payload.get("steps")
+    return ", ".join(map(str, steps)) if isinstance(steps, list) and steps else "no step"
 
 
 @dataclass(frozen=True)
@@ -356,6 +459,98 @@ def _investigation_cell(incident: Incident, events: Sequence[Event]) -> Cell:
     return Cell(label, f"{sure}, {calls} calls", pen=True, more=f"{sure} sure, {calls} calls")
 
 
+@dataclass(frozen=True)
+class PlanView:
+    """The last plan of an incident: what was proposed, at which level, and what became of it."""
+
+    steps: tuple[str, ...]
+    origin: str
+    level: str
+    held_back_by: tuple[str, ...]
+    state: str  # one word, for a board strip
+    story: str  # one sentence, for the incident page
+    waiting: bool = False
+
+
+_AFTER_PLAN = (
+    "approval.requested",
+    "approval.granted",
+    "approval.declined",
+    "approval.expired",
+    "plan.cancelled",
+    "plan.completed",
+    "action.started",
+    "action.undone",
+)
+
+
+def plan_of(events: Sequence[Event]) -> PlanView | None:
+    proposed = _last(events, "plan.proposed", "plan.refused", "plan.not_proposed")
+    if proposed is None:
+        return None
+    p = proposed.payload
+    steps = tuple(str(step) for step in p.get("steps") or [])
+    origin = f"runbook {p['runbook']}" if p.get("runbook") else str(p.get("origin") or "")
+    if proposed.kind != "plan.proposed":
+        refused = proposed.kind == "plan.refused"
+        return PlanView(
+            steps,
+            origin,
+            "none",
+            (),
+            "refused" if refused else "not sent",
+            f"The executor refused it: {_text(p.get('reason'))}."
+            if refused
+            else f"It did not reach the executor ({_text(p.get('reason'))}).",
+        )
+    level = str(p.get("level"))
+    held = tuple(str(reason) for reason in p.get("held_back_by") or [])
+    later = {
+        e.kind: e
+        for e in events
+        if e.id > proposed.id
+        and e.kind in _AFTER_PLAN
+        and e.payload.get("proposal") == p.get("proposal")
+    }
+    state, story, waiting = "recorded", "Recorded only: nothing was sent and nothing ran.", False
+    if level == "suggest":
+        state, story = "suggested", "Suggested only: it is in the analysis, with no button."
+    if "approval.requested" in later:
+        state, waiting = "waiting", True
+        story = "Waiting for your Go or No-go, on the notification sent to your phone."
+    if "approval.declined" in later:
+        state, story, waiting = "declined", "You said No-go. Nothing ran.", False
+    if "approval.expired" in later:
+        state, story, waiting = "expired", "Nobody answered in time. Nothing ran.", False
+    if "plan.cancelled" in later:
+        reason = _text(later["plan.cancelled"].payload.get("reason"))
+        state, story, waiting = "cancelled", f"Cancelled: {reason}. Nothing ran.", False
+    if "approval.granted" in later or level == "auto":
+        how = "You said Go." if "approval.granted" in later else "It ran without asking (auto)."
+        state, story, waiting = "running", f"{how} The executor is running it.", False
+        done = later.get("plan.completed")
+        if done is not None and done.payload.get("outcome") == "verified":
+            state, story = "verified", f"{how} It ran, and the result was verified."
+        elif done is not None:
+            state = "failed"
+            story = f"{how} It ran and did not work: {_text(done.payload.get('reason'))}."
+        if "action.undone" in later:
+            state, story = "undone", f"{how} It ran, and you undid it."
+    return PlanView(steps, origin, level, held, state, story, waiting)
+
+
+def _plan_cells(plan: PlanView | None, acting: bool) -> tuple[Cell, Cell]:
+    if plan is None:
+        return Cell("Plan", "none" if acting else "off"), Cell("Action", "none")
+    count = len(plan.steps)
+    first = plan.steps[0] if plan.steps else "no step"
+    short = first if count <= 1 else f"{first} +{count - 1}"
+    return (
+        Cell("Plan", short, more=", ".join(plan.steps)),
+        Cell("Action", plan.state, more=f"{plan.state} (level {plan.level})"),
+    )
+
+
 def findings_of(event: Event | None) -> dict[str, Any] | None:
     if event is None:
         return None
@@ -365,17 +560,21 @@ def findings_of(event: Event | None) -> dict[str, Any] | None:
     return findings
 
 
-def bay_of(incident: Incident) -> str:
+def bay_of(incident: Incident, plan: PlanView | None = None) -> str:
     if incident.status is IncidentStatus.RESOLVED:
         return "resolved"
     if incident.triage is StageState.PENDING:
         return "triage"
     if incident.investigation is StageState.PENDING:
         return "investigation"
+    if plan is not None and plan.waiting:
+        return "approval"
     return "open"
 
 
-def strip_of(incident: Incident, events: Sequence[Event], now: datetime) -> Strip:
+def strip_of(
+    incident: Incident, events: Sequence[Event], now: datetime, *, acting: bool = False
+) -> Strip:
     firing = sum(1 for alert in incident.alerts if alert.status is Status.FIRING)
     cost = sum(float(e.payload.get("cost") or 0) for e in events if e.kind == "model.call")
     cells = [
@@ -384,7 +583,10 @@ def strip_of(incident: Incident, events: Sequence[Event], now: datetime) -> Stri
         _triage_cell(incident, events),
         _investigation_cell(incident, events),
     ]
-    # Always the same six cells in the same order: a box sits at the same place on every strip.
+    plan = plan_of(events)
+    if acting or plan is not None:
+        cells += _plan_cells(plan, acting)
+    # Always the same cells in the same order: a box sits at the same place on every strip.
     wording = {StageState.DONE: "draft written", StageState.PENDING: "waiting"}
     cells.append(Cell("Postmortem", wording.get(incident.postmortem, incident.postmortem.value)))
     cells.append(Cell("Cost", money(cost)))
@@ -399,7 +601,7 @@ def strip_of(incident: Incident, events: Sequence[Event], now: datetime) -> Stri
         flags.append(f"maintenance: {incident.maintenance}")
     return Strip(
         incident=incident,
-        bay=bay_of(incident),
+        bay=bay_of(incident, plan),
         standing=standing,
         cells=tuple(cells),
         flags=tuple(flags),
@@ -415,7 +617,7 @@ class Bay:
     strips: tuple[Strip, ...]
 
 
-def board(store: Store, now: datetime) -> tuple[Bay, ...]:
+def board(store: Store, now: datetime, *, acting: bool = False) -> tuple[Bay, ...]:
     """Every open incident, and those resolved in the last days, each in its bay."""
     wanted = {incident.id: incident for incident in store.incidents(status=IncidentStatus.OPEN)}
     recent = now - timedelta(days=RESOLVED_DAYS)
@@ -424,11 +626,15 @@ def board(store: Store, now: datetime) -> tuple[Bay, ...]:
     strips: dict[str, list[Strip]] = defaultdict(list)
     for incident in wanted.values():
         events = list(store.events(incident_id=incident.id))
-        strip = strip_of(incident, events, now)
+        strip = strip_of(incident, events, now, acting=acting)
         strips[strip.bay].append(strip)
     for found in strips.values():
         found.sort(key=lambda strip: strip.incident.last_activity_at, reverse=True)
-    return tuple(Bay(key, name, empty, tuple(strips[key])) for key, name, empty in BAYS)
+    return tuple(
+        Bay(key, name, empty, tuple(strips[key]))
+        for key, name, empty in BAYS
+        if acting or key != "approval"
+    )
 
 
 @dataclass(frozen=True)
@@ -454,9 +660,12 @@ class IncidentView:
     postmortem: str | None
     cost: float
     calls: frozenset[str]
+    plan: PlanView | None = None
 
 
-def incident_view(store: Store, incident: Incident, now: datetime) -> IncidentView:
+def incident_view(
+    store: Store, incident: Incident, now: datetime, *, acting: bool = False
+) -> IncidentView:
     events = list(store.events(incident_id=incident.id))
     verdict = _last(events, "triage.verdict")
     skipped = _last(events, "triage.skipped")
@@ -480,7 +689,8 @@ def incident_view(store: Store, incident: Incident, now: datetime) -> IncidentVi
     if analysis is None and failed is not None:
         failure = str(redact(describe(failed), max_length=300))
     return IncidentView(
-        strip=strip_of(incident, events, now),
+        strip=strip_of(incident, events, now, acting=acting),
+        plan=plan_of(events),
         rows=tuple(row_of(event, detail=True) for event in events),
         verdict=None if verdict is None else redact(verdict.payload),
         triage_skip=None if skipped is None else _text(skipped.payload.get("skip")),
@@ -627,4 +837,69 @@ def stages(rules: Rules) -> tuple[tuple[str, str], ...]:
         ("Triage", "shadow" if rules.triage.enabled else "off"),
         ("Investigation", "read-only" if rules.investigation.enabled else "off"),
         ("Postmortems", "drafts" if rules.postmortems.enabled else "off"),
+        ("Actions", "by the executor" if rules.actions.enabled else "none"),
     )
+
+
+# --- actions and autonomy -------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PlanLine:
+    incident_id: int
+    title: str
+    at: datetime
+    plan: PlanView
+
+
+@dataclass(frozen=True)
+class ActionsView:
+    enabled: bool
+    killed: bool
+    waiting: tuple[dict[str, Any], ...]
+    plans: tuple[PlanLine, ...]
+    days: int
+
+
+def actions_view(store: Store, rules: Rules, now: datetime, *, days: int = 30) -> ActionsView:
+    switch = store.events(kinds=("killswitch.engaged", "killswitch.released"))
+    seen: dict[int, datetime] = {}
+    kinds = ("plan.proposed", "plan.refused", "plan.not_proposed")
+    for event in store.events(kinds=kinds, recorded_since=now - timedelta(days=days)):
+        if event.incident_id is not None:
+            seen[event.incident_id] = event.recorded_at
+    lines = []
+    for incident_id, at in sorted(seen.items(), key=lambda item: item[1], reverse=True)[:100]:
+        incident = store.incident(incident_id)
+        plan = plan_of(list(store.events(incident_id=incident_id)))
+        if incident is not None and plan is not None:
+            lines.append(PlanLine(incident_id, incident.title, at, plan))
+    return ActionsView(
+        enabled=rules.actions.enabled,
+        killed=autonomy.killed(switch),
+        waiting=tuple(remediation.pending_approvals(store, now)),
+        plans=tuple(lines),
+        days=days,
+    )
+
+
+@dataclass(frozen=True)
+class AutonomyView:
+    records: tuple[autonomy.Record, ...]
+    earned: tuple[autonomy.Record, ...]
+    promote_after: int
+    window_days: int
+
+
+def autonomy_view(store: Store, rules: Rules, now: datetime) -> AutonomyView:
+    records = tuple(autonomy.matrix(store.events(kinds=autonomy.KINDS), rules.actions, now))
+    return AutonomyView(
+        records=records,
+        earned=tuple(record for record in records if record.proposal),
+        promote_after=rules.actions.autonomy.promote_after,
+        window_days=rules.actions.autonomy.window_days,
+    )
+
+
+def postmortems_view(rules: Rules) -> tuple[postmortems.Draft, ...]:
+    return tuple(postmortems.drafts(rules.postmortems.dir)) if rules.postmortems.enabled else ()

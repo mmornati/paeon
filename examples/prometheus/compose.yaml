@@ -1,0 +1,69 @@
+# Paeon next to Prometheus and Alertmanager, with something to break. See
+# docs/quickstart-prometheus.md. Everything listens on localhost only.
+services:
+  # The thing to break: a container Prometheus scrapes. Stop it and an alert fires.
+  demo-app:
+    image: prom/pushgateway:v1.11.0
+    restart: "no"
+    networks: [quickstart]
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [quickstart]
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.0
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./secrets/ingest_token:/etc/alertmanager/paeon_token:ro
+    networks: [quickstart]
+
+  paeon:
+    image: ghcr.io/mmornati/paeon:edge
+    build: ../..          # from a clone: `docker compose up --build` needs no published image
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      PAEON_INGEST_TOKEN_FILE: /run/secrets/ingest_token
+      PAEON_CONFIG: /config/paeon.yaml
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+    volumes:
+      - paeon-data:/data
+      - ./paeon.yaml:/config/paeon.yaml:ro
+      - ./runbooks:/knowledge/runbooks:ro
+    secrets: [ingest_token, anthropic_api_key]
+    # The console has no login. Bound to localhost here; behind a proxy with a login anywhere else.
+    ports: ["127.0.0.1:8080:8080"]
+    networks: [quickstart, docker-read]
+
+  # What the investigator reads Docker through: GET on containers, nothing else.
+  dockerproxy:
+    image: tecnativa/docker-socket-proxy:latest
+    environment:
+      CONTAINERS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [docker-read]
+
+volumes:
+  paeon-data:
+
+networks:
+  quickstart:
+  docker-read:
+    internal: true
+
+secrets:
+  ingest_token:
+    file: ./secrets/ingest_token
+  anthropic_api_key:
+    file: ./secrets/anthropic_api_key

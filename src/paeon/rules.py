@@ -8,6 +8,7 @@ holds them. Unknown keys are refused, so a typo is an error at start instead of 
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from datetime import datetime, time, timedelta
 from pathlib import Path
@@ -222,10 +223,63 @@ class KnowledgeTools(_Rule):
     )
 
 
+class UptimeKumaTools(_Rule):
+    """The current state of every monitor, read from uptime-kuma's `/metrics` endpoint."""
+
+    url: str = Field(min_length=1, description="For example http://uptime-kuma:3001.")
+    api_key_env: str | None = Field(
+        default=None, description="Environment variable (or NAME_FILE) with an API key."
+    )
+
+
+class GitTools(_Rule):
+    """Local clones whose history may be read (the deployment repository, for example)."""
+
+    repos: dict[str, str] = Field(
+        default_factory=dict, description="Name the model uses, to the path of a working copy."
+    )
+    max_commits: int = Field(default=30, ge=1, le=200)
+
+
+_NAME = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"
+
+
+class SshHost(_Rule):
+    target: str = Field(pattern=r"^[A-Za-z0-9_.-]+@[A-Za-z0-9_.:-]+$", description="user@host.")
+    port: int = Field(default=22, ge=1, le=65535)
+    commands: dict[str, str] = Field(
+        min_length=1,
+        description="Name the model uses, to the command line you wrote. The model chooses a"
+        " name; it never writes a command or an argument.",
+    )
+
+
+class SshTools(_Rule):
+    """Other hosts, through commands you list. Pair it with a forced command on the far side."""
+
+    hosts: dict[str, SshHost] = Field(default_factory=dict)
+    identity_file: str = Field(min_length=1)
+    known_hosts_file: str = Field(
+        min_length=1, description="Host keys are checked strictly against this file."
+    )
+    timeout_seconds: float = Field(default=20, gt=0, le=120)
+
+    @model_validator(mode="after")
+    def _names(self) -> SshTools:
+        for host, entry in self.hosts.items():
+            for name in (host, *entry.commands):
+                if re.fullmatch(_NAME, name) is None:
+                    raise ValueError(f"{name!r} is not a plain name")
+        return self
+
+
 class InvestigationTools(_Rule):
     openobserve: OpenObserveTools | None = None
     docker: DockerTools | None = None
     knowledge: KnowledgeTools = Field(default_factory=KnowledgeTools)
+    uptime_kuma: UptimeKumaTools | None = None
+    git: GitTools | None = None
+    ssh: SshTools | None = None
 
 
 TriageVerdict = Literal["noise", "transient", "known_issue", "real"]
@@ -234,6 +288,11 @@ TriageVerdict = Literal["noise", "transient", "known_issue", "real"]
 class Investigation(_Rule):
     enabled: bool = False
     model: str = Field(default="investigate", description="An alias from `models`.")
+    fallback_model: str | None = Field(
+        default=None,
+        description="An alias tried once, from the start, when the first model fails or"
+        " declines. The tool budget is shared between the two.",
+    )
     verdicts: tuple[TriageVerdict, ...] = Field(
         default=("real", "known_issue"),
         description="Triage verdicts that are investigated. Without triage, every incident is.",
@@ -251,9 +310,25 @@ class Investigation(_Rule):
     ntfy: Ntfy | None = Field(default=None, description="Where the analysis is sent.")
 
 
+class PostmortemGit(_Rule):
+    """Commit each draft in the working copy that holds `postmortems.dir`."""
+
+    commit: bool = True
+    push: bool = Field(
+        default=False, description="Push after the commit, to the branch's own upstream."
+    )
+    author_name: str = Field(default="Paeon", min_length=1, max_length=100)
+    author_email: str = Field(default="paeon@localhost", min_length=3, max_length=200)
+    identity_file: str | None = Field(
+        default=None, description="A deploy key for the push, if the remote is reached over SSH."
+    )
+    known_hosts_file: str | None = None
+
+
 class Postmortems(_Rule):
     enabled: bool = False
     dir: str = Field(default="postmortems", min_length=1)
+    git: PostmortemGit | None = None
     model: str = Field(default="postmortem", description="An alias from `models`.")
     daily_budget: float | None = Field(
         default=None,
@@ -274,6 +349,135 @@ class Ui(_Rule):
         " X-authentik-username). A request without it is refused: a second net against a route"
         " that bypasses the proxy, not a login.",
     )
+    public_url: str | None = Field(
+        default=None,
+        pattern=r"^https?://[^\s]+$",
+        description="Where you reach the console (https://paeon.example.org). Notifications"
+        " link to the incident page there.",
+    )
+
+
+Level = Literal["observe", "suggest", "approve", "auto"]
+LEVELS: tuple[Level, ...] = ("observe", "suggest", "approve", "auto")
+
+
+class Verify(_Rule):
+    """How the executor decides that an action worked. Written by you, never by a model."""
+
+    wait_seconds: float = Field(default=15, ge=0, le=600)
+    timeout_seconds: float = Field(default=120, gt=0, le=3600)
+    http: str | None = Field(
+        default=None,
+        pattern=r"^https?://[^\s]+$",
+        description="A URL that must answer below 400 (the service's health endpoint).",
+    )
+
+
+class CatalogEntry(_Rule):
+    """One action of the closed set, switched on for the containers you name."""
+
+    targets: tuple[str, ...] = Field(
+        min_length=1, description="Container name patterns (fnmatch) it may be applied to."
+    )
+    deny: tuple[str, ...] = Field(
+        default=(), description="Patterns refused even when a target pattern matches."
+    )
+    verify: Verify = Field(default_factory=Verify)
+
+    def allows(self, target: str) -> bool:
+        if any(fnmatch.fnmatchcase(target, pattern) for pattern in self.deny):
+            return False
+        return any(fnmatch.fnmatchcase(target, pattern) for pattern in self.targets)
+
+
+class Policy(_Rule):
+    """The autonomy level of one (alert class, action, target). The first match wins."""
+
+    alert: Regex = Field(default=".*", description="Alert title, regular expression, full match.")
+    action: str = Field(default="*", description="A catalog action, or * for all.")
+    target: str = Field(default="*", description="Container name pattern (fnmatch).")
+    level: Level
+
+
+class Autonomy(_Rule):
+    promote_after: int = Field(
+        default=5, ge=1, description="Approved and verified runs before `auto` is proposed."
+    )
+    window_days: int = Field(default=90, ge=1)
+    min_confidence: float = Field(
+        default=0.8, ge=0, le=1, description="Under it, a plan never runs without approval."
+    )
+
+
+class RunbookStep(_Rule):
+    action: str = Field(min_length=1)
+    target: str = Field(min_length=1, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+
+
+class Runbook(_Rule):
+    """A known signature and its fix: a hit skips both models."""
+
+    name: str = Field(min_length=1, max_length=100)
+    match: Matcher
+    steps: tuple[RunbookStep, ...] = Field(min_length=1, max_length=10)
+    mode: Literal["escalate", "sequence"] = Field(
+        default="escalate",
+        description="escalate: stop at the first step that fixes it. sequence: run them all.",
+    )
+
+
+class Actions(_Rule):
+    """Stage 3 and 4: the catalog, who may approve what, and where the executor is.
+
+    The same file is read by the core and by the executor (`paeon executor`). The executor
+    trusts only its own copy: mount it read-only there, from git.
+    """
+
+    enabled: bool = False
+    executor_url: str = Field(
+        default="http://127.0.0.1:8081", description="Where the core reaches the executor."
+    )
+    public_url: str | None = Field(
+        default=None,
+        pattern=r"^https?://[^\s]+$",
+        description="Where your phone reaches the executor's /act path. Without it there are"
+        " no buttons, and nothing above `suggest` can happen.",
+    )
+    docker_url: str | None = Field(
+        default=None,
+        description="Executor only: a Docker socket proxy that allows POST on containers.",
+    )
+    lock_dir: str = Field(
+        default="locks", description="One lock file per container, shared with other repairers."
+    )
+    approval_minutes: float = Field(default=30, gt=0, le=24 * 60)
+    settle_seconds: float = Field(
+        default=30, ge=0, description="A runbook waits this long: the alert may clear by itself."
+    )
+    max_per_hour: int = Field(default=6, ge=1, description="Plans executed per hour, at most.")
+    default_level: Level = "suggest"
+    ntfy: Ntfy | None = Field(
+        default=None, description="The topic for approvals. Give it a token of its own."
+    )
+    catalog: dict[str, CatalogEntry] = Field(default_factory=dict)
+    policies: tuple[Policy, ...] = ()
+    autonomy: Autonomy = Field(default_factory=Autonomy)
+    runbooks: tuple[Runbook, ...] = ()
+
+    def level_for(self, alert: str, action: str, target: str) -> Level:
+        for policy in self.policies:
+            if (
+                re.fullmatch(policy.alert, alert) is not None
+                and policy.action in ("*", action)
+                and fnmatch.fnmatchcase(target, policy.target)
+            ):
+                return policy.level
+        return self.default_level
+
+    def runbook_for(self, alert: Alert) -> Runbook | None:
+        if not self.enabled:
+            return None
+        return next((book for book in self.runbooks if book.match.matches(alert)), None)
 
 
 class Rules(_Rule):
@@ -285,6 +489,33 @@ class Rules(_Rule):
     investigation: Investigation = Field(default_factory=Investigation)
     postmortems: Postmortems = Field(default_factory=Postmortems)
     ui: Ui = Field(default_factory=Ui)
+    actions: Actions = Field(default_factory=Actions)
+
+    @model_validator(mode="after")
+    def _actions_known(self) -> Rules:
+        from paeon.catalog import ACTIONS
+
+        known = sorted(name for name, kind in ACTIONS.items() if kind.proposable)
+        for name in self.actions.catalog:
+            if name not in known:
+                raise ValueError(f"actions.catalog: {name!r} is not an action; known: {known}")
+        for policy in self.actions.policies:
+            if policy.action != "*" and policy.action not in known:
+                raise ValueError(f"actions.policies: {policy.action!r} is not an action")
+        for book in self.actions.runbooks:
+            for step in book.steps:
+                entry = self.actions.catalog.get(step.action)
+                if entry is None or not entry.allows(step.target):
+                    raise ValueError(
+                        f"runbook {book.name!r}: {step.action} on {step.target} is not"
+                        " allowed by actions.catalog"
+                    )
+        fallback = self.investigation.fallback_model
+        if self.investigation.enabled and fallback is not None and fallback not in self.models:
+            raise ValueError(
+                f"investigation.fallback_model {fallback!r} is not defined under `models`"
+            )
+        return self
 
     @model_validator(mode="after")
     def _models_exist(self) -> Rules:

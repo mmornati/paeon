@@ -6,7 +6,7 @@
   <h1>Board</h1>
   <p class="live" data-live-status role="status">Refreshes every 10 seconds.</p>
 </div>
-<div class="board" data-live="/ui/board">
+<div class="board{% if acting %} board-acting{% endif %}" data-live="/ui/board">
 {% include "_bays.html" %}
 </div>
 <p class="legend">
