@@ -22,8 +22,14 @@ env:
 jobs:
   check:
     name: Lint, types, tests
-    # GitHub-hosted runners only: a public repository must never run on a self-hosted runner.
-    runs-on: ubuntu-latest
+    # A public repository never runs on a self-hosted runner: its jobs go to GitHub's runners,
+    # whatever the variable says. While the repository is private, the repository variable
+    # CI_RUNNER may name a self-hosted runner; unset, jobs run on GitHub's runners.
+    runs-on: >-
+      ${{ github.event.repository.private
+      && (github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name == github.repository)
+      && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,8 +49,13 @@ jobs:
   image:
     name: Image
     needs: check
-    # The push step holds a packages:write token, so this job stays on a GitHub-hosted runner.
-    runs-on: ubuntu-latest
+    # Same runner choice as `check`. The push step holds a packages:write token, which a
+    # self-hosted runner only ever sees while the repository is private.
+    runs-on: >-
+      ${{ github.event.repository.private
+      && (github.event_name != 'pull_request'
+      || github.event.pull_request.head.repo.full_name == github.repository)
+      && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     permissions:
       contents: read
