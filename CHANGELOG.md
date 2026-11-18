@@ -71,6 +71,12 @@ earn autonomy.
 - Notifications link to the console (`ui.public_url`); the analysis carries "cause is right /
   wrong" buttons when the executor is there to sign them.
 
+### Documentation
+
+- A public site on GitHub Pages: a landing page, the documentation (MkDocs, under `/docs/`) with
+  a five-minute quickstart and a tour of the console, and three narrated videos drawn on a
+  canvas. Built by `scripts/build-site.sh`, deployed by the `Documentation` workflow.
+
 ### Changed
 
 - The console is redesigned as an incident management app: a sidebar (a tab row on a phone), the

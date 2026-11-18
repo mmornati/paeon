@@ -1,0 +1,24 @@
+/* The player in Paeon's board: square corners, condensed capitals, amber for what is on.
+   Loaded after engine/player.css, which stays as the engine ships it. */
+html, body { font-family: Inter, system-ui, sans-serif; }
+h1, .kicker, .chapters-title, button, select { font-family: "Barlow Condensed", Sora, sans-serif; text-transform: uppercase; letter-spacing: 0.1em; }
+h1 { font-weight: 700; font-size: 1.75rem; letter-spacing: 0.04em; }
+.kicker, .chapters-title { font-weight: 600; font-size: 0.95rem; letter-spacing: 0.16em; }
+.stage, body.embed .stage { border-radius: 0; box-shadow: none; border: 1px solid var(--line); }
+button, select, .chapters button { border-radius: 0; border-width: 2px; font-weight: 600; font-size: 1rem; padding: 5px 14px; }
+button:hover, select:hover { border-color: var(--accent); color: var(--accent); }
+button[aria-pressed="true"], .chapters button.on { background: var(--accent); border-color: var(--accent); color: #071020; }
+.chapters button { text-transform: none; letter-spacing: 0.04em; font-size: 1.05rem; }
+.chapters button.on .t { color: #071020; }
+.note code { color: var(--accent); }
+body.embed .bar { margin-top: 6px; height: 34px; }
+body.embed button, body.embed select { padding: 3px 10px; font-size: 0.95rem; }
+/* a narrated video keeps its Sound switch at every width */
+@media (max-width: 620px) { body.embed #sound { display: inline-block; } }
+/* a phone keeps Subtitles and Fullscreen: the stage is small there, and both help */
+@media (max-width: 420px) {
+  body.embed #subs, body.embed #full { display: inline-block; }
+  body.embed #seek { min-width: 40px; flex-basis: 40px; }
+  body.embed button { padding: 3px 6px; font-size: 0.8rem; letter-spacing: 0.04em; }
+  body.embed .bar { gap: 4px; }
+}

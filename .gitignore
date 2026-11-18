@@ -22,3 +22,7 @@ htmlcov/
 .impeccable/review/
 .impeccable/hook.cache.json
 .impeccable/questions/
+
+# The built site and video render scratch
+site/
+website/videos/build/

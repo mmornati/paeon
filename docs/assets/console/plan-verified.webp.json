@@ -1,0 +1,4 @@
+{
+  "prompt": "ORIGIN: not generated imagery. A screenshot of Paeon's own console (src/paeon/ui): the Plan section of an incident page after Go, verified. Rendered from the synthetic demo data in tests/ui_data.py, with one fictional incident's findings overridden for a coherent story; no real server, alert or model answer is shown. Captured headless with Playwright (desktop viewport), converted with cwebp, stored at 1920x1200 px.",
+  "createdAt": "2026-11-18T20:14:14.613Z"
+}
