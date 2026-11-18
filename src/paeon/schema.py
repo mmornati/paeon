@@ -66,11 +66,17 @@ class IncidentStatus(StrEnum):
     RESOLVED = "resolved"
 
 
-class TriageState(StrEnum):
-    OFF = "off"  # triage was not enabled when the incident opened
+class StageState(StrEnum):
+    """Where an incident stands in one stage (triage, investigation, postmortem)."""
+
+    OFF = "off"  # the stage was not enabled when the incident opened
     PENDING = "pending"
     DONE = "done"
     SKIPPED = "skipped"
+    FAILED = "failed"
+
+
+TriageState = StageState
 
 
 class IncidentAlert(BaseModel):
@@ -104,7 +110,9 @@ class Incident(BaseModel):
     maintenance: str | None = Field(
         default=None, description="Name of the maintenance window it opened in, if any."
     )
-    triage: TriageState = TriageState.OFF
+    triage: StageState = StageState.OFF
+    investigation: StageState = StageState.OFF
+    postmortem: StageState = StageState.OFF
     alerts: tuple[IncidentAlert, ...] = ()
 
 

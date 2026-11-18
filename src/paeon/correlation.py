@@ -127,6 +127,9 @@ class Correlator:
     def _open(self, alert: Alert, host: str | None) -> int:
         maintenance = self._rules.maintenance_for(alert)
         triage = TriageState.PENDING if self._rules.triage.enabled else TriageState.OFF
+        investigation = (
+            TriageState.PENDING if self._rules.investigation.enabled else TriageState.OFF
+        )
         incident_id = self._store.open_incident(
             title=alert.title,
             severity=alert.severity,
@@ -134,6 +137,7 @@ class Correlator:
             opened_at=alert.observed_at,
             maintenance=maintenance,
             triage=triage,
+            investigation=investigation,
         )
         self._store.append(
             "incident.opened",

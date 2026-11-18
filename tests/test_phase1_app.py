@@ -28,7 +28,7 @@ AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 
 class Noise:
-    def complete(self, *, system: str, user: str) -> ModelReply:
+    def converse(self, *, system: str, turns: object, tools: object = ()) -> ModelReply:
         text = json.dumps({"verdict": "noise", "confidence": 0.95, "reason": "it always recovers"})
         return ModelReply(text=text, model="m-1", input_tokens=10, output_tokens=5)
 
@@ -122,7 +122,7 @@ def test_triage_runs_in_shadow_mode_from_the_app(store: Store) -> None:
         models={"triage": {"backend": "openai", "model": "auto"}},
         triage={"enabled": True, "settle_seconds": 0},
     )
-    app = create_app(config, store, triage_client=Noise())
+    app = create_app(config, store, model_clients={"triage": Noise()})
     with TestClient(app) as client:
         client.post("/ingest/uptime-kuma", json=kuma(1, 0, "2026-11-18 08:00:00"), headers=AUTH)
         assert app.state.triager.run_pending(datetime.now(UTC)) == 1

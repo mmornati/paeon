@@ -8,7 +8,13 @@ from typing import Any
 import httpx2 as httpx
 import pytest
 
-from paeon.models import AnthropicClient, ModelError, OpenAIClient, build_client
+from paeon.models import (
+    AnthropicClient,
+    ModelError,
+    OpenAIClient,
+    build_client,
+    complete,
+)
 from paeon.rules import ModelAlias
 from support import FIXTURES
 
@@ -38,7 +44,7 @@ def test_anthropic_messages_request_and_reply() -> None:
         max_tokens=300,
         transport=replay(recorded("anthropic_message.json"), seen),
     )
-    reply = client.complete(system="be brief", user="{}")
+    reply = complete(client, system="be brief", user="{}")
     client.close()
 
     [request] = seen
@@ -65,7 +71,7 @@ def test_openai_compatible_request_and_reply_through_a_gateway() -> None:
         base_url="http://gateway:8080/v1/",
         transport=replay(recorded("openai_chat_completion.json"), seen),
     )
-    reply = client.complete(system="be brief", user="{}")
+    reply = complete(client, system="be brief", user="{}")
     client.close()
 
     [request] = seen
@@ -79,32 +85,53 @@ def test_openai_compatible_request_and_reply_through_a_gateway() -> None:
     assert (reply.input_tokens, reply.cached_tokens, reply.output_tokens) == (1040, 512, 58)
 
 
-def test_no_key_sends_no_credential_header() -> None:
+def test_no_key_sends_no_credential() -> None:
     seen: list[httpx.Request] = []
-    OpenAIClient(
-        model="m", transport=replay(recorded("openai_chat_completion.json"), seen)
-    ).complete(system="s", user="u")
-    AnthropicClient(model="m", transport=replay(recorded("anthropic_message.json"), seen)).complete(
-        system="s", user="u"
+    complete(
+        OpenAIClient(model="m", transport=replay(recorded("openai_chat_completion.json"), seen)),
+        system="s",
+        user="u",
+    )
+    complete(
+        AnthropicClient(model="m", transport=replay(recorded("anthropic_message.json"), seen)),
+        system="s",
+        user="u",
     )
     assert "authorization" not in seen[0].headers
-    assert "x-api-key" not in seen[1].headers
+    assert seen[1].headers["x-api-key"] == "none"  # the SDK wants a value; a gateway ignores it
+
+
+def test_anthropic_client_ignores_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "from-the-environment")
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", "http://elsewhere:1")
+    seen: list[httpx.Request] = []
+    client = AnthropicClient(
+        model="m", api_key=KEY, transport=replay(recorded("anthropic_message.json"), seen)
+    )
+    complete(client, system="s", user="u")
+    assert seen[0].headers["x-api-key"] == KEY
+    assert seen[0].url.host == "api.anthropic.com"
 
 
 @pytest.mark.parametrize(
     ("body", "status", "message"),
     [
         ({"error": {"type": "overloaded_error", "message": f"key {KEY}"}}, 529, "HTTP 529"),
-        ("<html>bad gateway</html>", 200, "not JSON"),
-        ([1, 2], 200, "not a JSON object"),
-        ({"content": "text"}, 200, "no content"),
-        ({"content": [{"type": "tool_use"}]}, 200, "no text"),
+        ("<html>bad gateway</html>", 200, "not a message"),
+        ([1, 2], 200, "not a message"),
+        ({"content": "text"}, 200, "not a message"),
+        ({"content": [], "usage": {}, "model": "m", "stop_reason": "end_turn"}, 200, "no text"),
+        (
+            {"content": [], "usage": {}, "model": "m", "stop_reason": "refusal"},
+            200,
+            "declined the request",
+        ),
     ],
 )
 def test_anthropic_errors_are_model_errors(body: Any, status: int, message: str) -> None:
     client = AnthropicClient(model="m", api_key=KEY, transport=replay(body, [], status))
     with pytest.raises(ModelError, match=message) as caught:
-        client.complete(system="s", user="u")
+        complete(client, system="s", user="u")
     assert KEY not in str(caught.value)
 
 
@@ -113,8 +140,8 @@ def test_anthropic_errors_are_model_errors(body: Any, status: int, message: str)
 )
 def test_openai_answers_without_text_are_model_errors(body: Any) -> None:
     client = OpenAIClient(model="m", transport=replay(body, []))
-    with pytest.raises(ModelError, match="no text"):
-        client.complete(system="s", user="u")
+    with pytest.raises(ModelError, match=r"no text|no message"):
+        complete(client, system="s", user="u")
 
 
 def test_unreachable_model_is_a_model_error_without_the_url() -> None:
@@ -125,13 +152,13 @@ def test_unreachable_model_is_a_model_error_without_the_url() -> None:
         model="m", base_url="http://gateway:8080/v1", transport=httpx.MockTransport(handler)
     )
     with pytest.raises(ModelError, match="ConnectError") as caught:
-        client.complete(system="s", user="u")
+        complete(client, system="s", user="u")
     assert "gateway" not in str(caught.value)
 
 
 def test_missing_usage_counts_as_zero() -> None:
     body = {"choices": [{"message": {"content": "ok"}}]}
-    reply = OpenAIClient(model="m", transport=replay(body, [])).complete(system="s", user="u")
+    reply = complete(OpenAIClient(model="m", transport=replay(body, [])), system="s", user="u")
     assert (reply.model, reply.input_tokens, reply.output_tokens) == ("m", 0, 0)
 
 

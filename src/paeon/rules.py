@@ -136,6 +136,9 @@ class Price(_Rule):
 
     input_per_mtok: float = Field(default=0, ge=0)
     output_per_mtok: float = Field(default=0, ge=0)
+    cached_input_per_mtok: float | None = Field(
+        default=None, ge=0, description="Price of input read from the cache; input price if unset."
+    )
 
 
 class ModelAlias(_Rule):
@@ -147,8 +150,13 @@ class ModelAlias(_Rule):
     api_key_env: str | None = Field(
         default=None, description="Name of the environment variable (or NAME_FILE) with the key."
     )
-    max_tokens: int = Field(default=600, ge=1)
-    timeout_seconds: float = Field(default=30, gt=0)
+    max_tokens: int = Field(
+        default=2000, ge=1, description="Output ceiling; on recent models it includes thinking."
+    )
+    timeout_seconds: float = Field(default=60, gt=0)
+    effort: Literal["low", "medium", "high", "xhigh", "max"] | None = Field(
+        default=None, description="Anthropic backend only: `output_config.effort`."
+    )
     price: Price = Field(default_factory=Price)
 
 
@@ -179,17 +187,91 @@ class Digest(_Rule):
     ntfy: Ntfy | None = None
 
 
+class OpenObserveTools(_Rule):
+    """What the investigator may read in OpenObserve (with the PAEON_OPENOBSERVE_* account)."""
+
+    streams: tuple[str, ...] = Field(
+        default=(), description="Log streams that may be searched. Nothing else is readable."
+    )
+    metrics: bool = Field(default=False, description="Allow PromQL range queries.")
+    max_rows: int = Field(default=100, ge=1, le=1000)
+
+
+class DockerTools(_Rule):
+    """What the investigator may read from Docker, through a socket proxy limited to GET."""
+
+    url: str = Field(min_length=1, description="For example http://dockerproxy:2375.")
+    logs: tuple[str, ...] = Field(
+        default=(), description="Container name patterns whose logs may be read (fnmatch)."
+    )
+    labels: tuple[str, ...] = Field(
+        default=(), description="Label keys that `inspect` may return. The others are left out."
+    )
+    mount_sources: tuple[str, ...] = Field(
+        default=(), description="Host path prefixes that `inspect` may show as mount sources."
+    )
+    max_log_lines: int = Field(default=200, ge=1, le=2000)
+
+
+class KnowledgeTools(_Rule):
+    paths: tuple[str, ...] = Field(
+        default=(), description="Directories of markdown: runbooks, notes, a README."
+    )
+
+
+class InvestigationTools(_Rule):
+    openobserve: OpenObserveTools | None = None
+    docker: DockerTools | None = None
+    knowledge: KnowledgeTools = Field(default_factory=KnowledgeTools)
+
+
+TriageVerdict = Literal["noise", "transient", "known_issue", "real"]
+
+
+class Investigation(_Rule):
+    enabled: bool = False
+    model: str = Field(default="investigate", description="An alias from `models`.")
+    verdicts: tuple[TriageVerdict, ...] = Field(
+        default=("real", "known_issue"),
+        description="Triage verdicts that are investigated. Without triage, every incident is.",
+    )
+    settle_seconds: float = Field(default=60, ge=0)
+    max_tool_calls: int = Field(default=25, ge=1, le=200)
+    max_seconds: float = Field(default=600, gt=0)
+    max_result_chars: int = Field(default=12000, ge=500)
+    max_per_hour: int = Field(default=6, ge=1, description="Storm guard.")
+    budget_per_incident: float | None = Field(default=None, ge=0)
+    daily_budget: float | None = Field(
+        default=None, ge=0, description="Counts every model call of the day, all stages."
+    )
+    tools: InvestigationTools = Field(default_factory=InvestigationTools)
+    ntfy: Ntfy | None = Field(default=None, description="Where the analysis is sent.")
+
+
+class Postmortems(_Rule):
+    enabled: bool = False
+    dir: str = Field(default="postmortems", min_length=1)
+    model: str = Field(default="postmortem", description="An alias from `models`.")
+
+
 class Rules(_Rule):
     correlation: Correlation = Field(default_factory=Correlation)
     maintenance: tuple[MaintenanceWindow, ...] = ()
     models: dict[str, ModelAlias] = Field(default_factory=dict)
     triage: Triage = Field(default_factory=Triage)
     digest: Digest = Field(default_factory=Digest)
+    investigation: Investigation = Field(default_factory=Investigation)
+    postmortems: Postmortems = Field(default_factory=Postmortems)
 
     @model_validator(mode="after")
-    def _triage_model_exists(self) -> Rules:
-        if self.triage.enabled and self.triage.model not in self.models:
-            raise ValueError(f"triage.model {self.triage.model!r} is not defined under `models`")
+    def _models_exist(self) -> Rules:
+        for name, stage in (
+            ("triage", self.triage),
+            ("investigation", self.investigation),
+            ("postmortems", self.postmortems),
+        ):
+            if stage.enabled and stage.model not in self.models:
+                raise ValueError(f"{name}.model {stage.model!r} is not defined under `models`")
         return self
 
     def maintenance_for(self, alert: Alert) -> str | None:

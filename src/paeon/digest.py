@@ -148,16 +148,18 @@ def publish_ntfy(
     *,
     title: str,
     message: str,
+    priority: int = 2,
+    tags: tuple[str, ...] = ("clipboard",),
     transport: httpx.BaseTransport | None = None,
 ) -> None:
     """Publish to an ntfy topic. Raises RuntimeError without the URL or the token in it."""
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     body = {
         "topic": ntfy.topic,
-        "title": title,
+        "title": title[:200],
         "message": message[:3500],  # ntfy refuses bodies over 4096 bytes
-        "priority": 2,
-        "tags": ["clipboard"],
+        "priority": priority,
+        "tags": list(tags),
     }
     try:
         with httpx.Client(timeout=15, transport=transport) as http:

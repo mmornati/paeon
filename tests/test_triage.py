@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -10,7 +11,7 @@ import httpx2 as httpx
 import pytest
 
 from paeon.correlation import Correlator
-from paeon.models import AnthropicClient, ModelError, ModelReply
+from paeon.models import AnthropicClient, ModelError, ModelReply, ToolSpec, Turn, UserTurn
 from paeon.recorder import Recorder
 from paeon.redact import MASK
 from paeon.rules import Rules, parse_rules
@@ -51,8 +52,13 @@ class Scripted:
         self.script = list(script)
         self.calls: list[tuple[str, str]] = []
 
-    def complete(self, *, system: str, user: str) -> ModelReply:
-        self.calls.append((system, user))
+    def converse(
+        self, *, system: str, turns: Sequence[Turn], tools: Sequence[ToolSpec] = ()
+    ) -> ModelReply:
+        [first] = turns
+        assert isinstance(first, UserTurn)
+        assert not tools  # triage has no tools
+        self.calls.append((system, first.text))
         step = self.script.pop(0)
         if isinstance(step, Exception):
             raise step

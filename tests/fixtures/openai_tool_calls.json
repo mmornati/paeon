@@ -1,0 +1,21 @@
+{
+  "id": "chatcmpl-9x2c01AbCd",
+  "object": "chat.completion",
+  "created": 1794688860,
+  "model": "strong-model-2026-09",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          { "id": "call_a1", "type": "function", "function": { "name": "container_logs", "arguments": "{\"name\": \"api\", \"tail\": 50}" } },
+          { "id": "call_a2", "type": "function", "function": { "name": "recent_changes", "arguments": "{not json" } }
+        ]
+      },
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": { "prompt_tokens": 2210, "completion_tokens": 41, "total_tokens": 2251 }
+}

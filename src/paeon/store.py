@@ -14,16 +14,27 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from paeon.schema import (
     Incident,
     IncidentAlert,
     IncidentStatus,
     Severity,
+    StageState,
     Status,
-    TriageState,
 )
+
+Stage = Literal["triage", "investigation", "postmortem"]
+_ADD_STAGE = {
+    "investigation": "ALTER TABLE incidents ADD COLUMN investigation TEXT NOT NULL DEFAULT 'off'",
+    "postmortem": "ALTER TABLE incidents ADD COLUMN postmortem TEXT NOT NULL DEFAULT 'off'",
+}
+_SET_STAGE = {
+    "triage": "UPDATE incidents SET triage = ? WHERE id = ?",
+    "investigation": "UPDATE incidents SET investigation = ? WHERE id = ?",
+    "postmortem": "UPDATE incidents SET postmortem = ? WHERE id = ?",
+}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS events (
@@ -83,7 +94,7 @@ CREATE INDEX IF NOT EXISTS incident_alerts_alert ON incident_alerts (source, fin
 
 _SELECT_INCIDENTS = (
     "SELECT id, status, title, severity, host, opened_at, last_activity_at, resolved_at,"
-    " flapping, maintenance, triage FROM incidents"
+    " flapping, maintenance, triage, investigation, postmortem FROM incidents"
 )
 
 
@@ -123,6 +134,10 @@ class Store:
         if "incident_id" not in columns:  # a database created by phase 0
             self._db.execute("ALTER TABLE events ADD COLUMN incident_id INTEGER")
         self._db.execute("CREATE INDEX IF NOT EXISTS events_incident ON events (incident_id, id)")
+        columns = {row[1] for row in self._db.execute("PRAGMA table_info(incidents)")}
+        for stage in ("investigation", "postmortem"):  # absent from a phase 1 database
+            if stage not in columns:
+                self._db.execute(_ADD_STAGE[stage])
 
     def close(self) -> None:
         with self._lock:
@@ -242,12 +257,14 @@ class Store:
         host: str | None,
         opened_at: datetime,
         maintenance: str | None,
-        triage: TriageState,
+        triage: StageState,
+        investigation: StageState = StageState.OFF,
     ) -> int:
         with self._lock:
             cursor = self._db.execute(
                 "INSERT INTO incidents (status, title, severity, host, opened_at,"
-                " last_activity_at, maintenance, triage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                " last_activity_at, maintenance, triage, investigation)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     IncidentStatus.OPEN.value,
                     title,
@@ -257,6 +274,7 @@ class Store:
                     _iso(opened_at),
                     maintenance,
                     triage.value,
+                    investigation.value,
                 ),
             )
         incident_id = cursor.lastrowid
@@ -281,11 +299,9 @@ class Store:
                 ),
             )
 
-    def set_triage(self, incident_id: int, state: TriageState) -> None:
+    def set_stage(self, incident_id: int, stage: Stage, state: StageState) -> None:
         with self._lock:
-            self._db.execute(
-                "UPDATE incidents SET triage = ? WHERE id = ?", (state.value, incident_id)
-            )
+            self._db.execute(_SET_STAGE[stage], (state.value, incident_id))
 
     def attach_alert(
         self, incident_id: int, *, source: str, fingerprint: str, title: str, status: Status
@@ -316,7 +332,9 @@ class Store:
         self,
         *,
         status: IncidentStatus | None = None,
-        triage: TriageState | None = None,
+        triage: StageState | None = None,
+        investigation: StageState | None = None,
+        postmortem: StageState | None = None,
         active_since: datetime | None = None,
     ) -> list[Incident]:
         sql = _SELECT_INCIDENTS + " WHERE 1 = 1"
@@ -324,6 +342,8 @@ class Store:
         for clause, value in (
             (" AND status = ?", None if status is None else status.value),
             (" AND triage = ?", None if triage is None else triage.value),
+            (" AND investigation = ?", None if investigation is None else investigation.value),
+            (" AND postmortem = ?", None if postmortem is None else postmortem.value),
             (" AND last_activity_at >= ?", None if active_since is None else _iso(active_since)),
         ):
             if value is not None:
@@ -361,7 +381,9 @@ class Store:
                 resolved_at=None if row[7] is None else datetime.fromisoformat(row[7]),
                 flapping=bool(row[8]),
                 maintenance=row[9],
-                triage=TriageState(row[10]),
+                triage=StageState(row[10]),
+                investigation=StageState(row[11]),
+                postmortem=StageState(row[12]),
                 alerts=tuple(members[row[0]]),
             )
             for row in rows

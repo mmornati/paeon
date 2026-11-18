@@ -1,7 +1,8 @@
 # LLM incident response: architecture draft
 
-Status: design reviewed on 2026-11-18. Phases 0 (record) and 1 (observe, triage in shadow mode) are built in this
-repository, with the limits listed in the README; nothing is deployed.
+Status: design reviewed on 2026-11-18. Phases 0 (record), 1 (observe, triage in shadow mode) and 2 (read-only
+investigation, postmortem drafts) are built in this repository, with the limits listed in the README; nothing is
+deployed.
 Name: **Paeon** (the healer of the gods in Homer), to live at `github.com/mmornati/paeon`.
 Decisions, the review changes and what is still open are in §10.
 
