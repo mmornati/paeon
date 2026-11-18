@@ -462,6 +462,19 @@ def test_the_knowledge_index_follows_the_files(tmp_path: Path) -> None:
         "SELECT extract(hour FROM ts) FROM traefik",  # `ts` reads as a table: refused
         "SELECT * FROM traefik WHERE msg = 'it''s",  # an unterminated string
         "SELECT 1",
+        # A quote inside a quoted identifier must not open a string that hides a join.
+        'SELECT * FROM "traefik" WHERE "a\'" = 1 JOIN finance ON "b\'" = 2',
+        "SELECT * FROM traefik WHERE m = E'\\' JOIN finance ON m = '",
+        "SELECT * FROM traefik.finance",  # a qualified name
+        'SELECT * FROM traefik."finance"',
+        'SELECT * FROM traefik"finance"',
+        "SELECT * FROM traefik(1)",  # a table function
+        "SELECT * FROM (SELECT 1 FROM traefik) t, finance",  # a comma join after a sub-query
+        "SELECT * FROM traefik JOIN a ON a.x = 1, finance",
+        "SELECT * FROM traefik UNION SELECT * FROM finance",
+        "SELECT * FROM traefik)",
+        "SELECT * FROM (SELECT * FROM traefik",
+        "SELECT * FROM traefik WHERE x IN (SELECT y FROM finance)",
     ],
 )
 def test_sql_that_cannot_be_accounted_for_is_never_rerun(sql: str) -> None:
@@ -479,3 +492,6 @@ def test_sql_streams_reads_plain_queries() -> None:
     assert sql_streams("select a from traefik where m = 'from finance, x'") == {"traefik"}
     assert sql_streams("SELECT * FROM a JOIN b ON a.x = b.x") == {"a", "b"}
     assert sql_streams("SELECT * FROM (SELECT x FROM inner_one) AS t") == {"inner_one"}
+    assert sql_streams("SELECT a, b FROM traefik t WHERE f(a, 1) > 2 GROUP BY a, b") == {"traefik"}
+    assert sql_streams("SELECT a FROM x UNION SELECT a, b FROM y ORDER BY a, b") == {"x", "y"}
+    assert sql_streams('select "a" from "traefik" as t where "m" = \'x, y\'') == {"traefik"}
