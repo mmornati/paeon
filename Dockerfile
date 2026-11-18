@@ -6,7 +6,7 @@
 #   - works with `docker run --read-only`: the only writable place is /data (mount a volume there)
 #   - the API has only the bearer token on its ingest endpoints: keep it on an internal network
 
-# Same base images and digests as Horae, so one Renovate rule keeps both in step.
+# Base images are pinned by digest; bump the tag and the digest together.
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0
 
@@ -23,7 +23,7 @@ WORKDIR /build
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
-COPY README.md LICENSE ./
+COPY README.md LICENSE NOTICE ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable
