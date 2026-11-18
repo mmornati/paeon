@@ -4,7 +4,20 @@ dynamic = ["version"]
 description = "Alert triage, investigation and approved remediation for self-hosted servers."
 readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Marco Mornati" }]
+keywords = ["alerting", "incident-response", "llm", "observability", "self-hosted", "sre"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: No Input/Output (Daemon)",
+    "Framework :: FastAPI",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
 requires-python = ">=3.12"
 dependencies = [
     "anthropic>=1,<2",
@@ -17,6 +30,12 @@ dependencies = [
     "tzdata>=2024.1",
     "uvicorn>=0.30",
 ]
+
+[project.urls]
+Homepage = "https://github.com/mmornati/paeon"
+Documentation = "https://github.com/mmornati/paeon/blob/main/docs/llm-incident-response-architecture.md"
+Issues = "https://github.com/mmornati/paeon/issues"
+Security = "https://github.com/mmornati/paeon/security/policy"
 
 [project.scripts]
 paeon = "paeon.cli:main"

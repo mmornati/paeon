@@ -113,6 +113,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
+    # The HTTP client logs every request URL at INFO, and the heartbeat URL carries a token.
+    for name in ("httpx2", "httpcore2"):
+        logging.getLogger(name).setLevel(logging.WARNING)
     try:
         if args.command == "serve":
             return _serve()

@@ -87,7 +87,7 @@ def alertmanager() -> dict[str, Any]:
         "alerts": [
             {
                 "status": "firing",
-                "labels": {"alertname": "DiskFull", "severity": "warning", "instance": "n100"},
+                "labels": {"alertname": "DiskFull", "severity": "warning", "instance": "server-1"},
                 "annotations": {"summary": "disk", "description": "/ is at 93 %"},
                 "startsAt": "2026-11-18T07:50:00Z",
                 "endsAt": "0001-01-01T00:00:00Z",
@@ -116,7 +116,7 @@ def test_alertmanager() -> None:
     assert firing.description == "/ is at 93 %"
     assert firing.observed_at == NOW
     assert firing.source_url == "http://prometheus:9090/graph?g0.expr=x"
-    assert firing.labels["instance"] == "n100"
+    assert firing.labels["instance"] == "server-1"
 
     assert resolved.status is Status.RESOLVED
     assert resolved.severity is Severity.CRITICAL

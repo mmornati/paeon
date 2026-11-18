@@ -22,11 +22,12 @@ env:
 jobs:
   check:
     name: Lint, types, tests
-    # The repository variable CI_RUNNER picks the runner (`n100`: the self-hosted one on the home
-    # server, which costs no GitHub minutes). Unset, jobs run on GitHub's runners. A pull request
-    # from a fork never lands on the self-hosted runner.
+    # A public repository never runs on a self-hosted runner: its jobs go to GitHub's runners,
+    # whatever the variable says. While the repository is private, the repository variable
+    # CI_RUNNER may name a self-hosted runner; unset, jobs run on GitHub's runners.
     runs-on: >-
-      ${{ (github.event_name != 'pull_request'
+      ${{ github.event.repository.private
+      && (github.event_name != 'pull_request'
       || github.event.pull_request.head.repo.full_name == github.repository)
       && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
@@ -48,11 +49,11 @@ jobs:
   image:
     name: Image
     needs: check
-    # Same runner choice as `check`. The push step holds a packages:write token: acceptable on the
-    # self-hosted runner while the repository is private, to be pinned back to `ubuntu-latest`
-    # before the image is published for anyone else.
+    # Same runner choice as `check`. The push step holds a packages:write token, which a
+    # self-hosted runner only ever sees while the repository is private.
     runs-on: >-
-      ${{ (github.event_name != 'pull_request'
+      ${{ github.event.repository.private
+      && (github.event_name != 'pull_request'
       || github.event.pull_request.head.repo.full_name == github.repository)
       && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 140" width="560" height="140" role="img" aria-labelledby="t d">
+  <title id="t">Paeon</title>
+  <desc id="d">A pulse line that spikes, is examined, and settles into a check mark.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- the incident: a spike on the pulse line -->
+    <path d="M24 78 H108 L124 78 L138 34 L156 112 L170 58 L182 78 H232" stroke="#e5484d" stroke-width="5"/>
+    <!-- the investigation: the line calms down -->
+    <path d="M232 78 H276 L286 66 L296 86 L306 78 H330" stroke="#8b8d98" stroke-width="5"/>
+    <!-- the fix, approved and verified -->
+    <path d="M330 78 H360 L378 98 L414 48" stroke="#30a46c" stroke-width="7"/>
+  </g>
+  <text x="434" y="92" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="40" font-weight="700" letter-spacing="-1" fill="#8b8d98">Paeon</text>
+</svg>
