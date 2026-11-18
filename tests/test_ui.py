@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from paeon.app import create_app
 from paeon.config import Settings, load
 from paeon.rules import RulesError, parse_rules
-from paeon.schema import Severity, StageState
+from paeon.schema import Severity, StageState, Status
 from paeon.store import Event, Store
 from paeon.ui import views
 from ui_data import populate
@@ -164,6 +164,23 @@ def test_page_escapes_and_redacts_what_others_wrote(store: Store) -> None:
     assert "&lt;script&gt;" in text
     assert "hunter2" not in text
     assert "swordfish" not in text
+    # Text the views pass through as it is: an alert title, a failure reason.
+    store.attach_alert(
+        incident,
+        source="kuma",
+        fingerprint="a",
+        title="GET https://x.example/?api_key=sesame-sesame failed",
+        status=Status.FIRING,
+    )
+    store.set_stage(incident, "investigation", StageState.FAILED)
+    store.append(
+        "investigation.failed",
+        {"reason": "model_error: 401 for Bearer abcdef0123456789", "tool_calls": 0},
+        incident_id=incident,
+    )
+    for page in (http.get(f"/ui/incidents/{incident}").text, http.get("/ui").text):
+        assert "sesame" not in page
+        assert "abcdef0123456789" not in page
     event = http.get("/ui/events/1").text
     assert "hunter2" not in event
     assert "[REDACTED]" in event

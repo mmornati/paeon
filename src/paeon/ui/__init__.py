@@ -21,8 +21,10 @@ from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Query, Req
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from markupsafe import Markup
 
 from paeon import __version__
+from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
 from paeon.ui import views
@@ -59,6 +61,19 @@ def mount_ui(
     zone = ZoneInfo(rules.digest.timezone)
     templates = Jinja2Templates(directory=_HERE / "templates")
     env = templates.env
+
+    def shown(value: object) -> object:
+        """The last net: every string a template prints goes through the secret patterns.
+
+        The views redact what they build from payloads; this covers what they pass through as
+        it is (an alert title, a host, a reason code, a model name). Markup is a macro's own
+        output, made of values that already came through here.
+        """
+        if isinstance(value, str) and not isinstance(value, Markup):
+            return redact_text(value, max_length=views.DETAIL_LIMIT * 3)
+        return value
+
+    env.finalize = shown
     env.filters["clock"] = lambda moment: moment.astimezone(zone).strftime("%H:%M:%S")
     env.filters["day"] = lambda moment: moment.astimezone(zone).strftime("%a %d %b")
     env.filters["stamp"] = lambda moment: moment.astimezone(zone).strftime("%d %b %H:%M")

@@ -478,7 +478,7 @@ def incident_view(store: Store, incident: Incident, now: datetime) -> IncidentVi
         )
     failure = None
     if analysis is None and failed is not None:
-        failure = describe(failed)
+        failure = str(redact(describe(failed), max_length=300))
     return IncidentView(
         strip=strip_of(incident, events, now),
         rows=tuple(row_of(event, detail=True) for event in events),
