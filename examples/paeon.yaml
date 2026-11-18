@@ -33,13 +33,29 @@ models:
     base_url: http://llm-gateway:8080/v1
     model: auto
     api_key_env: PAEON_TRIAGE_API_KEY
-    max_tokens: 600
-    timeout_seconds: 30
+    max_tokens: 2000        # on recent models the ceiling includes thinking
+    timeout_seconds: 60
     price: { input_per_mtok: 0.25, output_per_mtok: 1.25 }
   # triage:
   #   backend: anthropic
   #   model: claude-haiku-5-5
   #   api_key_env: ANTHROPIC_API_KEY
+  #   effort: low
+  # The investigator needs a strong model that can call tools.
+  investigate:
+    backend: anthropic
+    model: claude-opus-5-5
+    api_key_env: ANTHROPIC_API_KEY
+    max_tokens: 16000
+    timeout_seconds: 300
+    effort: high            # Anthropic backend only
+    price: { input_per_mtok: 4.0, output_per_mtok: 20.0, cached_input_per_mtok: 0.2 }
+  postmortem:
+    backend: anthropic
+    model: claude-opus-5-5
+    api_key_env: ANTHROPIC_API_KEY
+    max_tokens: 8000
+    price: { input_per_mtok: 4.0, output_per_mtok: 20.0 }
 
 # Shadow mode: the verdict is recorded and shown in the digest. Nothing acts on it.
 triage:
@@ -64,3 +80,43 @@ digest:
   #   url: https://ntfy.example.org
   #   topic: incidents
   #   token_env: PAEON_NTFY_TOKEN
+
+# Stage 2: a strong model investigates with tools that only read. Its analysis is advice:
+# nothing here can act on the server.
+investigation:
+  enabled: false
+  model: investigate
+  verdicts: [real, known_issue]   # triage verdicts that are investigated; without triage, all
+  settle_seconds: 60
+  max_tool_calls: 25
+  max_seconds: 600
+  max_per_hour: 6             # storm guard
+  budget_per_incident: 0.5    # in the currency of `price`
+  daily_budget: 2.0           # counts every model call of the day, all stages
+  tools:
+    # Uses the PAEON_OPENOBSERVE_* account. Only the streams listed here are readable:
+    # leave out anything private (finance, health, shell or assistant transcripts).
+    openobserve:
+      streams: [traefik, docker]
+      metrics: ["container_*", "node_*", "up"]   # metric names PromQL may read
+    # A Docker socket proxy limited to GET (for example tecnativa/docker-socket-proxy with
+    # CONTAINERS=1 and everything else off). Never the socket itself.
+    docker:
+      url: http://dockerproxy:2375
+      logs: ["traefik", "media-*"]          # containers whose logs may be read
+      labels: [com.docker.compose.project, com.docker.compose.service]
+      mount_sources: [/srv]                 # other mount sources are not shown
+    knowledge:
+      paths: [/knowledge/runbooks]          # markdown; the postmortems directory is added
+  # Where the analysis is sent. Without it the analysis is only in the event log.
+  # ntfy:
+  #   url: https://ntfy.example.org
+  #   topic: incidents
+  #   token_env: PAEON_NTFY_TOKEN
+
+# Drafts written when an investigated incident has stayed resolved. Marked `draft`.
+postmortems:
+  enabled: false
+  dir: /data/postmortems
+  model: postmortem
+  daily_budget: 2.0

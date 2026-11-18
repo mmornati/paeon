@@ -39,7 +39,8 @@ class Settings:
     heartbeat_seconds: float
     rules: Rules = field(default_factory=Rules)
     model_keys: Mapping[str, str] = field(default_factory=dict)  # by model alias
-    ntfy_token: str | None = None
+    ntfy_token: str | None = None  # the digest's
+    investigation_ntfy_token: str | None = None
 
 
 def _secret(env: Mapping[str, str], name: str) -> str:
@@ -104,6 +105,10 @@ def load(env: Mapping[str, str]) -> Settings:
     }
     ntfy = rules.digest.ntfy
     ntfy_token = _secret(env, ntfy.token_env) if ntfy is not None and ntfy.token_env else ""
+    analysis = rules.investigation.ntfy
+    analysis_token = (
+        _secret(env, analysis.token_env) if analysis is not None and analysis.token_env else ""
+    )
 
     port = int(_number(env, "PAEON_PORT", 8080, minimum=1))
     return Settings(
@@ -117,4 +122,5 @@ def load(env: Mapping[str, str]) -> Settings:
         rules=rules,
         model_keys=model_keys,
         ntfy_token=ntfy_token or None,
+        investigation_ntfy_token=analysis_token or None,
     )

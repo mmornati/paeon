@@ -9,17 +9,19 @@ and plain code executes a closed catalog of typed actions. Autonomy is earned pe
 target. The full design is in
 [docs/llm-incident-response-architecture.md](docs/llm-incident-response-architecture.md).
 
-## Status: phase 1, observe
+## Status: phase 2, observe and investigate
 
-Paeon **records, correlates and, if you enable it, asks a model for an opinion that nothing acts
-on**. It sends no page, takes no action and changes nothing in your alerting. The roadmap is in
+Paeon **records, correlates, and, if you enable the stages, triages in shadow mode,
+investigates with read-only tools and drafts postmortems**. It takes no action on your server and
+changes nothing in your alerting; what it can send is its analysis and a daily digest, to an
+ntfy topic you configure. The roadmap is in
 [§9 of the design](docs/llm-incident-response-architecture.md#9-roadmap).
 
 | Phase | What | State |
 |---|---|---|
 | 0. Record | Alert schema, append-only event log, OpenObserve pull adapter, webhooks, source staleness, heartbeat | built |
-| 1. Observe | Correlation into incidents, flap and maintenance flags, change calendar, triage in shadow mode, daily digest with feedback | built, see the limits below |
-| 2. Investigate | Read-only investigation by a strong model, analysis by notification, postmortem drafts | planned |
+| 1. Observe | Correlation into incidents, flap and maintenance flags, change calendar, triage in shadow mode, daily digest with feedback | built |
+| 2. Investigate | Read-only investigation by a strong model, analysis by notification, postmortem drafts | built, see the limits below |
 | 3. Approve and act | Action catalog, signed Go / No-go, executor, verification, rollback | planned |
 | 4. UI and MCP | Incident pages, autonomy matrix | planned |
 | 5. Earned autonomy | Promotion proposals, `auto` for the first actions, Undo | planned |
@@ -44,24 +46,40 @@ What exists:
 - **Change calendar**: `POST /ingest/change` records a deploy, an update run or a backup, announced
   by whatever did it.
 - **Triage in shadow mode** (`paeon.triage`): one model call per incident with a context pack built
-  by code (the alerts, their history, recent changes, other open incidents), redacted before it
-  leaves. The verdict (`noise`, `transient`, `known_issue`, `real`) is recorded with the model that
-  answered, the tokens and the cost. It fails open: model down, invalid answer twice, low
-  confidence, budget spent or storm guard hit, and the incident counts as real. Page-level alerts
-  are never sent to the model.
-- **Model clients** (`paeon.models`): the Anthropic Messages API and the OpenAI-compatible chat
-  API, each with a configurable base URL.
+  by code, redacted before it leaves. The verdict (`noise`, `transient`, `known_issue`, `real`) is
+  recorded with the model that answered, the tokens and the cost. It fails open, and page-level
+  alerts are never sent to the model.
+- **Investigation** (`paeon.investigation`): a strong model with tools that only read
+  (`paeon.tools`) and a budget in tool calls, time and cost. It must hand in a summary, the
+  impact, a root cause with a confidence, the evidence (each claim tied to the tool call that
+  supports it; a claim that cites no real call is marked), the hypotheses it rejected, and a plan
+  for a person to carry out. Every tool call is recorded with its full redacted result.
+- **Tools**: Paeon's own record (open and past incidents, the change calendar, keyword search in
+  runbooks and postmortems), OpenObserve (log search on an allow-list of streams, PromQL on an
+  allow-list of metric names), Docker through a socket proxy (list, inspect without the environment, logs for an
+  allow-list of containers).
+- **Postmortem drafts** (`paeon.postmortem`): markdown with YAML front matter, written to a
+  directory when an investigated incident has stayed resolved. The front matter, the timeline and
+  the automation review come from the event log; the model writes the prose; the file says
+  `status: draft`.
+- **Model clients** (`paeon.models`): the Anthropic Messages API (through the `anthropic` SDK)
+  and the OpenAI-compatible chat API, each with a configurable base URL, both with tool calls.
 - **Digest and feedback** (`paeon.digest`): `paeon digest`, `GET /digest`, and optionally one ntfy
   message a day. `paeon feedback <id> up|down` records whether triage was right.
 
-Limits of phase 1 as built:
+Limits as built:
 
-- The context pack has no re-run of the alert's query and no postmortems: the first needs the
-  alert definition from OpenObserve (an open question of the design), the second arrives with
-  phase 2.
-- Feedback is given from the CLI or the API. The digest notification has no 👍 / 👎 buttons yet.
-- Maintenance windows are weekly and declared in the rules file; there is no storm guard on
-  correlation itself, only on triage.
+- The investigator cannot re-run an alert's own query: that needs the alert definition from
+  OpenObserve, an open question of the design. It can search the streams you allow.
+- There is no tool for uptime-kuma monitor history, for git history or for hosts reached over
+  SSH: the investigator sees other machines only through their logs and metrics.
+- Knowledge search is a keyword scan of markdown files, not an index.
+- Postmortem drafts are files in a directory. Committing them to a git repository is left to
+  whatever syncs that directory; Paeon holds no git credential.
+- The plan in an analysis is free text for a person. The typed action catalog is phase 3.
+- A model that declines a request ends the investigation as failed; no fallback model is tried.
+- Triage does not yet read past postmortems, and feedback is given from the CLI or the API (the
+  notifications have no buttons).
 
 ## Run it
 
@@ -94,9 +112,21 @@ windows, model aliases, triage and the digest. Start from
 correlates with the defaults and calls no model. Secrets stay in the environment: the file names
 the variable (`api_key_env`, `token_env`), and each accepts `NAME_FILE` too.
 
-Triage is off until `triage.enabled: true`. When it is on, alert titles, descriptions and labels
-are sent to the model you configured, after redaction of secret-shaped strings. Raw payloads and
-log lines are not sent.
+Every stage is off until you enable it (`triage`, `investigation`, `postmortems`).
+
+What leaves the server when they are on, always to the model you configured and after redaction
+of secret-shaped strings:
+
+- triage: alert titles, descriptions and labels. No raw payload, no log line.
+- investigation: the same, plus what its tools return: rows of the log streams you listed,
+  listed metrics, container state without the environment, log lines of the containers you listed, and
+  excerpts of your runbooks and postmortems.
+- postmortems: the incident's timeline and the investigation's findings.
+
+The allow-lists in `investigation.tools` are the control: a stream or a container that is not
+listed cannot be read. Give Paeon credentials that can only read as well (an OpenObserve account
+limited to search, a Docker socket proxy limited to GET), so that the allow-lists are the second
+net and not the only one.
 
 A deployment example is in [examples/compose.yaml](examples/compose.yaml).
 

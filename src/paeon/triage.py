@@ -25,7 +25,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from paeon.models import ModelClient, ModelError
+from paeon import ledger
+from paeon.models import ModelClient, ModelError, complete, cost_of
 from paeon.redact import redact
 from paeon.rules import Rules
 from paeon.schema import Alert, Incident, IncidentStatus, Severity, TriageState
@@ -287,21 +288,17 @@ class Triager:
         }
         started = time.monotonic()
         try:
-            reply = self._client.complete(system=SYSTEM_PROMPT, user=user)
+            reply = complete(self._client, system=SYSTEM_PROMPT, user=user)
         except ModelError as exc:
             record |= {"error": str(exc), "cost": 0.0}
             raise
         else:
-            cost = (
-                reply.input_tokens * alias.price.input_per_mtok
-                + reply.output_tokens * alias.price.output_per_mtok
-            ) / 1_000_000
             record |= {
                 "model": reply.model,
                 "input_tokens": reply.input_tokens,
                 "output_tokens": reply.output_tokens,
                 "cached_tokens": reply.cached_tokens,
-                "cost": round(cost, 6),
+                "cost": cost_of(reply, alias),
                 "output": reply.text,
             }
             return reply.text, reply.model
@@ -310,12 +307,7 @@ class Triager:
             self._store.append("model.call", record, incident_id=incident.id)
 
     def spent_today(self, now: datetime) -> float:
-        """Cost of every model call since midnight UTC, from the ledger."""
-        midnight = now.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-        return sum(
-            float(event.payload.get("cost") or 0)
-            for event in self._store.events(kind="model.call", recorded_since=midnight)
-        )
+        return ledger.spent_today(self._store, now)
 
     def _skip(self, incident: Incident, reason: str) -> None:
         self._store.append(
@@ -326,4 +318,4 @@ class Triager:
         self._done(incident, TriageState.SKIPPED)
 
     def _done(self, incident: Incident, state: TriageState) -> None:
-        self._store.set_triage(incident.id, state)
+        self._store.set_stage(incident.id, "triage", state)

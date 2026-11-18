@@ -1,8 +1,9 @@
-"""The service: webhook endpoints, the OpenObserve poll loop, correlation, shadow triage, digest.
+"""The service: ingestion, correlation, shadow triage, investigation, postmortem drafts, digest.
 
-Phase 1 observes: it records, groups alerts into incidents and, when triage is enabled, asks a
-model for a verdict that is recorded and never acted on. The only thing it can send is the
-daily digest, and only if an ntfy topic is configured.
+Paeon observes and advises. It records, groups alerts into incidents, and when the stages are
+enabled asks a model for a triage verdict (recorded, never acted on), investigates with tools
+that only read, and drafts a postmortem. What it can send: the analysis of an investigation and
+the daily digest, each only if an ntfy topic is configured for it. It takes no action.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ import asyncio
 import contextlib
 import hmac
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
@@ -23,17 +24,22 @@ from pydantic import BaseModel, ConfigDict, Field
 from paeon import digest as digests
 from paeon.config import Settings
 from paeon.correlation import Correlator
-from paeon.models import ModelClient, build_client
+from paeon.investigation import Investigator
+from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
+from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.schema import Change, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
+from paeon.tools import Tool, Toolbox, docker_tools, openobserve_tools, paeon_tools
 from paeon.triage import Triager
 
 log = logging.getLogger(__name__)
 
 TRIAGE_TICK_SECONDS = 15
+INVESTIGATION_TICK_SECONDS = 15
+POSTMORTEM_TICK_SECONDS = 60
 DIGEST_TICK_SECONDS = 300
 
 
@@ -63,25 +69,66 @@ def create_app(
     store: Store,
     *,
     openobserve: OpenObserveSource | None = None,
-    triage_client: ModelClient | None = None,
+    model_clients: Mapping[str, ModelClient] | None = None,
+    toolbox: Toolbox | None = None,
 ) -> FastAPI:
+    """Build the app. `model_clients` (by alias) and `toolbox` replace the real ones in tests."""
     rules = settings.rules
     recorder = Recorder(store, Correlator(store, rules))
-    own_model_client = None
-    if rules.triage.enabled and triage_client is None:
-        alias = rules.models[rules.triage.model]
-        own_model_client = build_client(alias, settings.model_keys.get(rules.triage.model, ""))
-        triage_client = own_model_client
-    triager = (
-        Triager(store, rules, triage_client)
-        if rules.triage.enabled and triage_client is not None
-        else None
-    )
+    closers: list[Callable[[], None]] = []
+    built: dict[str, AnthropicClient | OpenAIClient] = {}
+
+    def model_client(alias_name: str) -> ModelClient:
+        if model_clients is not None and alias_name in model_clients:
+            return model_clients[alias_name]
+        if alias_name not in built:
+            built[alias_name] = build_client(
+                rules.models[alias_name], settings.model_keys.get(alias_name, "")
+            )
+            closers.append(built[alias_name].close)
+        return built[alias_name]
+
     client: HttpSearchClient | None = None
-    if openobserve is None and settings.openobserve is not None:
+    if settings.openobserve is not None and (
+        openobserve is None or rules.investigation.tools.openobserve is not None
+    ):
         oo = settings.openobserve
         client = HttpSearchClient(oo.url, oo.org, oo.user, oo.password)
-        openobserve = OpenObserveSource(client, store, recorder, base_url=oo.url)
+        closers.append(client.close)
+    if openobserve is None and settings.openobserve is not None and client is not None:
+        openobserve = OpenObserveSource(client, store, recorder, base_url=settings.openobserve.url)
+
+    triager = (
+        Triager(store, rules, model_client(rules.triage.model)) if rules.triage.enabled else None
+    )
+
+    investigator: Investigator | None = None
+    if rules.investigation.enabled:
+        if toolbox is None:
+            wanted = rules.investigation.tools
+            knowledge_paths = [*wanted.knowledge.paths]
+            if rules.postmortems.enabled:
+                knowledge_paths.append(rules.postmortems.dir)
+            tools: list[Tool] = paeon_tools(store, knowledge_paths)
+            if wanted.openobserve is not None and client is not None:
+                tools += openobserve_tools(client, wanted.openobserve)
+            if wanted.docker is not None:
+                docker = httpx.Client(base_url=wanted.docker.url.rstrip("/"), timeout=20)
+                closers.append(docker.close)
+                tools += docker_tools(docker, wanted.docker)
+            toolbox = Toolbox(tools, max_result_chars=rules.investigation.max_result_chars)
+        investigator = Investigator(
+            store,
+            rules,
+            model_client(rules.investigation.model),
+            toolbox,
+            ntfy_token=settings.investigation_ntfy_token,
+        )
+    writer = (
+        PostmortemWriter(store, rules, model_client(rules.postmortems.model))
+        if rules.postmortems.enabled
+        else None
+    )
     source = openobserve
 
     async def poll_openobserve() -> None:
@@ -118,6 +165,16 @@ def create_app(
             return
         await asyncio.to_thread(triager.run_pending, _now())
 
+    async def run_investigation() -> None:
+        if investigator is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(investigator.run_pending, _now())
+
+    async def run_postmortems() -> None:
+        if writer is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(writer.run_pending, _now())
+
     def send_digest(now: datetime) -> bool:
         ntfy = rules.digest.ntfy
         if ntfy is None:  # pragma: no cover - not scheduled
@@ -152,6 +209,16 @@ def create_app(
             )
         if triager is not None:
             tasks.append(asyncio.create_task(_every(TRIAGE_TICK_SECONDS, "triage", run_triage)))
+        if investigator is not None:
+            tasks.append(
+                asyncio.create_task(
+                    _every(INVESTIGATION_TICK_SECONDS, "investigation", run_investigation)
+                )
+            )
+        if writer is not None:
+            tasks.append(
+                asyncio.create_task(_every(POSTMORTEM_TICK_SECONDS, "postmortems", run_postmortems))
+            )
         if rules.digest.ntfy is not None:
             tasks.append(asyncio.create_task(_every(DIGEST_TICK_SECONDS, "digest", run_digest)))
         try:
@@ -160,10 +227,8 @@ def create_app(
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
-            if client is not None:
-                client.close()
-            if own_model_client is not None:
-                own_model_client.close()
+            for close in closers:
+                close()
 
     app = FastAPI(title="Paeon", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 
@@ -245,5 +310,7 @@ def create_app(
         return {**report.as_dict(), "text": digests.render(report)}
 
     app.state.triager = triager
+    app.state.investigator = investigator
+    app.state.postmortems = writer
     app.state.send_digest = send_digest
     return app

@@ -64,6 +64,15 @@ class HttpSearchClient:
         hits = response.json().get("hits", [])
         return [hit for hit in hits if isinstance(hit, dict)]
 
+    def query_range(self, promql: str, start: int, end: int, step: int) -> Any:
+        """A PromQL range query (`GET /api/{org}/prometheus/api/v1/query_range`), in seconds."""
+        response = self._http.get(
+            f"/api/{self._org}/prometheus/api/v1/query_range",
+            params={"query": promql, "start": start, "end": end, "step": step},
+        )
+        response.raise_for_status()
+        return response.json().get("data")
+
     def close(self) -> None:
         self._http.close()
 
