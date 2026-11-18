@@ -57,6 +57,8 @@ class ExecutorSettings:
     signing_key: str | None
     ntfy_token: str | None
     kill_switch: bool
+    coolify_token: str | None = None
+    github_token: str | None = None
 
 
 def _secret(env: Mapping[str, str], name: str) -> str:
@@ -172,7 +174,18 @@ def load_executor(env: Mapping[str, str]) -> ExecutorSettings:
         raise ConfigError("PAEON_SIGNING_KEY must differ from PAEON_EXECUTOR_TOKEN")
     ntfy = rules.actions.ntfy
     ntfy_token = _secret(env, ntfy.token_env) if ntfy is not None and ntfy.token_env else ""
+    coolify = rules.actions.coolify
+    coolify_token = "" if coolify is None else _secret(env, coolify.token_env)
+    if coolify is not None and not coolify_token:
+        raise ConfigError(f"actions.coolify: {coolify.token_env} (or _FILE) is not set")
+    repository = rules.actions.repository
+    github = None if repository is None else repository.github
+    github_token = "" if github is None else _secret(env, github.token_env)
+    if github is not None and not github_token:
+        raise ConfigError(f"actions.repository.github: {github.token_env} (or _FILE) is not set")
     return ExecutorSettings(
+        coolify_token=coolify_token or None,
+        github_token=github_token or None,
         db_path=Path(env.get("PAEON_EXECUTOR_DB", "").strip() or "executor.sqlite"),
         host=env.get("PAEON_EXECUTOR_HOST", "").strip() or "127.0.0.1",
         port=int(_number(env, "PAEON_EXECUTOR_PORT", 8081, minimum=1)),

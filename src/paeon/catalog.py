@@ -26,9 +26,11 @@ class ActionType:
     name: str
     tier: int
     summary: str
-    verb: str  # the Docker API verb: POST /containers/{id}/<verb>
+    verb: str = ""  # Docker backend: POST /containers/{id}/<verb>
     inverse: str | None = None  # the action that undoes it, where there is one
     proposable: bool = True  # False: exists only as the inverse of another action
+    backend: str = "docker"  # docker, coolify or repository: what the executor acts through
+    target: str = "a container"  # what a step's target names, for prompts and pages
 
 
 ACTIONS: dict[str, ActionType] = {
@@ -43,8 +45,28 @@ ACTIONS: dict[str, ActionType] = {
         ),
         ActionType("stop_container", 1, "Stop a container", "stop", proposable=False),
         ActionType("pause_container", 1, "Pause a container", "pause", proposable=False),
+        # A compose update can leave a container on its network without its service alias:
+        # the others then cannot resolve it. Reconnecting it with the alias puts that right.
+        ActionType("reattach_network_alias", 1, "Reattach the network alias of a container"),
+        ActionType(
+            "coolify_restart",
+            1,
+            "Restart a Coolify resource, same version",
+            backend="coolify",
+            target="a Coolify resource you named",
+        ),
+        # Tier 2: it changes configuration, so it is never applied. It becomes a pull request
+        # on the deployment repository, and merging it is the approval.
+        ActionType(
+            "config_change",
+            2,
+            "Change one value of a configuration file, as a pull request",
+            backend="repository",
+            target="a configuration file you named",
+        ),
     )
 }
+PARAMS: dict[str, tuple[str, ...]] = {"config_change": ("key", "value")}
 
 
 class Step(BaseModel):
@@ -52,10 +74,23 @@ class Step(BaseModel):
 
     action: str = Field(min_length=1, max_length=64)
     target: str = Field(pattern=TARGET_PATTERN)
+    params: dict[str, str] = Field(
+        default_factory=dict,
+        max_length=4,
+        description="What the action needs beyond its target: `key` and `value` of a change.",
+    )
 
     @property
     def label(self) -> str:
+        if self.params:
+            detail = " = ".join(self.params.get(name, "?") for name in PARAMS.get(self.action, ()))
+            return f"{self.action}({self.target}: {detail})"
         return f"{self.action}({self.target})"
+
+    @property
+    def tier(self) -> int:
+        kind = ACTIONS.get(self.action)
+        return 99 if kind is None else kind.tier
 
 
 class Proposal(BaseModel):
@@ -76,12 +111,19 @@ class Proposal(BaseModel):
     steps: tuple[Step, ...] = Field(min_length=1, max_length=10)
 
     @property
+    def changes(self) -> bool:
+        """Whether this is a configuration change (a pull request) rather than actions."""
+        return any(step.tier >= 2 for step in self.steps)
+
+    @property
     def hash(self) -> str:
         """What an approval is bound to: the incident, the steps in order, and how they run."""
         body = {
             "incident": self.incident_id,
             "mode": self.mode,
-            "steps": [[step.action, step.target] for step in self.steps],
+            "steps": [
+                [step.action, step.target, *sorted(step.params.items())] for step in self.steps
+            ],
         }
         text = json.dumps(body, separators=(",", ":"), sort_keys=True)
         return hashlib.sha256(text.encode()).hexdigest()

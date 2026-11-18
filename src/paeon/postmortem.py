@@ -139,6 +139,10 @@ _TIMELINE: dict[str, Callable[[dict[str, Any]], str]] = {
     "action.rolled_back": lambda p: f"Rolled back: {p.get('step')}",
     "action.undone": lambda p: f"Undone on request: {p.get('step')}",
     "plan.completed": lambda p: f"Plan {p.get('outcome')}",
+    "change.proposed": lambda p: (
+        f"Change proposed as a pull request: {', '.join(p.get('steps') or [])}"
+    ),
+    "change.failed": lambda p: f"Change not proposed: {p.get('reason')}",
     "autonomy.demoted": lambda p: f"Autonomy demoted to approve: {p.get('reason')}",
 }
 

@@ -45,6 +45,12 @@ def _timezone(value: str) -> str:
     return value
 
 
+def _inside(value: str) -> str:
+    if ".." in value.split("/") or "//" in value:
+        raise ValueError("the path must stay inside the repository")
+    return value
+
+
 Regex = Annotated[str, AfterValidator(_regex)]
 Timezone = Annotated[str, AfterValidator(_timezone)]
 
@@ -390,6 +396,69 @@ class CatalogEntry(_Rule):
         return any(fnmatch.fnmatchcase(target, pattern) for pattern in self.targets)
 
 
+class CoolifyResource(_Rule):
+    uuid: str = Field(pattern=r"^[A-Za-z0-9]{6,64}$")
+    kind: Literal["application", "service"] = "application"
+
+
+class Coolify(_Rule):
+    """Executor only: the Coolify resources `coolify_restart` may restart, by a name of yours."""
+
+    url: str = Field(pattern=r"^https?://[^\s]+$", description="For example http://coolify:8000.")
+    token_env: str = Field(min_length=1, description="An API token that can deploy.")
+    resources: dict[str, CoolifyResource] = Field(default_factory=dict)
+
+
+class RepoFile(_Rule):
+    """One file of the deployment repository in which `config_change` may change values."""
+
+    path: Annotated[str, AfterValidator(_inside)] = Field(
+        pattern=r"^[A-Za-z0-9_][A-Za-z0-9_./-]{0,199}\.ya?ml$",
+        description="Relative to the repository. YAML only.",
+    )
+    keys: tuple[str, ...] = Field(
+        min_length=1,
+        description="Dotted key patterns (fnmatch) that may be changed, for example"
+        " services.*.mem_limit. The key must already exist and hold a single value.",
+    )
+    values: Regex = Field(
+        default=r"[A-Za-z0-9][A-Za-z0-9_.:/@+=-]{0,99}",
+        description="What a new value must look like, full match.",
+    )
+
+    def allows(self, key: str, value: str) -> bool:
+        return (
+            any(fnmatch.fnmatchcase(key, pattern) for pattern in self.keys)
+            and re.fullmatch(self.values, value) is not None
+        )
+
+
+class GitHub(_Rule):
+    repo: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", description="owner/name.")
+    token_env: str = Field(
+        min_length=1, description="A token that can open pull requests on that repository only."
+    )
+    api_url: str = Field(default="https://api.github.com", pattern=r"^https://[^\s]+$")
+
+
+class Repository(_Rule):
+    """Executor only: a clone of the deployment repository that belongs to Paeon.
+
+    Paeon checks out branches in it and never merges anything: a change is a branch pushed
+    with the key you name and, with `github`, a pull request. Merging it is your approval.
+    """
+
+    path: str = Field(min_length=1, description="A working copy nothing else uses.")
+    remote: str = Field(default="origin", pattern=r"^[A-Za-z0-9_.-]+$")
+    base: str = Field(default="main", pattern=r"^[A-Za-z0-9_./-]+$")
+    files: dict[str, RepoFile] = Field(default_factory=dict)
+    github: GitHub | None = None
+    identity_file: str | None = None
+    known_hosts_file: str | None = None
+    author_name: str = Field(default="Paeon", min_length=1, max_length=100)
+    author_email: str = Field(default="paeon@localhost", min_length=3, max_length=200)
+
+
 class Policy(_Rule):
     """The autonomy level of one (alert class, action, target). The first match wins."""
 
@@ -468,6 +537,33 @@ class Actions(_Rule):
     policies: tuple[Policy, ...] = ()
     autonomy: Autonomy = Field(default_factory=Autonomy)
     runbooks: tuple[Runbook, ...] = ()
+    coolify: Coolify | None = None
+    repository: Repository | None = None
+
+    def refusal(self, action: str, target: str, params: dict[str, str]) -> str | None:
+        """Why this catalog does not allow a step, or None. The one check both processes run:
+        the core before it accepts a model's plan, the executor before it considers one."""
+        from paeon.catalog import ACTIONS, PARAMS
+
+        kind = ACTIONS.get(action)
+        entry = self.catalog.get(action)
+        if kind is None or not kind.proposable or entry is None:
+            return f"{action} is not in the catalog"
+        if not entry.allows(target):
+            return f"{action} is not allowed on {target}"
+        if set(params) != set(PARAMS.get(action, ())):
+            return f"{action} takes {list(PARAMS.get(action, ())) or 'no parameter'}"
+        if kind.backend == "coolify" and (
+            self.coolify is None or target not in self.coolify.resources
+        ):
+            return f"{target} is not a Coolify resource of the rules file"
+        if kind.backend == "repository":
+            file = None if self.repository is None else self.repository.files.get(target)
+            if file is None:
+                return f"{target} is not a file of actions.repository"
+            if not file.allows(params["key"], params["value"]):
+                return f"{params['key']} = {params['value']} is not a change {target} allows"
+        return None
 
     def level_for(self, alert: str, action: str, target: str) -> Level:
         for policy in self.policies:
@@ -514,6 +610,10 @@ class Rules(_Rule):
                     raise ValueError(
                         f"runbook {book.name!r}: {step.action} on {step.target} is not"
                         " allowed by actions.catalog"
+                    )
+                if ACTIONS[step.action].tier != 1:
+                    raise ValueError(
+                        f"runbook {book.name!r}: {step.action} is not something a runbook runs"
                     )
         fallback = self.investigation.fallback_model
         if self.investigation.enabled and fallback is not None and fallback not in self.models:

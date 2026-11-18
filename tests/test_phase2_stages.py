@@ -122,12 +122,12 @@ def test_a_typed_step_must_be_in_the_catalog_before_anyone_sees_it(store: Store)
     setup.investigator.run_pending(LATER)
 
     system, _, tools = model.seen[0]
-    assert "restart_container: restart a container; containers: worker, vpn, media-*" in system
+    assert "restart_container: restart a container; allowed on: worker, vpn, media-*" in system
     assert "never: media-db" in system
     assert tools[-1] == SUBMIT
     refusals = [turn.results[0].content for _, turns, _ in model.seen[1:] for turn in turns[-1:]]  # type: ignore[union-attr]
-    assert "restart_container is not allowed on 'media-db'" in refusals[0]
-    assert "catalog_action must be one of" in refusals[1]
+    assert "restart_container is not allowed on media-db" in refusals[0]
+    assert "delete_volume is not in the catalog" in refusals[1]
     assert "catalog_action must be one of" in refusals[2]
     ((incident_id, findings),) = handed
     assert incident_id == 1
@@ -146,7 +146,7 @@ def test_with_actions_off_a_typed_step_is_only_its_sentence(store: Store) -> Non
     assert plan[0]["target"] is None
     assert "catalog" not in model.seen[0][0].lower()
     assert "catalog_action" not in json.dumps(Investigator.__init__.__defaults__, default=str)
-    assert catalog_prompt({}).strip().endswith("addresses the cause.")
+    assert catalog_prompt(acting_rules().actions).count("\n- ") == 3
 
 
 def test_the_analysis_carries_buttons_and_survives_their_failure(store: Store) -> None:

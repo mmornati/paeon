@@ -152,25 +152,32 @@ class Remediator:
         return tuple(dict.fromkeys(alert.title for alert in incident.alerts)) or (incident.title,)
 
     def on_findings(self, incident: Incident, findings: Findings) -> None:
-        """Hand the typed steps of an analysis to the executor. The rest stays advice."""
-        steps = tuple(
-            Step(action=step.catalog_action, target=step.target)
+        """Hand the typed steps of an analysis to the executor. The rest stays advice.
+
+        Configuration changes go first and on their own: they become a pull request, while
+        the actions wait for a Go. The plan of actions is then the incident's latest plan.
+        """
+        steps = [
+            Step(action=step.catalog_action, target=step.target, params=step.params)
             for step in findings.plan
             if step.catalog_action is not None and step.target is not None
-        )
-        if not steps:
-            return
-        self._propose(
-            Proposal(
-                incident_id=incident.id,
-                title=incident.title[:300],
-                origin="investigation",
-                alerts=self._alerts(incident)[:50],
-                confidence=findings.root_cause.confidence,
-                summary=findings.summary[:1500],
-                steps=steps[:10],
-            )
-        )
+        ]
+        for group in (
+            [step for step in steps if step.tier >= 2],
+            [step for step in steps if step.tier < 2],
+        ):
+            if group:
+                self._propose(
+                    Proposal(
+                        incident_id=incident.id,
+                        title=incident.title[:300],
+                        origin="investigation",
+                        alerts=self._alerts(incident)[:50],
+                        confidence=findings.root_cause.confidence,
+                        summary=findings.summary[:1500],
+                        steps=tuple(group[:10]),
+                    )
+                )
 
     def _propose(self, proposal: Proposal) -> dict[str, Any] | None:
         try:
