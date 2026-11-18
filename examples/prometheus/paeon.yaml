@@ -1,0 +1,36 @@
+# The quick start's rules: investigation on, with tools that can only read this compose project.
+models:
+  investigate:
+    backend: anthropic
+    model: claude-opus-5-5
+    api_key_env: ANTHROPIC_API_KEY
+    max_tokens: 16000
+    timeout_seconds: 300
+    # Set the prices of your contract so that the budgets below mean something.
+    price: { input_per_mtok: 0, output_per_mtok: 0 }
+  # A local or other OpenAI-compatible server works the same way, if its model can call tools:
+  # investigate:
+  #   backend: openai
+  #   base_url: http://host.docker.internal:11434/v1
+  #   model: your-model
+
+investigation:
+  enabled: true
+  model: investigate
+  settle_seconds: 20
+  max_tool_calls: 15
+  max_per_hour: 4
+  tools:
+    docker:
+      url: http://dockerproxy:2375
+      logs: ["*demo-app*"]          # the only container whose logs the model may read
+    knowledge:
+      paths: [/knowledge/runbooks]
+
+postmortems:
+  enabled: true
+  model: investigate
+  dir: /data/postmortems
+
+ui:
+  enabled: true

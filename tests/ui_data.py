@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import sys
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from paeon.schema import Incident, IncidentStatus, Severity, StageState, Status
@@ -390,5 +391,250 @@ def populate(store: Store, now: datetime | None = None) -> dict[str, int]:
     return ids
 
 
+POSTMORTEM = """\
+---
+id: 2026-11-17-worker-stalled
+incident: {incident}
+status: draft
+severity: warning
+detected_at: '2026-11-17T22:41:00+00:00'
+autonomy: auto
+---
+
+# The job worker stopped taking jobs for nine minutes
+
+> Draft written by Paeon from its event log. Review before relying on it.
+
+## Summary
+
+The worker stalled on a dead VPN route. The runbook restarted it and it recovered.
+
+## Action items
+
+- [ ] (prevent) Add a liveness probe that checks the route.
+- [x] (detect) Alert on the queue length.
+"""
+
+
+def populate_actions(store: Store, ids: dict[str, int], directory: Path | None = None) -> None:
+    """The same evening once Paeon may act: a plan waiting for Go, a runbook that fixed a
+    stall by itself, one that failed and was demoted, and a record long enough to earn `auto`.
+    Written as the core mirrors them from the executor."""
+    end = datetime.now(UTC)
+
+    def add(kind: str, payload: dict[str, Any], minutes: float, incident_id: int | None) -> None:
+        store.append(
+            kind,
+            payload,
+            source="executor",
+            incident_id=incident_id,
+            now=end - timedelta(minutes=minutes),
+        )
+
+    restart_media = "restart_container(media-server)"
+    media_tuple = ["slo_traefik_5xx", "restart_container", "media-server"]
+    for days in (40, 31, 22, 15, 6):  # five approved, verified restarts in the last weeks
+        add(
+            "plan.completed",
+            {"outcome": "verified", "level": "approve", "tuples": [media_tuple]},
+            days * 24 * 60,
+            None,
+        )
+    media = ids["media"]
+    add(
+        "plan.proposed",
+        {
+            "proposal": 11,
+            "origin": "investigation",
+            "runbook": None,
+            "level": "approve",
+            "held_back_by": [],
+            "steps": [restart_media],
+            "tuples": [media_tuple],
+            "confidence": 0.78,
+        },
+        60.1,
+        media,
+    )
+    expires = (end + timedelta(minutes=14)).isoformat()
+    add("approval.requested", {"proposal": 11, "expires_at": expires}, 60.0, media)
+    add(
+        "notification.sent",
+        {"channel": "ntfy", "about": "approval", "topic": "incidents"},
+        60,
+        media,
+    )
+
+    def incident(name: str, title: str, minutes: float) -> int:
+        number = store.open_incident(
+            title=title,
+            severity=Severity.WARNING,
+            host="server-1",
+            opened_at=end - timedelta(minutes=minutes),
+            maintenance=None,
+            triage=StageState.SKIPPED,
+            investigation=StageState.SKIPPED,
+        )
+        ids[name] = number
+        store.attach_alert(
+            number, source="uptime-kuma", fingerprint=name, title=title, status=Status.RESOLVED
+        )
+        store.append(
+            "incident.opened",
+            {"title": title, "severity": "warning", "host": "server-1"},
+            incident_id=number,
+            now=end - timedelta(minutes=minutes),
+        )
+        for stage in ("triage", "investigation"):
+            store.append(
+                f"{stage}.skipped",
+                {"skip": "runbook"},
+                incident_id=number,
+                now=end - timedelta(minutes=minutes),
+            )
+        return number
+
+    def close(number: int, minutes: float) -> None:
+        found = store.incident(number)
+        assert isinstance(found, Incident)
+        when = end - timedelta(minutes=minutes)
+        store.save_incident(
+            found.model_copy(
+                update={
+                    "status": IncidentStatus.RESOLVED,
+                    "resolved_at": when,
+                    "last_activity_at": when,
+                }
+            )
+        )
+
+    # A runbook that worked without asking.
+    worker = incident("worker", "worker_stalled", 1400)
+    worker_tuple = ["worker_stalled", "restart_container", "worker"]
+    steps = ["restart_container(worker)", "restart_container(vpn)"]
+    add("runbook.matched", {"runbook": "worker-stalled", "steps": steps}, 1400, worker)
+    add(
+        "plan.proposed",
+        {
+            "proposal": 9,
+            "origin": "runbook",
+            "runbook": "worker-stalled",
+            "level": "auto",
+            "held_back_by": [],
+            "steps": steps,
+            "tuples": [worker_tuple],
+        },
+        1399,
+        worker,
+    )
+    add("action.started", {"proposal": 9, "step": steps[0]}, 1399, worker)
+    add("action.verified", {"proposal": 9, "step": steps[0]}, 1398, worker)
+    add(
+        "plan.completed",
+        {
+            "proposal": 9,
+            "outcome": "verified",
+            "level": "auto",
+            "origin": "runbook",
+            "steps": steps[:1],
+            "tuples": [worker_tuple],
+        },
+        1398,
+        worker,
+    )
+    add(
+        "notification.sent",
+        {"channel": "ntfy", "about": "result", "topic": "incidents"},
+        1398,
+        worker,
+    )
+    close(worker, 1391)
+    store.set_stage(worker, "postmortem", StageState.DONE)
+    store.append(
+        "postmortem.drafted",
+        {"path": "2026-11-17-worker-stalled.md", "narrative": True},
+        incident_id=worker,
+        now=end - timedelta(minutes=1300),
+    )
+
+    # One that did not work, and lost its `auto`.
+    queue = incident("queue", "queue_backlog", 2900)
+    queue_tuple = ["queue_backlog", "restart_container", "queue"]
+    add(
+        "plan.proposed",
+        {
+            "proposal": 6,
+            "origin": "runbook",
+            "runbook": "queue-backlog",
+            "level": "auto",
+            "held_back_by": [],
+            "steps": ["restart_container(queue)"],
+            "tuples": [queue_tuple],
+        },
+        2899,
+        queue,
+    )
+    add(
+        "action.failed",
+        {
+            "proposal": 6,
+            "step": "restart_container(queue)",
+            "reason": "its health check says unhealthy",
+        },
+        2897,
+        queue,
+    )
+    add(
+        "plan.completed",
+        {
+            "proposal": 6,
+            "outcome": "failed",
+            "level": "auto",
+            "origin": "runbook",
+            "steps": ["restart_container(queue)"],
+            "tuples": [queue_tuple],
+            "reason": "its health check says unhealthy",
+        },
+        2897,
+        queue,
+    )
+    demoted = {"alert": "queue_backlog", "action": "restart_container", "target": "queue"}
+    add("autonomy.demoted", {**demoted, "reason": "a verification failed"}, 2897, queue)
+    close(queue, 2700)
+
+    if directory is not None:
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "2026-11-17-worker-stalled.md").write_text(POSTMORTEM.format(incident=worker))
+
+
+ACTING_RULES: dict[str, Any] = {
+    "actions": {
+        "enabled": True,
+        "catalog": {
+            "restart_container": {
+                "targets": ["worker", "vpn", "queue", "media-*"],
+                "deny": ["media-db"],
+            }
+        },
+        "policies": [
+            {"alert": "worker_stalled", "action": "restart_container", "level": "auto"},
+            {"alert": "queue_backlog", "action": "restart_container", "level": "auto"},
+            {"alert": "slo_.*", "level": "approve"},
+        ],
+        "runbooks": [
+            {
+                "name": "worker-stalled",
+                "match": {"title": "worker_stalled"},
+                "steps": [
+                    {"action": "restart_container", "target": "worker"},
+                    {"action": "restart_container", "target": "vpn"},
+                ],
+            }
+        ],
+    }
+}
+
+
 if __name__ == "__main__":  # pragma: no cover
-    populate(Store(sys.argv[1]))
+    demo = Store(sys.argv[1])
+    populate_actions(demo, populate(demo), Path(sys.argv[2]) if len(sys.argv) > 2 else None)

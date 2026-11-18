@@ -1,6 +1,8 @@
 """The console under `/ui`: the event log rendered for a person.
 
-Read-only, apart from one thing the API already accepts: saying whether triage was right.
+Read-only, apart from two things: saying whether triage was right, and stopping automation
+(the kill switch, which the console can engage and cannot release). It shows plans, approvals
+and what the executor did; it cannot approve anything: a Go is a signed link on your phone.
 
 It has no login. It is mounted only when `ui.enabled` is set, and it expects a reverse proxy
 that authenticates in front of it (Traefik with forward-auth, for example); `ui.require_header`
@@ -24,6 +26,7 @@ from fastapi.templating import Jinja2Templates
 from markupsafe import Markup
 
 from paeon import __version__
+from paeon import postmortem as postmortems
 from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
@@ -55,8 +58,15 @@ def _same_origin(request: Request) -> None:
 
 
 def mount_ui(
-    app: FastAPI, store: Store, rules: Rules, *, now: Callable[[], datetime] | None = None
+    app: FastAPI,
+    store: Store,
+    rules: Rules,
+    *,
+    now: Callable[[], datetime] | None = None,
+    stop: Callable[[], None] | None = None,
 ) -> None:
+    acting = rules.actions.enabled
+    keeps = rules.postmortems.enabled
     clock = now or (lambda: datetime.now(UTC))
     zone = ZoneInfo(rules.digest.timezone)
     templates = Jinja2Templates(directory=_HERE / "templates")
@@ -94,6 +104,8 @@ def mount_ui(
         "zone": rules.digest.timezone,
         "stages": views.stages(rules),
         "filters": views.FILTERS,
+        "acting": acting,
+        "keeps_postmortems": rules.postmortems.enabled,
     }
 
     def proxied(request: Request) -> None:
@@ -108,19 +120,20 @@ def mount_ui(
 
     @router.get("", response_class=HTMLResponse)
     def board(request: Request) -> Response:
-        return page(request, "board.html", bays=views.board(store, clock()), here="board")
+        bays = views.board(store, clock(), acting=acting)
+        return page(request, "board.html", bays=bays, here="board")
 
     @router.get("/board", response_class=HTMLResponse)
     def board_fragment(request: Request) -> Response:
         """The bays alone, for the live refresh."""
-        return page(request, "_bays.html", bays=views.board(store, clock()))
+        return page(request, "_bays.html", bays=views.board(store, clock(), acting=acting))
 
     @router.get("/incidents/{incident_id}", response_class=HTMLResponse)
     def incident(request: Request, incident_id: int) -> Response:
         found = store.incident(incident_id)
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
-        view = views.incident_view(store, found, clock())
+        view = views.incident_view(store, found, clock(), acting=acting)
         return page(request, "incident.html", view=view, here="board")
 
     @router.post("/incidents/{incident_id}/feedback", dependencies=[Depends(_same_origin)])
@@ -169,6 +182,54 @@ def mount_ui(
     def ledger(request: Request) -> Response:
         view = views.ledger_view(store, rules, clock())
         return page(request, "ledger.html", ledger=view, here="ledger")
+
+    @router.get("/actions", response_class=HTMLResponse)
+    def actions(request: Request, stopped: Annotated[str | None, Query()] = None) -> Response:
+        view = views.actions_view(store, rules, clock())
+        return page(
+            request,
+            "actions.html",
+            view=view,
+            catalog=rules.actions.catalog,
+            policies=rules.actions.policies,
+            default_level=rules.actions.default_level,
+            runbooks=rules.actions.runbooks,
+            can_stop=stop is not None,
+            stopped=stopped,
+            here="actions",
+        )
+
+    @router.post("/actions/stop", dependencies=[Depends(_same_origin)])
+    def stop_automation() -> Response:
+        """Engage the kill switch. There is no way back from here: that takes the owner."""
+        if stop is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND)
+        try:
+            stop()
+        except Exception:
+            outcome = "failed"
+        else:
+            outcome = "yes"
+        return RedirectResponse(
+            f"/ui/actions?stopped={outcome}", status.HTTP_303_SEE_OTHER, headers=HEADERS
+        )
+
+    @router.get("/autonomy", response_class=HTMLResponse)
+    def autonomy_page(request: Request) -> Response:
+        view = views.autonomy_view(store, rules, clock())
+        return page(request, "autonomy.html", view=view, here="autonomy")
+
+    @router.get("/postmortems", response_class=HTMLResponse)
+    def postmortem_list(request: Request) -> Response:
+        drafts = views.postmortems_view(rules)
+        return page(request, "postmortems.html", drafts=drafts, here="postmortems")
+
+    @router.get("/postmortems/{name}", response_class=HTMLResponse)
+    def postmortem(request: Request, name: str) -> Response:
+        found = postmortems.read_draft(rules.postmortems.dir, name) if keeps else None
+        if found is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND)
+        return page(request, "postmortem.html", draft=found[0], text=found[1], here="postmortems")
 
     @app.get("/", include_in_schema=False, dependencies=[Depends(proxied)])
     def home() -> Response:

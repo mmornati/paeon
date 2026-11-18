@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Autonomy{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Autonomy</h1>
+  <p class="live">Per alert, action and container: the level in force and the record behind it. Paeon proposes a promotion; you make it.</p>
+</div>
+
+<section class="block" aria-labelledby="h-earned">
+  <h2 id="h-earned">Earned</h2>
+  {% if view.earned %}
+  <p class="lead">{{ view.earned|length }} action{{ "" if view.earned|length == 1 else "s" }} ran {{ view.promote_after }} times or more in a row, approved and verified.</p>
+  <p class="facts">To let one run without asking, add its line at the top of <code>actions.policies</code> and deploy the rules file.</p>
+  {% for r in view.earned -%}
+  <pre class="payload-open" tabindex="0">{{ r.proposal }}</pre>
+  {% endfor -%}
+  {% else %}
+  <p class="note">Nothing yet. An action earns a proposal after {{ view.promote_after }} approved and verified runs in a row within {{ view.window_days }} days, with no failure, no Undo and no “This was wrong”.</p>
+  {% endif %}
+</section>
+
+<section class="block" aria-labelledby="h-matrix">
+  <h2 id="h-matrix">Track record</h2>
+  {% if view.records %}
+  <table class="table">
+    <thead><tr><th>Action</th><th class="wide">Alert</th><th>Level</th><th class="num wide">Verified</th><th class="num wide">Failed</th><th class="num wide">Undone</th><th class="num wide">Wrong</th><th class="num">In a row</th></tr></thead>
+    <tbody>
+      {% for r in view.records -%}
+      <tr><td class="subject">{{ r.action }}<wbr>({{ r.target }})</td><td class="wide keep">{{ r.alert }}</td><td>{{ r.effective }}{% if r.demoted is not none %} <span class="outcome outcome-failed">demoted</span>{% endif %}</td><td class="num wide">{{ r.verified }} of {{ r.runs }}</td><td class="num wide">{{ r.failed }}</td><td class="num wide">{{ r.undone }}</td><td class="num wide">{{ r.wrong }}</td><td class="num">{{ r.streak }}</td></tr>
+      <tr class="narrow"><td colspan="8">on {{ r.alert }}: {{ r.verified }} of {{ r.runs }} verified, {{ r.failed }} failed, {{ r.undone }} undone, {{ r.wrong }} wrong</td></tr>
+      {% if r.demoted is not none -%}
+      <tr><td colspan="8" class="demotion">Policy says {{ r.policy }}; held at approve because {{ r.demoted or "of a bad sign" }}. Lift it with <code>paeon reinstate</code> next to the executor.</td></tr>
+      {%- endif %}
+      {% endfor -%}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="note">No action has run yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

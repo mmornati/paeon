@@ -86,6 +86,9 @@ digest:
 investigation:
   enabled: false
   model: investigate
+  # Tried once, from the start, when the first model fails or declines. Any alias of `models`
+  # that can call tools.
+  # fallback_model: investigate-fallback
   verdicts: [real, known_issue]   # triage verdicts that are investigated; without triage, all
   settle_seconds: 60
   max_tool_calls: 25
@@ -108,6 +111,24 @@ investigation:
       mount_sources: [/srv]                 # other mount sources are not shown
     knowledge:
       paths: [/knowledge/runbooks]          # markdown; the postmortems directory is added
+    # The state of every monitor right now, from uptime-kuma's /metrics (Settings, API keys).
+    # Their history comes from Paeon's own record of the webhook and needs nothing.
+    # uptime_kuma:
+    #   url: http://uptime-kuma:3001
+    #   api_key_env: PAEON_UPTIME_KUMA_API_KEY
+    # The history of working copies mounted read-only: subjects and file names, no authors.
+    # git:
+    #   repos: { deployment: /repos/deployment }
+    # Other hosts, through commands you write here. The model picks a host and a name; it
+    # cannot write a command or an argument. Pair it with a forced command in the far side's
+    # authorized_keys, and a key that can do nothing else.
+    # ssh:
+    #   identity_file: /run/secrets/paeon_ssh_key
+    #   known_hosts_file: /config/known_hosts
+    #   hosts:
+    #     nas:
+    #       target: paeon@nas.example.org
+    #       commands: { disk: "df -h", raid: "cat /proc/mdstat" }
   # Where the analysis is sent. Without it the analysis is only in the event log.
   # ntfy:
   #   url: https://ntfy.example.org
@@ -120,6 +141,12 @@ postmortems:
   dir: /data/postmortems
   model: postmortem
   daily_budget: 2.0
+  # Commit each draft in the git working copy that holds `dir`, and push it. The deploy key
+  # should be able to write to that one repository and nothing else.
+  # git:
+  #   push: true
+  #   identity_file: /run/secrets/paeon_postmortems_key
+  #   known_hosts_file: /config/known_hosts
 
 # The console under /ui. No login of its own: enable it only behind a reverse proxy that
 # authenticates, and do not publish Paeon's port.
@@ -127,3 +154,62 @@ ui:
   enabled: false
   # A header the proxy sets after authentication. A request without it is refused.
   # require_header: X-authentik-username
+  # Where you reach it. Notifications then open the incident's page.
+  # public_url: https://paeon.example.org
+
+# Stages 3 and 4: acting. Off by default, and nothing here can make a model act: a plan is a
+# list of the actions below, checked by the executor (`paeon executor`, a second process with
+# its own credentials) against ITS copy of this file. Mount the file read-only there, from git.
+actions:
+  enabled: false
+  executor_url: http://paeon-executor:8081   # how the core reaches the executor
+  # Where your phone reaches the executor's /act path: the only path of Paeon that must be
+  # reachable without single sign-on. Without it there are no buttons, and no plan goes
+  # above `suggest`.
+  # public_url: https://paeon-act.example.org
+  # Executor only: a Docker socket proxy that allows start, stop and restart. Not the one
+  # the investigator reads through.
+  docker_url: http://dockerproxy-act:2375
+  # One lock file per container. Point your own repair scripts at the same files
+  # (flock /locks/<container>.lock ...) and two automations never restart the same thing.
+  lock_dir: /locks
+  approval_minutes: 30          # no answer in time: nothing runs, one reminder
+  max_per_hour: 6               # plans executed per hour; beyond it, suggestions only
+  default_level: suggest        # what applies when no policy matches
+  # The topic approvals are sent to. Give it a token of its own, and read access to you only:
+  # a one-tap approval is as strong as this channel.
+  # ntfy:
+  #   url: https://ntfy.example.org
+  #   topic: incidents
+  #   token_env: PAEON_ACTIONS_NTFY_TOKEN
+
+  # The closed set of actions, each switched on for the containers you name. Three exist:
+  # restart_container, start_container, unpause_container. Nothing else can be added here.
+  catalog:
+    restart_container:
+      targets: ["media-*", worker]
+      deny: [media-db]                      # refused even though media-* matches
+      verify:
+        wait_seconds: 15                    # then: running, healthy, and the URL answers
+        timeout_seconds: 120
+        # http: http://worker:8080/healthz
+
+  # Autonomy per (alert, action, container). The first match wins.
+  #   observe: record what would have been done      suggest: say it, no button
+  #   approve: wait for Go on your phone             auto: run, verify, then tell you
+  policies:
+    - { alert: "worker_stalled", action: restart_container, target: worker, level: approve }
+    - { alert: "slo_.*", level: suggest }
+
+  autonomy:
+    promote_after: 5        # approved, verified runs in a row before `auto` is proposed
+    window_days: 90
+    min_confidence: 0.8     # under it, a plan from an analysis always asks
+
+  # A known signature and its fix. A hit skips both models; the steps escalate: the first one
+  # that fixes it ends the plan. If none does, the incident goes to the investigator.
+  runbooks:
+    - name: worker-stalled
+      match: { source: uptime-kuma, title: "worker_stalled" }
+      steps:
+        - { action: restart_container, target: worker }

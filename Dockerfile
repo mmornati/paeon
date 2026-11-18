@@ -2,9 +2,12 @@
 # stage holds the interpreter and that virtualenv only.
 #
 # Runtime contract:
+#   - one image, two processes: `paeon serve` (the core, port 8080) and `paeon executor` (port 8081)
 #   - runs as the numeric, non-root user 10001:10001
 #   - works with `docker run --read-only`: the only writable place is /data (mount a volume there)
 #   - the API has only the bearer token on its ingest endpoints: keep it on an internal network
+#   - git and ssh are there for three optional features (git history as a tool, postmortem
+#     commits, read-only commands on other hosts); nothing runs them unless you configure it
 
 # Base images are pinned by digest; bump the tag and the digest together.
 ARG PYTHON_IMAGE=python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
@@ -38,6 +41,10 @@ LABEL org.opencontainers.image.title="paeon" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.revision="${REVISION}"
 
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends git openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --gid 10001 paeon \
     && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /nonexistent \
                --shell /usr/sbin/nologin paeon \
@@ -57,7 +64,7 @@ ENV PATH=/opt/venv/bin:$PATH \
 
 WORKDIR /data
 USER 10001:10001
-EXPOSE 8080
+EXPOSE 8080 8081
 
 # Standard library only (no curl in the image), no proxy. Follows PAEON_PORT.
 HEALTHCHECK --interval=60s --timeout=10s --start-period=20s --retries=3 \

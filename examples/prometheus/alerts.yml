@@ -1,0 +1,11 @@
+groups:
+  - name: quickstart
+    rules:
+      - alert: DemoAppDown
+        expr: up{job="demo-app"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: demo-app does not answer its scrape
+          description: Prometheus could not scrape demo-app for 30 seconds.

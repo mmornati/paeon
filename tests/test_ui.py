@@ -387,4 +387,5 @@ def test_postmortem_cell_and_stage_names(store: Store, tmp_path: Path) -> None:
         ("Triage", "off"),
         ("Investigation", "off"),
         ("Postmortems", "off"),
+        ("Actions", "none"),
     )
