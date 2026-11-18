@@ -178,6 +178,10 @@ actions:
   # (flock /locks/<container>.lock ...) and two automations never restart the same thing.
   lock_dir: /locks
   approval_minutes: 30          # no answer in time: nothing runs, one reminder
+  # one_tap: the phone sends the link in the background; the answer is the next notification.
+  # page: the button opens a page that says what it does, asks to confirm, and shows the
+  # outcome. Two taps, and an answer that does not depend on a push reaching the phone.
+  buttons: one_tap
   max_per_hour: 6               # plans executed per hour; beyond it, suggestions only
   default_level: suggest        # what applies when no policy matches
   # The topic approvals are sent to. Give it a token of its own, and read access to you only:

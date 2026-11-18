@@ -563,6 +563,13 @@ class Actions(_Rule):
         default="locks", description="One lock file per container, shared with other repairers."
     )
     approval_minutes: float = Field(default=30, gt=0, le=24 * 60)
+    buttons: Literal["one_tap", "page"] = Field(
+        default="one_tap",
+        description="What a button in a notification does. `one_tap`: the phone sends the"
+        " link in the background, and the only answer is the next notification. `page`: it"
+        " opens the executor's page, which says what the link does, asks to confirm, and"
+        " then shows what happened. Two taps, and an answer that needs no notification.",
+    )
     settle_seconds: float = Field(
         default=30, ge=0, description="A runbook waits this long: the alert may clear by itself."
     )
@@ -577,6 +584,15 @@ class Actions(_Rule):
     runbooks: tuple[Runbook, ...] = ()
     coolify: Coolify | None = None
     repository: Repository | None = None
+
+    def button(self, label: str, url: str) -> dict[str, Any]:
+        """A notification button for a signed link, of the kind `buttons` names."""
+        if self.buttons == "page":
+            # A `view` action: the phone opens the link. That GET changes nothing, it shows
+            # the page, and the page's Confirm sends the POST.
+            return {"action": "view", "label": label, "url": url, "clear": True}
+        # An `http` action: the phone POSTs the link itself, without showing anything.
+        return {"action": "http", "label": label, "url": url, "method": "POST", "clear": True}
 
     def refusal(self, action: str, target: str, params: dict[str, str]) -> str | None:
         """Why this catalog does not allow a step, or None. The one check both processes run:

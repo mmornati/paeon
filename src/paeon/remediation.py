@@ -202,7 +202,7 @@ class Remediator:
         except ExecutorError:
             links = {}
         actions = tuple(
-            {"action": "http", "label": label, "url": links[vote], "method": "POST", "clear": True}
+            self._rules.actions.button(label, links[vote])
             for vote, label in (("up", right), ("down", wrong))
             if vote in links
         )

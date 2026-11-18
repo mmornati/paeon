@@ -553,8 +553,7 @@ class Executor:
         return f"{self._actions.public_url.rstrip('/')}/act/{token}"
 
     def _button(self, label: str, url: str) -> dict[str, Any]:
-        # An `http` action: the phone POSTs the link. Opening it (a GET) only shows a page.
-        return {"action": "http", "label": label, "url": url, "method": "POST", "clear": True}
+        return self._actions.button(label, url)
 
     def _details(self, incident_id: int | None) -> str | None:
         base = self._rules.ui.public_url
