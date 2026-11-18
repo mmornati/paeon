@@ -20,6 +20,10 @@ PROVIDER = "sk-" + "x9" * 12
         ('{"api_key": "abc123def456"}', "abc123def456"),
         ("https://push.example.org/hook?token=q1w2e3r4&x=1", "q1w2e3r4"),
         ("DB_PASSWORD: correct-horse", "correct-horse"),
+        ('password: "correct horse battery"', "horse battery"),
+        ("secret = 'two words' rejected", "words"),
+        ('{"api_key": "abc 123", "host": "db"}', "123"),
+        ('token="unterminated value here', "value here"),
         (f"jwt {JWT} rejected", JWT),
         (f"pushed with {GITHUB}", GITHUB),
         (f"key {PROVIDER} is over quota", PROVIDER),
@@ -35,6 +39,11 @@ def test_secret_shapes_are_masked(text: str, secret: str) -> None:
 def test_ordinary_alert_text_is_untouched() -> None:
     text = "connect ECONNREFUSED 10.0.0.5:8096 after 3 retries; token bucket empty"
     assert redact_text(text) == text
+
+
+def test_text_after_a_quoted_secret_is_kept() -> None:
+    cleaned = redact_text('{"password": "a b c", "host": "db-1"} on line 2')
+    assert cleaned == f'{{"password": {MASK}, "host": "db-1"}} on line 2'
 
 
 def test_long_text_is_cut() -> None:
