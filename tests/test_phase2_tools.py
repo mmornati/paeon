@@ -27,6 +27,7 @@ from paeon.tools import (
     openobserve_tools,
     paeon_tools,
     parse_monitors,
+    sql_streams,
     ssh_tools,
     uptime_kuma_tools,
 )
@@ -444,3 +445,37 @@ def test_the_knowledge_index_follows_the_files(tmp_path: Path) -> None:
         index.close()
     assert knowledge.sections("no heading\n") == [("", "no heading")]
     assert knowledge.sections("# A\n\n## B\n\ntext") == [("A", ""), ("B", "text")]
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        'SELECT * FROM "traefik", finance',  # a comma join
+        'SELECT * FROM "traefik" t, finance f',
+        'SELECT * FROM traefik AS t , "finance"',
+        'SELECT * FROM"finance"',  # no space before the name
+        'SELECT * FROM "traefik" -- JOIN x\nJOIN finance ON 1 = 1',
+        'SELECT * FROM "traefik" /* */ JOIN finance ON 1 = 1',
+        'SELECT 1 FROM "traefik"; SELECT * FROM finance',
+        'SELECT * FROM "my-stream"',  # a name this reader cannot hold
+        "SELECT * FROM `finance`",
+        "SELECT extract(hour FROM ts) FROM traefik",  # `ts` reads as a table: refused
+        "SELECT * FROM traefik WHERE msg = 'it''s",  # an unterminated string
+        "SELECT 1",
+    ],
+)
+def test_sql_that_cannot_be_accounted_for_is_never_rerun(sql: str) -> None:
+    streams = sql_streams(sql)
+    assert streams is None or not streams <= {"traefik"}  # unknown, or more than what is listed
+    hidden = {**V2, "query_condition": {"type": "sql", "sql": sql}}
+    toolbox, telemetry = alert_query(hidden, OpenObserveTools(streams=("traefik",)))
+    result, _ = toolbox.call("alert_query", {"alert": "x"})
+    assert "not_run" in result
+    assert telemetry.sql == []
+
+
+def test_sql_streams_reads_plain_queries() -> None:
+    assert sql_streams('SELECT count(*) FROM "traefik" WHERE s >= 500') == {"traefik"}
+    assert sql_streams("select a from traefik where m = 'from finance, x'") == {"traefik"}
+    assert sql_streams("SELECT * FROM a JOIN b ON a.x = b.x") == {"a", "b"}
+    assert sql_streams("SELECT * FROM (SELECT x FROM inner_one) AS t") == {"inner_one"}

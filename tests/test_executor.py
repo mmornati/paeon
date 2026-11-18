@@ -444,3 +444,16 @@ def test_a_restart_closes_what_it_interrupted_and_resumes_nothing(tmp_path: Path
     assert bench.sent[-1]["title"] == "Incident #1: fix failed"
     assert bench.last("autonomy.demoted")["target"] == "worker"
     assert bench.executor.recover() == 0
+
+
+def test_a_burst_hits_the_rate_limit_before_any_plan_has_finished(tmp_path: Path) -> None:
+    bench = Bench(tmp_path, policies=[{"level": "auto"}], max_per_hour=2)
+    bench.executor._spawn = lambda job: None  # plans are approved and have not run yet
+    levels = [
+        bench.executor.propose(proposal(incident=number), T0)["level"] for number in (1, 2, 3)
+    ]
+    assert levels == ["auto", "auto", "suggest"]
+    # And a second plan for an incident whose first is still queued does not run alone.
+    again = bench.executor.propose(proposal(("restart_container", "vpn"), incident=1), T0)
+    assert again["level"] == "suggest"
+    assert "plan.completed" not in bench.kinds()

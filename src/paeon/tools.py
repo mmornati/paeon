@@ -345,7 +345,36 @@ def metric_names(promql: str) -> set[str]:
     }
 
 
-_SQL_STREAM = re.compile(r"\b(?:from|join)\s+\"?([A-Za-z_][A-Za-z0-9_]*)\"?", re.IGNORECASE)
+_SQL_STRING = re.compile(r"'(?:[^']|'')*'")
+_SQL_KEYWORD = re.compile(r"\b(?:from|join)\b", re.IGNORECASE)
+_SQL_TABLE = re.compile(
+    r"\b(?:from|join)\s*(?:\"([A-Za-z_][A-Za-z0-9_]*)\"|([A-Za-z_][A-Za-z0-9_]*))", re.I
+)
+_SQL_SUBQUERY = re.compile(r"\b(?:from|join)\s*\(", re.IGNORECASE)
+_SQL_COMMA_JOIN = re.compile(
+    r"\b(?:from|join)\s*\"?[A-Za-z_][A-Za-z0-9_]*\"?(?:\s+(?:as\s+)?[A-Za-z_][A-Za-z0-9_]*)?\s*,",
+    re.IGNORECASE,
+)
+
+
+def sql_streams(sql: str) -> set[str] | None:
+    """Every stream a SQL query reads, or None when that cannot be told for certain.
+
+    Not a SQL parser, so it refuses what it cannot account for: a comment, a second statement,
+    a comma join, and any `from` or `join` that is followed by neither a plain table name nor a
+    sub-query (whose own tables are then found in turn). `extract(x from y)` is refused too:
+    a query that is not re-run costs a tool call, one that reads an unlisted stream leaks it.
+    """
+    text = _SQL_STRING.sub("''", sql)
+    if "'" in text.replace("''", "") or any(mark in text for mark in (";", "--", "/*", "`")):
+        return None
+    if _SQL_COMMA_JOIN.search(text):
+        return None
+    tables = [quoted or bare for quoted, bare in _SQL_TABLE.findall(text)]
+    accounted = len(tables) + len(_SQL_SUBQUERY.findall(text))
+    if not tables or accounted != len(_SQL_KEYWORD.findall(text)):
+        return None
+    return set(tables)
 
 
 def openobserve_tools(
@@ -389,12 +418,15 @@ def openobserve_tools(
                     definition.promql, int(start.timestamp()), int(now.timestamp()), step
                 )
         elif definition.kind == "sql" and definition.sql and definition.stream_type == "logs":
-            streams = set(_SQL_STREAM.findall(definition.sql)) | {definition.stream}
-            if not streams <= set(config.streams):
+            streams = sql_streams(definition.sql)
+            if streams is None:
                 answer["not_run"] = (
-                    f"the query reads {sorted(streams - set(config.streams))},"
-                    " which is not on the allow-list"
+                    "the streams this query reads cannot be told for certain;"
+                    " use search_logs on its stream"
                 )
+            elif not streams | {definition.stream} <= set(config.streams):
+                unlisted = sorted((streams | {definition.stream}) - set(config.streams))
+                answer["not_run"] = f"the query reads {unlisted}, which is not on the allow-list"
             else:
                 rows = client.search(definition.sql, to_micros(start), to_micros(now), 50)
                 answer["result"] = {"rows": rows[:50], "count": len(rows[:50])}

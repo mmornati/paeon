@@ -43,7 +43,8 @@ log = logging.getLogger(__name__)
 
 POLL_SECONDS = 5.0
 RESULT_LINK_HOURS = 24
-_TERMINAL = ("declined", "expired", "cancelled", "done", "failed", "undone", "recorded")
+# A plan in one of these states was allowed to run: it counts against the limits.
+_SPENT = ("approved", "running", "done", "failed", "undone")
 
 _PROPOSALS = """
 CREATE TABLE IF NOT EXISTS proposals (
@@ -458,15 +459,21 @@ class Executor:
 
         if self._docker is None:
             cap("suggest", "the executor has no Docker endpoint")
+        # Counted from the plans themselves, not from their completion: a burst of proposals
+        # must hit the limit before the first of them has finished running.
         hour_ago = now - timedelta(hours=1)
-        ran = sum(1 for _ in self._store.events(kind="plan.completed", recorded_since=hour_ago))
+        ran = sum(
+            1
+            for known in self._store.proposals()
+            if known.status in _SPENT and known.created_at >= hour_ago
+        )
         if ran >= actions.max_per_hour:
             cap("suggest", "too many plans ran in the last hour")
         if len(set(proposal.alerts)) > 1:
             cap("approve", "the incident has more than one alert class")
         if proposal.confidence < actions.autonomy.min_confidence:
             cap("approve", "the confidence is under the threshold")
-        if any(known.status in ("done", "failed", "undone", "running") for known in earlier):
+        if any(known.status in _SPENT for known in earlier):
             cap("approve", "a plan already ran for this incident")
         if level == "approve" and not self.can_ask():
             cap("suggest", "there is no approval channel (signing key, public_url, ntfy)")
