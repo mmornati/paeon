@@ -191,20 +191,26 @@ class Remediator:
             return None
         return answer
 
-    def extras(self, incident: Incident) -> Extras:
-        """The page an analysis links to, and its two buttons: was the root cause right?"""
+    def page(self, incident_id: int) -> str | None:
         base = self._rules.ui.public_url
-        click = None if base is None else f"{base.rstrip('/')}/ui/incidents/{incident.id}"
+        return None if base is None else f"{base.rstrip('/')}/ui/incidents/{incident_id}"
+
+    def buttons(self, incident_id: int, about: str, right: str, wrong: str) -> Extras:
+        """The incident's page, and two signed buttons that record a thumbs-up or down."""
         try:
-            links = self._executor.vote_links(incident.id, "root_cause")
+            links = self._executor.vote_links(incident_id, about)
         except ExecutorError:
             links = {}
-        buttons = tuple(
+        actions = tuple(
             {"action": "http", "label": label, "url": links[vote], "method": "POST", "clear": True}
-            for vote, label in (("up", "Cause is right"), ("down", "Cause is wrong"))
+            for vote, label in (("up", right), ("down", wrong))
             if vote in links
         )
-        return Extras(click=click, actions=buttons)
+        return Extras(click=self.page(incident_id), actions=actions)
+
+    def extras(self, incident: Incident) -> Extras:
+        """What an analysis carries: was the root cause right?"""
+        return self.buttons(incident.id, "root_cause", "Cause is right", "Cause is wrong")
 
     def stop(self) -> None:
         """Engage the kill switch. The core can stop automation; it cannot resume it."""

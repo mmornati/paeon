@@ -192,6 +192,14 @@ class Digest(_Rule):
     hour: int = Field(default=8, ge=0, le=23)
     timezone: Timezone = "UTC"
     ntfy: Ntfy | None = None
+    feedback: int = Field(
+        default=5,
+        ge=0,
+        le=20,
+        description="After the digest, one short message with right / wrong buttons for each"
+        " of this many verdicts, those triage would have demoted first. Needs the executor,"
+        " which signs the buttons. 0: none.",
+    )
 
 
 class OpenObserveTools(_Rule):

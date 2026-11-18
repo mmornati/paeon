@@ -249,7 +249,31 @@ def create_app(
                     message=text,
                     click=f"{base.rstrip('/')}/ui",
                 )
-            store.append("digest.sent", {"date": today, "incidents": len(report.lines)})
+            asked = 0
+            if remediator is not None:
+                # One short, quiet message per verdict: a notification holds three buttons.
+                for line in digests.to_rate(report, rules.digest.feedback):
+                    extras = remediator.buttons(line.incident.id, "triage", "Right", "Wrong")
+                    if not extras.actions:
+                        break  # the executor is not there to sign them
+                    title, text = digests.question(line)
+                    try:
+                        digests.publish_ntfy(
+                            ntfy,
+                            settings.ntfy_token,
+                            title=title,
+                            message=text,
+                            priority=1,
+                            tags=("question",),
+                            click=extras.click,
+                            actions=extras.actions,
+                        )
+                    except RuntimeError:
+                        break
+                    asked += 1
+            store.append(
+                "digest.sent", {"date": today, "incidents": len(report.lines), "asked": asked}
+            )
         store.set_cursor("digest", today)
         return bool(report.lines)
 
