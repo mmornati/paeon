@@ -32,7 +32,8 @@ earn autonomy.
 - Execution with a lock per container, a pre-check, verification, rollback where an action has
   an inverse, and one automated attempt per incident.
 - Runbooks: a known alert and a ladder of steps, with no model call. A runbook that fails hands
-  the incident to the investigator.
+  the incident to the investigator, and so does one whose plan is only recorded (`observe`,
+  `suggest`): a runbook can be tried in the record without the alert going unlooked at.
 - Earned autonomy: track records, promotion proposals as a policy line, automatic demotion on a
   failed verification, an Undo or a "This was wrong".
 - A kill switch: notification button, console, `paeon stop`, `PAEON_KILL_SWITCH`.

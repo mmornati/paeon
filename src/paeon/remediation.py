@@ -273,13 +273,21 @@ class Remediator:
                 if answer is None or answer.get("status") == "refused":
                     reason = "unknown runbook" if answer is None else answer.get("reason")
                     self._fall_back(incident, f"runbook not run: {reason}")
+                elif answer.get("level") in ("observe", "suggest"):
+                    # The plan is recorded and nothing will run: the alert is not handled, so
+                    # the incident is looked at like any other.
+                    self._fall_back(
+                        incident,
+                        f"its plan is at level {answer['level']}: recorded, not run",
+                        kind="runbook.skipped",
+                    )
             self._store.set_cursor(RUNBOOK_CURSOR, str(event.id))
             handled += 1
         return handled
 
-    def _fall_back(self, incident: Incident, reason: str) -> None:
-        """A runbook that could not fix it hands the incident to the investigator."""
-        self._store.append("runbook.failed", {"reason": reason}, incident_id=incident.id)
+    def _fall_back(self, incident: Incident, reason: str, *, kind: str = "runbook.failed") -> None:
+        """A runbook that did not fix it hands the incident to the investigator."""
+        self._store.append(kind, {"reason": reason}, incident_id=incident.id)
         current = self._store.incident(incident.id)
         if (
             self._rules.investigation.enabled
