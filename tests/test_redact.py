@@ -24,6 +24,7 @@ PROVIDER = "sk-" + "x9" * 12
         ("secret = 'two words' rejected", "words"),
         ('{"api_key": "abc 123", "host": "db"}', "123"),
         ('token="unterminated value here', "value here"),
+        ("password=ab\"cd'ef next", "cd"),
         (f"jwt {JWT} rejected", JWT),
         (f"pushed with {GITHUB}", GITHUB),
         (f"key {PROVIDER} is over quota", PROVIDER),
