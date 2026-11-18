@@ -2,13 +2,23 @@
 {% block title %}Actions{% endblock %}
 {% block main %}
 <div class="head">
-  <h1>Actions</h1>
-  <p class="live">What the executor was asked, what you answered, and what it did. The console shows it; it cannot approve.</p>
+  <div>
+    <h1>Actions</h1>
+    <p class="sub">What the executor was asked, what you answered, and what it did. The console shows it; it cannot approve.</p>
+  </div>
 </div>
 
+<dl class="stats">
+  <div class="stat{% if view.killed %} is-bad{% endif %}"><dt class="stat-label">Automation</dt><dd class="stat-value">{{ "Stopped" if view.killed else "Running" }}</dd><dd class="stat-sub">kill switch {{ "engaged" if view.killed else "off" }}</dd></div>
+  <div class="stat"><dt class="stat-label">Waiting for you</dt><dd class="stat-value">{{ view.waiting|length }}</dd><dd class="stat-sub">answer on your phone</dd></div>
+  <div class="stat"><dt class="stat-label">Plans</dt><dd class="stat-value">{{ view.plans|length }}</dd><dd class="stat-sub">last {{ view.days }} days</dd></div>
+  <div class="stat"><dt class="stat-label">Verified</dt><dd class="stat-value">{{ view.plans|selectattr("plan.state", "equalto", "verified")|list|length }}</dd><dd class="stat-sub">{{ view.plans|selectattr("plan.state", "equalto", "failed")|list|length }} failed</dd></div>
+</dl>
+
 <section class="block" aria-labelledby="h-switch">
-  <h2 id="h-switch">Kill switch</h2>
-  {% if stopped == "failed" %}<p class="lead">The executor did not answer: automation was not stopped from here. Run <code>paeon stop</code> next to it.</p>{% endif %}
+  <div class="block-head"><h2 id="h-switch">Kill switch</h2><span class="outcome outcome-{{ "failed" if view.killed else "verified" }}">{{ "engaged" if view.killed else "off" }}</span></div>
+  <div class="block-body">
+  {% if stopped == "failed" %}<p class="banner">The executor did not answer: automation was not stopped from here. Run <code>paeon stop</code> next to it.</p>{% endif %}
   {% if view.killed %}
   <p class="lead">Engaged. Every plan is recorded and nothing else happens.</p>
   <p class="note">Only you can release it: <code>paeon resume</code> next to the executor.</p>
@@ -21,52 +31,62 @@
   </form>
   {% endif %}
   {% endif %}
+  </div>
 </section>
 
 <section class="block" aria-labelledby="h-waiting">
-  <h2 id="h-waiting">Waiting for your answer</h2>
+  <div class="block-head"><h2 id="h-waiting">Waiting for your answer</h2></div>
   {% if view.waiting %}
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>Incident</th><th>Plan</th><th class="num">Until</th></tr></thead>
     <tbody>
       {% for w in view.waiting -%}
-      <tr><td><a href="/ui/incidents/{{ w.incident }}#plan">{{ w.incident }}</a></td><td>{{ w.steps|join(", ") }}</td><td class="num">{{ w.expires_at[11:16] if w.expires_at else "?" }} UTC</td></tr>
+      <tr><td><a href="/ui/incidents/{{ w.incident }}#plan">{{ w.incident }}</a></td><td><span class="typed">{{ w.steps|join(", ") }}</span></td><td class="num">{{ w.expires_at[11:16] if w.expires_at else "?" }} UTC</td></tr>
       {% endfor -%}
     </tbody>
   </table>
-  <p class="note">Answer on the notification. A plan nobody answers expires, and nothing runs.</p>
+  </div>
+  <div class="block-body"><p class="note">Answer on the notification. A plan nobody answers expires, and nothing runs.</p></div>
   {% else %}
-  <p class="note">No plan is waiting.</p>
+  <div class="block-body"><p class="note">No plan is waiting.</p></div>
   {% endif %}
 </section>
 
 <section class="block" aria-labelledby="h-plans">
-  <h2 id="h-plans">Plans, last {{ view.days }} days</h2>
+  <div class="block-head"><h2 id="h-plans">Plans, last {{ view.days }} days</h2></div>
   {% if view.plans %}
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>Incident</th><th>Plan</th><th class="wide">Level</th><th>Outcome</th></tr></thead>
     <tbody>
       {% for line in view.plans -%}
-      <tr><td><a href="/ui/incidents/{{ line.incident_id }}#plan" title="{{ line.title }}">{{ line.incident_id }}</a></td><td>{{ line.plan.steps|join(", ") }}</td><td class="wide">{{ line.plan.level }}</td><td><span class="outcome outcome-{{ line.plan.state|replace(" ", "-") }}">{{ line.plan.state }}</span></td></tr>
+      <tr><td><a href="/ui/incidents/{{ line.incident_id }}#plan" title="{{ line.title }}">{{ line.incident_id }}</a></td><td class="subject">{{ line.plan.steps|join(", ") }}</td><td class="wide">{{ line.plan.level }}</td><td><span class="outcome outcome-{{ line.plan.state|replace(" ", "-") }}">{{ line.plan.state }}</span></td></tr>
       {% endfor -%}
     </tbody>
   </table>
+  </div>
   {% else %}
-  <p class="note">No plan was proposed. One appears when an analysis names a catalog action, or when a runbook matches an alert.</p>
+  <div class="block-body"><p class="note">No plan was proposed. One appears when an analysis names a catalog action, or when a runbook matches an alert.</p></div>
   {% endif %}
 </section>
 
 <section class="block" aria-labelledby="h-catalog">
-  <h2 id="h-catalog">Catalog</h2>
+  <div class="block-head"><h2 id="h-catalog">Catalog</h2></div>
   {% if catalog %}
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>Action</th><th>Containers</th><th>Never</th></tr></thead>
     <tbody>
       {% for name, entry in catalog.items() -%}
-      <tr><td>{{ name }}</td><td>{{ entry.targets|join(", ") }}</td><td>{{ entry.deny|join(", ") or "none" }}</td></tr>
+      <tr><td class="subject">{{ name }}</td><td>{{ entry.targets|join(", ") }}</td><td>{{ entry.deny|join(", ") or "none" }}</td></tr>
       {% endfor -%}
     </tbody>
   </table>
+  </div>
+  {% endif %}
+  <div class="block-body">
+  {% if catalog %}
   <p class="facts">As this process read it. The executor decides from its own copy of the rules file.</p>
   {% else %}
   <p class="note">The catalog is empty: no action can be proposed.</p>
@@ -75,23 +95,26 @@
   <h3>Runbooks</h3>
   <ul class="evidence">
     {% for book in runbooks -%}
-    <li><strong>{{ book.name }}</strong> {% for step in book.steps %}{{ step.action }} on {{ step.target }}{% if not loop.last %}, then {% endif %}{% endfor %}{% if book.mode == "escalate" and book.steps|length > 1 %}, stopping at the first that works{% endif %}</li>
+    <li><span><strong>{{ book.name }}</strong> {% for step in book.steps %}{{ step.action }} on {{ step.target }}{% if not loop.last %}, then {% endif %}{% endfor %}{% if book.mode == "escalate" and book.steps|length > 1 %}, stopping at the first that works{% endif %}</span></li>
     {% endfor -%}
   </ul>
   {% endif %}
+  </div>
 </section>
 
 <section class="block" aria-labelledby="h-policies">
-  <h2 id="h-policies">Policies</h2>
+  <div class="block-head"><h2 id="h-policies">Policies</h2></div>
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>Alert</th><th>Action</th><th>Container</th><th>Level</th></tr></thead>
     <tbody>
       {% for policy in policies -%}
-      <tr><td>{{ policy.alert }}</td><td>{{ policy.action }}</td><td>{{ policy.target }}</td><td>{{ policy.level }}</td></tr>
+      <tr><td class="subject">{{ policy.alert }}</td><td>{{ policy.action }}</td><td>{{ policy.target }}</td><td>{{ policy.level }}</td></tr>
       {% endfor -%}
       <tr><td colspan="3">Everything else</td><td>{{ default_level }}</td></tr>
     </tbody>
   </table>
-  <p class="facts">The first line that matches decides. Changing a level is a change to the rules file, in git.</p>
+  </div>
+  <div class="block-body"><p class="facts">The first line that matches decides. Changing a level is a change to the rules file, in git.</p></div>
 </section>
 {% endblock %}

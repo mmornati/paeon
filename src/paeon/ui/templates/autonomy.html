@@ -2,12 +2,15 @@
 {% block title %}Autonomy{% endblock %}
 {% block main %}
 <div class="head">
-  <h1>Autonomy</h1>
-  <p class="live">Per alert, action and container: the level in force and the record behind it. Paeon proposes a promotion; you make it.</p>
+  <div>
+    <h1>Autonomy</h1>
+    <p class="sub">Per alert, action and container: the level in force and the record behind it. Paeon proposes a promotion; you make it.</p>
+  </div>
 </div>
 
 <section class="block" aria-labelledby="h-earned">
-  <h2 id="h-earned">Earned</h2>
+  <div class="block-head"><h2 id="h-earned">Earned</h2>{% if view.earned %}<span class="outcome outcome-verified">{{ view.earned|length }} ready</span>{% endif %}</div>
+  <div class="block-body">
   {% if view.earned %}
   <p class="lead">{{ view.earned|length }} action{{ "" if view.earned|length == 1 else "s" }} ran {{ view.promote_after }} times or more in a row, approved and verified.</p>
   <p class="facts">To let one run without asking, add its line at the top of <code>actions.policies</code> and deploy the rules file.</p>
@@ -17,11 +20,13 @@
   {% else %}
   <p class="note">Nothing yet. An action earns a proposal after {{ view.promote_after }} approved and verified runs in a row within {{ view.window_days }} days, with no failure, no Undo and no “This was wrong”.</p>
   {% endif %}
+  </div>
 </section>
 
 <section class="block" aria-labelledby="h-matrix">
-  <h2 id="h-matrix">Track record</h2>
+  <div class="block-head"><h2 id="h-matrix">Track record</h2></div>
   {% if view.records %}
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th>Action</th><th class="wide">Alert</th><th>Level</th><th class="num wide">Verified</th><th class="num wide">Failed</th><th class="num wide">Undone</th><th class="num wide">Wrong</th><th class="num">In a row</th></tr></thead>
     <tbody>
@@ -34,8 +39,9 @@
       {% endfor -%}
     </tbody>
   </table>
+  </div>
   {% else %}
-  <p class="note">No action has run yet.</p>
+  <div class="block-body"><p class="note">No action has run yet.</p></div>
   {% endif %}
 </section>
 {% endblock %}

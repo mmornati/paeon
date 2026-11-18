@@ -4,18 +4,28 @@
 {% macro bar(share) %}<svg class="meter" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="meter-track" width="100" height="6"/><rect class="meter-fill" width="{{ "%.1f"|format(share) }}" height="6"/></svg>{% endmacro %}
 {% block main %}
 <div class="head">
-  <h1>Ledger</h1>
-  <p class="live">Every model call is an event with its tokens and its cost. Budgets are read from the same events.</p>
+  <div>
+    <h1>Ledger</h1>
+    <p class="sub">Every model call is an event with its tokens and its cost. Budgets are read from the same events.</p>
+  </div>
 </div>
 
+<dl class="stats">
+  <div class="stat"><dt class="stat-label">Spent today</dt><dd class="stat-value">{{ ledger.today|money }}</dd><dd class="stat-sub">since midnight UTC, all stages</dd></div>
+  <div class="stat"><dt class="stat-label">Last {{ ledger.days }} days</dt><dd class="stat-value">{{ ledger.total.cost|money }}</dd><dd class="stat-sub">{{ ledger.total.calls }} model call{{ "" if ledger.total.calls == 1 else "s" }}</dd></div>
+  <div class="stat{% if ledger.total.errors %} is-bad{% endif %}"><dt class="stat-label">Failed calls</dt><dd class="stat-value">{{ ledger.total.errors }}</dd><dd class="stat-sub">of {{ ledger.total.calls }}</dd></div>
+  <div class="stat"><dt class="stat-label">Triage rated right</dt><dd class="stat-value">{% if ledger.rated %}{{ ledger.right }} of {{ ledger.rated }}{% else %}none{% endif %}</dd><dd class="stat-sub">{% if ledger.rated %}by you, last {{ ledger.days }} days{% else %}no verdict rated yet{% endif %}</dd></div>
+</dl>
+
 <section class="block" aria-labelledby="h-today">
-  <h2 id="h-today">Today</h2>
+  <div class="block-head"><h2 id="h-today">Today</h2></div>
+  <div class="block-body">
   <p class="lead"><span class="figure">{{ ledger.today|money }}</span> spent since midnight UTC, all stages.</p>
   {% if ledger.budgets %}
   <p class="facts">Each stage stops calling a model when this total, not its own share, reaches its stop.</p>
   <ul class="budgets">
     {% for b in ledger.budgets -%}
-    <li>
+    <li{% if b.exhausted %} class="is-spent"{% endif %}>
       <span class="budget-name">{{ b.stage }} stops at {{ b.limit|money }}</span>
       <span class="figure">{{ "reached" if b.exhausted else (b.left|money) ~ " left" }}</span>
       {{ bar(b.share) }}
@@ -26,11 +36,39 @@
   {% else %}
   <p class="note">No daily budget is set for a stage that is on.</p>
   {% endif %}
+  </div>
 </section>
 
 {% if ledger.total.calls %}
+<section class="block" aria-labelledby="h-days">
+  <div class="block-head"><h2 id="h-days">By day</h2><span class="facts">Cost per UTC day, last {{ ledger.days }} days</span></div>
+  <div class="block-body">
+  {% set n = ledger.series|length %}
+  <svg class="chart" viewBox="0 0 {{ n * 10 }} 40" preserveAspectRatio="none" role="img" aria-label="Cost per day, last {{ ledger.days }} days">
+    {% for day, cost, share in ledger.series -%}
+    <rect class="chart-slot" x="{{ loop.index0 * 10 + 1 }}" y="0" width="8" height="40"/>
+    {% if cost %}<rect class="chart-bar" x="{{ loop.index0 * 10 + 1 }}" y="{{ "%.1f"|format(40 - [share * 0.4, 0.8]|max) }}" width="8" height="{{ "%.1f"|format([share * 0.4, 0.8]|max) }}"><title>{{ day }}: {{ cost|money }}</title></rect>{% endif %}
+    {% endfor -%}
+  </svg>
+  <p class="chart-axis" aria-hidden="true"><span>{{ ledger.series[0][0] }}</span><span>{{ ledger.series[-1][0] }}</span></p>
+  </div>
+  <div class="table-wrap">
+  <table class="table table-days">
+    <thead><tr><th>Day, UTC</th><th class="num">Calls</th><th class="num">Cost</th><th><span class="sr">Share of the dearest day</span></th></tr></thead>
+    <tbody>
+      {% for day, t, share in ledger.by_day -%}
+      <tr><td>{{ day }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ t.cost|money }}</td><td class="meter-cell">{{ bar(share) }}</td></tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  </div>
+  {% set quiet = ledger.days - ledger.by_day|length %}
+  {% if quiet %}<div class="block-body"><p class="facts">No model call on the other {{ quiet }} day{{ "" if quiet == 1 else "s" }} of the last {{ ledger.days }}.</p></div>{% endif %}
+</section>
+
 <section class="block" aria-labelledby="h-models">
-  <h2 id="h-models">By stage and model, last {{ ledger.days }} days</h2>
+  <div class="block-head"><h2 id="h-models">By stage and model, last {{ ledger.days }} days</h2></div>
+  <div class="table-wrap">
   <table class="table">
     <thead><tr><th class="wide">Stage</th><th>Model that answered</th><th class="num">Calls</th><th class="num wide">Failed</th><th class="num wide">In</th><th class="num wide">Cached</th><th class="num wide">Out</th><th class="num">Cost</th></tr></thead>
     <tbody>
@@ -42,24 +80,12 @@
     <tfoot><tr><th class="wide">All</th><th><span class="narrow-inline">All</span></th><td class="num">{{ ledger.total.calls }}</td><td class="num wide">{{ ledger.total.errors }}</td><td class="num wide">{{ ledger.total.input_tokens }}</td><td class="num wide">{{ ledger.total.cached_tokens }}</td><td class="num wide">{{ ledger.total.output_tokens }}</td><td class="num">{{ ledger.total.cost|money }}</td></tr>
       <tr class="narrow"><td colspan="8">{{ ledger.total.input_tokens }} in, {{ ledger.total.cached_tokens }} cached, {{ ledger.total.output_tokens }} out, {{ ledger.total.errors }} failed</td></tr></tfoot>
   </table>
-</section>
-
-<section class="block" aria-labelledby="h-days">
-  <h2 id="h-days">By day</h2>
-  <table class="table table-days">
-    <thead><tr><th>Day, UTC</th><th class="num">Calls</th><th class="num">Cost</th><th><span class="sr">Share of the dearest day</span></th></tr></thead>
-    <tbody>
-      {% for day, t, share in ledger.by_day -%}
-      <tr><td>{{ day }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ t.cost|money }}</td><td class="meter-cell">{{ bar(share) }}</td></tr>
-      {% endfor -%}
-    </tbody>
-  </table>
-  {% set quiet = ledger.days - ledger.by_day|length %}
-  {% if quiet %}<p class="facts">No model call on the other {{ quiet }} day{{ "" if quiet == 1 else "s" }} of the last {{ ledger.days }}.</p>{% endif %}
+  </div>
 </section>
 
 <section class="block" aria-labelledby="h-triage">
-  <h2 id="h-triage">Triage record, last {{ ledger.days }} days</h2>
+  <div class="block-head"><h2 id="h-triage">Triage record, last {{ ledger.days }} days</h2></div>
+  <div class="block-body">
   {% if ledger.verdicts or ledger.fail_open %}
   <dl class="tally">
     {% for verdict, count in ledger.verdicts -%}
@@ -73,10 +99,11 @@
   {% else %}
   <p class="note">No verdict in this period.</p>
   {% endif %}
+  </div>
 </section>
 
 <section class="block" aria-labelledby="h-recent">
-  <h2 id="h-recent">Latest calls</h2>
+  <div class="block-head"><h2 id="h-recent">Latest calls</h2></div>
   {{ record(ledger.recent, linked=true) }}
 </section>
 {% else %}

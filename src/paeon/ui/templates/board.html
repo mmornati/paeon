@@ -1,17 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Board{% endblock %}
+{% from "_icons.html" import icon %}
+{% block title %}Incidents{% endblock %}
 {% block layout %}page page-wide{% endblock %}
 {% block main %}
 <div class="head">
-  <h1>Board</h1>
+  <div>
+    <h1>Incidents</h1>
+    <p class="sub">Every open incident by the stage it is waiting for, and those resolved in the last 7 days.</p>
+  </div>
   <p class="live" data-live-status role="status">Refreshes every 10 seconds.</p>
+</div>
+<div class="toolbar">
+  <label class="search">{{ icon("search") }}<span class="sr">Filter incidents</span><input type="search" placeholder="Filter by title, host, severity, state" autocomplete="off" data-filter=".inc" data-filter-in=".board"><kbd aria-hidden="true">/</kbd></label>
 </div>
 <div class="board{% if acting %} board-acting{% endif %}" data-live="/ui/board">
 {% include "_bays.html" %}
 </div>
+<p class="filter-none" data-filter-none hidden>No incident on the board matches.</p>
 <p class="legend">
-  <span class="legend-item">Printed: recorded by code.</span>
-  <span class="legend-item pen">Blue, slanted: said by a model.</span>
-  <span class="legend-item">A strip sits in the bay of the stage it is waiting for, and stands out of line when it has changed.</span>
+  <span class="legend-item pen">Violet: said by a model.</span>
+  <span class="legend-item">Everything else was recorded by code.</span>
 </p>
 {% endblock %}

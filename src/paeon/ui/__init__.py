@@ -30,7 +30,7 @@ from paeon import postmortem as postmortems
 from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
-from paeon.ui import views
+from paeon.ui import markdown, views
 
 _HERE = Path(__file__).parent
 PAGE = 100
@@ -42,6 +42,15 @@ HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "no-store",
+}
+
+# A postmortem with a diagram: the library that draws it styles its drawing inline, which the
+# policy above refuses. Styles only, and on that page only. Scripts stay same-origin: nothing
+# the file contains becomes markup (see `markdown`), so there is no inline style to inject.
+DIAGRAM_HEADERS = HEADERS | {
+    "Content-Security-Policy": HEADERS["Content-Security-Policy"].replace(
+        "style-src 'self'", "style-src 'self' 'unsafe-inline'"
+    )
 }
 
 
@@ -229,7 +238,22 @@ def mount_ui(
         found = postmortems.read_draft(rules.postmortems.dir, name) if keeps else None
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
-        return page(request, "postmortem.html", draft=found[0], text=found[1], here="postmortems")
+        # Masked before it is rendered: the rendered page does not pass through `shown`.
+        text = redact_text(found[1], max_length=views.DETAIL_LIMIT * 30)
+        body = markdown.render(text)
+        diagrams = markdown.DIAGRAM in body
+        return templates.TemplateResponse(
+            request,
+            "postmortem.html",
+            {
+                "draft": found[0],
+                "text": text,
+                "body": body,
+                "diagrams": diagrams,
+                "here": "postmortems",
+            },
+            headers=DIAGRAM_HEADERS if diagrams else HEADERS,
+        )
 
     @app.get("/", include_in_schema=False, dependencies=[Depends(proxied)])
     def home() -> Response:

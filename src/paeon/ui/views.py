@@ -398,6 +398,15 @@ def row_of(event: Event, *, detail: bool = False) -> Row:
     )
 
 
+_TONES: dict[str, str] = {
+    **dict.fromkeys(("off", "none", "skipped", "recorded", "suggested", "not sent"), "mute"),
+    **dict.fromkeys(("waiting", "queued", "running", "proposed"), "active"),
+    **dict.fromkeys(("failed", "failed open", "refused", "expired", "declined"), "bad"),
+    **dict.fromkeys(("verified", "draft written", "done"), "good"),
+    **dict.fromkeys(("cancelled", "undone"), "warn"),
+}
+
+
 @dataclass(frozen=True)
 class Cell:
     label: str
@@ -408,6 +417,11 @@ class Cell:
     @property
     def full(self) -> str:
         return self.more or self.value
+
+    @property
+    def tone(self) -> str:
+        """How the value reads at a glance: the console colours a state, never a sentence."""
+        return _TONES.get(self.value, "plain")
 
 
 @dataclass(frozen=True)
@@ -787,6 +801,7 @@ class Ledger:
     rated: int
     right: int
     recent: tuple[Row, ...]
+    series: tuple[tuple[str, float, float], ...] = ()  # every day, oldest first, for the chart
 
 
 def _counted(values: Iterable[str]) -> tuple[tuple[str, int], ...]:
@@ -855,6 +870,10 @@ def ledger_view(store: Store, rules: Rules, now: datetime, *, days: int = 14) ->
         right=sum(1 for vote in votes.values() if vote == "up"),
         recent=tuple(
             row_of(event) for event in sorted(calls, key=lambda e: e.id, reverse=True)[:25]
+        ),
+        series=tuple(
+            (day, tally.cost, 0.0 if dearest <= 0 else tally.cost / dearest * 100)
+            for day, tally in sorted(by_day.items())
         ),
     )
 

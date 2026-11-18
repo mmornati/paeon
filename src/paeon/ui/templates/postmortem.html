@@ -1,10 +1,30 @@
 {% extends "base.html" %}
 {% block title %}{{ draft.title }}{% endblock %}
+{% block scripts %}{% if diagrams %}
+<script src="/ui/static/vendor/mermaid.min.js?v={{ version }}" defer></script>
+<script src="/ui/static/diagrams.js?v={{ version }}" defer></script>
+{% endif %}{% endblock %}
 {% block main %}
-<p class="back"><a href="/ui/postmortems">Postmortems</a>{% if draft.incident %} <a href="/ui/incidents/{{ draft.incident }}">Incident {{ draft.incident }}</a>{% endif %}</p>
-<div class="head">
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/ui/postmortems">Postmortems</a>{% if draft.incident %} <a href="/ui/incidents/{{ draft.incident }}">Incident {{ draft.incident }}</a>{% endif %}</nav>
+<header class="inc-head{% if draft.severity %} sev-{{ draft.severity }}{% endif %}">
+  <div class="inc-top">
+    {% if draft.severity %}<span class="sev-badge">{{ draft.severity }}</span>{% endif %}
+    <span class="outcome outcome-{{ draft.status }}">{{ draft.status }}</span>
+    {% if draft.detected_at %}<span class="inc-when">detected <time datetime="{{ draft.detected_at }}">{{ draft.detected_at[:16]|replace("T", " ") }}</time></span>{% endif %}
+  </div>
   <h1>{{ draft.title }}</h1>
-  <p class="live">{{ draft.name }}, <span class="outcome outcome-{{ draft.status }}">{{ draft.status }}</span>. Shown as written, with secrets masked; edit the file itself.</p>
-</div>
-<pre class="payload-open sheet" tabindex="0">{{ text }}</pre>
+  <dl class="kv kv-open">
+    <div class="kv-item"><dt>File</dt><dd class="mono">{{ draft.name }}</dd></div>
+    {% if draft.incident %}<div class="kv-item"><dt>Incident</dt><dd><a href="/ui/incidents/{{ draft.incident }}">#{{ draft.incident }}</a></dd></div>{% endif %}
+    <div class="kv-item{% if draft.open_items %} tone-warn{% else %} tone-good{% endif %}"><dt>Action items</dt><dd>{{ draft.open_items|length }} open</dd></div>
+  </dl>
+</header>
+<article class="md sheet">
+{{ body }}
+</article>
+<details class="source">
+  <summary>Markdown source</summary>
+  <p class="facts">The file as written, with secrets masked. To change the postmortem, edit the file itself.</p>
+  <pre class="payload-open" tabindex="0">{{ text }}</pre>
+</details>
 {% endblock %}

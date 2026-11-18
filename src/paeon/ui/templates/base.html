@@ -5,31 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
-<title>{% block title %}Board{% endblock %} · Paeon</title>
+<title>{% block title %}Incidents{% endblock %} · Paeon</title>
 <link rel="icon" href="/ui/static/mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/ui/static/console.css?v={{ version }}">
+<script src="/ui/static/theme.js?v={{ version }}"></script>
 <script src="/ui/static/console.js?v={{ version }}" defer></script>
+{% block scripts %}{% endblock %}
 </head>
 <body>
+{% from "_icons.html" import icon %}
 <a class="skip" href="#main">Skip to content</a>
-<header class="bar">
-  <div class="bar-line">
-    <a class="mark" href="/ui">Paeon</a>
-    <nav class="nav" aria-label="Console">
-      <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>Board</a>
-      <a href="/ui/log"{% if here == "log" %} aria-current="page"{% endif %}>Log</a>
-      <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>Ledger</a>
-      {% if acting %}<a href="/ui/actions"{% if here == "actions" %} aria-current="page"{% endif %}>Actions</a>
-      <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>Autonomy</a>{% endif %}
-      {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>Postmortems</a>{% endif %}
-    </nav>
+<div class="shell">
+<header class="side">
+  <div class="side-top">
+    <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="28" height="28"><span>Paeon</span></a>
+    <button class="icon-btn theme-btn" type="button" data-theme-toggle hidden aria-label="Switch between light and dark">{{ icon("moon", "icon-moon") }}{{ icon("sun", "icon-sun") }}</button>
   </div>
-  <ul class="stages" aria-label="Stages">
-    {% for name, state in stages -%}
-    <li class="stage{% if state in ("off", "none") %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
-    {% endfor -%}
-  </ul>
+  <nav class="nav" aria-label="Console">
+    <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>{{ icon("incidents") }}Incidents</a>
+    <a href="/ui/log"{% if here == "log" %} aria-current="page"{% endif %}>{{ icon("log") }}Log</a>
+    <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>{{ icon("ledger") }}Ledger</a>
+    {% if acting %}<a href="/ui/actions"{% if here == "actions" %} aria-current="page"{% endif %}>{{ icon("actions") }}Actions</a>
+    <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>{{ icon("autonomy") }}Autonomy</a>{% endif %}
+    {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>{{ icon("postmortems") }}Postmortems</a>{% endif %}
+  </nav>
+  <section class="sys" aria-labelledby="h-stages">
+    <h2 class="sys-title" id="h-stages">Stages</h2>
+    <ul class="stages">
+      {% for name, state in stages -%}
+      <li class="stage{% if state in ("off", "none") %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
+      {% endfor -%}
+    </ul>
+  </section>
+  <p class="side-foot">Paeon {{ version }}</p>
 </header>
+<div class="content">
 <main id="main" class="{% block layout %}page{% endblock %}">
 {% block main %}{% endblock %}
 </main>
@@ -37,5 +47,7 @@
   <p>Paeon {{ version }} records and advises. {% if acting %}Only the executor acts: catalog actions, at the level your policies give.{% else %}It takes no action on this server.{% endif %}</p>
   <p>Times are in {{ zone }}. Budget days are UTC.</p>
 </footer>
+</div>
+</div>
 </body>
 </html>

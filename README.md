@@ -249,16 +249,16 @@ Then open `http://paeon:8080/ui`.
 
 | Page | |
 |---|---|
-| **Board** | Every open incident and those resolved in the last 7 days, as strips in bays: waiting for triage, under investigation, waiting for your Go (with actions on), open, resolved. It refreshes itself; a strip that changed is marked until you touch it. |
+| **Incidents** | Every open incident and those resolved in the last 7 days, grouped by the stage they are waiting for: triage, investigation, your Go (with actions on), open, resolved, with a count of each at the top and a filter box. It refreshes itself; an incident that changed is marked until you touch it. |
 | **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
 | **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
 | **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
-| **Postmortems** | The drafts, their review status and their open action items. |
+| **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
 
-What a model said is shown in blue, what code recorded in black: a verdict is never dressed as a
-fact. The console is read-only, apart from two things: saying whether triage was right, and
+What a model said is shown in violet and marked as the model's, what code recorded in plain text:
+a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set. The console is read-only, apart from two things: saying whether triage was right, and
 stopping automation. **It cannot approve a plan**, and it cannot resume what it stopped.
 
 The console has **no login**. It is off until you enable it, and it must sit behind a reverse

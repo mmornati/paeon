@@ -1,25 +1,22 @@
-{% macro strip(s, heading="h3", link=true) %}
-{#- On the board every strip has the same height: one line each, the reason in the title.
-    On its own page (link=false) the strip has room and says everything. -#}
+{% macro cells(s, open=false) %}
+<dl class="kv{% if open %} kv-open{% endif %}">
+  {% for cell in s.cells -%}
+  <div class="kv-item tone-{{ cell.tone }}"><dt>{{ cell.label }}</dt><dd{% if cell.pen %} class="pen"{% endif %}{% if not open %} title="{{ cell.full }}"{% endif %}>{{ cell.full if open else cell.value }}</dd></div>
+  {% endfor -%}
+</dl>
+{% endmacro %}
+{% macro strip(s) %}
+{#- One incident as a row of the board: severity, title, when, and one box per stage. The
+    reasons behind a state are on the incident's own page. -#}
 {%- set i = s.incident -%}
-<article class="strip sev-{{ i.severity.value }}{% if i.status.value == "resolved" %} is-resolved{% endif %}{% if link %} strip-fixed{% endif %}" data-id="{{ i.id }}" data-rev="{{ s.rev }}">
-  <div class="holder">
-    <span class="holder-id"><span class="sr">Incident </span>{{ i.id }}</span>
-    <span class="holder-sev">{{ i.severity.value }}</span>
+<article class="inc sev-{{ i.severity.value }}{% if i.status.value == "resolved" %} is-resolved{% endif %}" data-id="{{ i.id }}" data-rev="{{ s.rev }}">
+  <div class="inc-top">
+    <span class="sev-badge">{{ i.severity.value }}</span>
+    <span class="inc-id"><span class="sr">Incident </span>#{{ i.id }}</span>
+    <h3 class="inc-title"><a href="/ui/incidents/{{ i.id }}" title="{{ i.title }}">{{ i.title }}</a></h3>
+    {%- for flag in s.flags %} <span class="tag" title="{{ flag }}">{{ flag.split(":")[0] }}</span>{% endfor %}
+    <span class="inc-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ i.opened_at|brief }}</time> · {{ s.standing }}</span>
   </div>
-  <div class="strip-body">
-    <{{ heading }} class="strip-title">
-      {%- if link %}<a href="/ui/incidents/{{ i.id }}" title="{{ i.title }}">{{ i.title }}</a>{% else %}{{ i.title }}{% endif -%}
-    </{{ heading }}>
-    <p class="strip-standing">
-      <span class="standing-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ (i.opened_at|brief) if link else (i.opened_at|stamp) }}</time>, {{ s.standing }}</span>
-      {%- for flag in s.flags %} <span class="flag"{% if link %} title="{{ flag }}"{% endif %}>{{ flag.split(":")[0] if link else flag }}</span>{% endfor %}
-    </p>
-    <dl class="cells">
-      {% for cell in s.cells -%}
-      <div class="cell"><dt>{{ cell.label }}</dt><dd{% if cell.pen %} class="pen"{% endif %}{% if link %} title="{{ cell.full }}"{% endif %}>{{ cell.value if link else cell.full }}</dd></div>
-      {% endfor -%}
-    </dl>
-  </div>
+  {{ cells(s) }}
 </article>
 {% endmacro %}

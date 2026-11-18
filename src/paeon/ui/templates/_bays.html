@@ -1,4 +1,9 @@
 {% from "_strip.html" import strip %}
+<nav class="pipeline" aria-label="Pipeline">
+  {% for bay in bays -%}
+  <a class="pipe pipe-{{ bay.key }}{% if not bay.strips %} is-empty{% endif %}" href="#bay-{{ bay.key }}"><span class="pipe-name">{{ bay.name }}</span><span class="pipe-count">{{ bay.strips|length }}</span></a>
+  {% endfor -%}
+</nav>
 {% for bay in bays -%}
 <section class="bay" data-bay="{{ bay.key }}" aria-labelledby="bay-{{ bay.key }}">
   <header class="bay-head">
