@@ -192,6 +192,26 @@ def test_a_runbook_that_cannot_run_hands_over_to_the_investigator(store: Store) 
     assert store.incident(2).investigation is StageState.PENDING  # type: ignore[union-attr]
 
 
+@pytest.mark.parametrize("level", ["observe", "suggest"])
+def test_a_runbook_whose_plan_will_not_run_hands_over_too(store: Store, level: str) -> None:
+    recorder, remediator, fake = setup(store)
+    recorder.observe(alert(Status.FIRING, 0, title="worker_stalled"))
+    fake.answer = {"status": "recorded", "proposal": 1, "level": level}
+    assert remediator.run_pending(LATER) == 1
+    assert next(store.events(kind="runbook.skipped")).payload == {
+        "reason": f"its plan is at level {level}: recorded, not run"
+    }
+    assert list(store.events(kind="runbook.failed")) == []
+    assert store.incident(1).investigation is StageState.PENDING  # type: ignore[union-attr]
+
+
+def test_a_runbook_that_asks_or_runs_keeps_the_incident(store: Store) -> None:
+    recorder, remediator, _ = setup(store)  # the fake executor answers `approve`
+    recorder.observe(alert(Status.FIRING, 0, title="worker_stalled"))
+    assert remediator.run_pending(LATER) == 1
+    assert store.incident(1).investigation is StageState.SKIPPED  # type: ignore[union-attr]
+
+
 def test_the_journal_is_mirrored_once_and_a_failed_runbook_falls_back(store: Store) -> None:
     recorder, remediator, fake = setup(store)
     recorder.observe(alert(Status.FIRING, 0, title="worker_stalled"))

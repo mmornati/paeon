@@ -201,7 +201,9 @@ alert clears by itself. If no step fixes it, or the executor cannot be reached f
 the incident is handed to the investigator.
 
 A runbook's plan goes through the same policies as any other: write `approve` for it until you
-trust it.
+trust it. At `observe` or `suggest` the plan is recorded and nothing runs, so the incident is not
+handled: it goes to the investigator like any other, and the record shows what the runbook would
+have done.
 
 ### Migrating a watchdog script
 
