@@ -1,0 +1,66 @@
+# Paeon rules (PAEON_CONFIG=/config/paeon.yaml). Every key is optional; these are examples,
+# not defaults. Secrets never go here: name the environment variable that holds them.
+
+correlation:
+  # The same alert firing again this soon after its incident closed reopens that incident.
+  window_minutes: 30
+  # An alert on the same host this soon after an incident opened joins it.
+  host_window_minutes: 5
+  # Labels that name the host, first match wins.
+  host_labels: [host, instance, hostname]
+  # Alerts whose labels carry no host (OpenObserve alerts have a name and an id only).
+  hosts:
+    - match: { source: openobserve, title: "slo_.*" }
+      host: server-1
+  flap:
+    threshold: 3        # firings of one alert
+    window_minutes: 60  # within this long: the incident is flagged as flapping
+
+# Weekly windows in which alerts are expected. The incident is flagged, never dropped.
+maintenance:
+  - name: weekly updates
+    days: [sun]
+    start: "04:00"
+    duration_minutes: 90
+    timezone: Europe/Paris
+    match: { labels: { host: server-1 } }
+
+# Model aliases. Two backends: `anthropic` (Messages API) and `openai` (chat completions,
+# as served by OpenAI and by compatible gateways and local servers).
+models:
+  triage:
+    backend: openai
+    base_url: http://llm-gateway:8080/v1
+    model: auto
+    api_key_env: PAEON_TRIAGE_API_KEY
+    max_tokens: 600
+    timeout_seconds: 30
+    price: { input_per_mtok: 0.25, output_per_mtok: 1.25 }
+  # triage:
+  #   backend: anthropic
+  #   model: claude-haiku-5-5
+  #   api_key_env: ANTHROPIC_API_KEY
+
+# Shadow mode: the verdict is recorded and shown in the digest. Nothing acts on it.
+triage:
+  enabled: false
+  model: triage
+  confidence_threshold: 0.7   # under it, the incident is treated as real
+  settle_seconds: 60          # let related alerts join the incident first
+  max_per_hour: 20            # storm guard
+  daily_budget: 2.0           # in the currency of `price`; spent: treated as real, no call
+  history_days: 30
+  # Page-level alerts are never sent to the model.
+  skip:
+    - { severity: critical, source: uptime-kuma }
+    - { title: "vpn_unhealthy" }
+
+digest:
+  hour: 8
+  timezone: Europe/Paris
+  # Without `ntfy` the digest is only available from `paeon digest` and `GET /digest`.
+  # With it, this is the one thing Paeon sends: once a day, and only if there was an incident.
+  # ntfy:
+  #   url: https://ntfy.example.org
+  #   topic: incidents
+  #   token_env: PAEON_NTFY_TOKEN

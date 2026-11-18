@@ -189,7 +189,7 @@ class Down:
 def wait_for_events(store: Store, count: int) -> list[str]:
     deadline = time.monotonic() + 5
     while time.monotonic() < deadline:
-        found = [f"{e.kind} {e.fingerprint}" for e in store.events()]
+        found = [f"{e.kind} {e.fingerprint}" for e in store.events() if e.kind.startswith("alert.")]
         if len(found) >= count:
             return found
         time.sleep(0.02)

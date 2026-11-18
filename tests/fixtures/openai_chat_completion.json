@@ -1,0 +1,22 @@
+{
+  "id": "chatcmpl-9x2bq7ZrT1",
+  "object": "chat.completion",
+  "created": 1794688800,
+  "model": "small-fast-model-2026-10",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "```json\n{\"verdict\": \"real\", \"confidence\": 0.84, \"severity\": \"critical\", \"reason\": \"Three monitors on the same host went down together and nothing was planned.\"}\n```"
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1040,
+    "completion_tokens": 58,
+    "total_tokens": 1098,
+    "prompt_tokens_details": { "cached_tokens": 512 }
+  }
+}
