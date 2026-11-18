@@ -263,6 +263,19 @@ class Postmortems(_Rule):
     )
 
 
+class Ui(_Rule):
+    """The console under `/ui`. It has no login of its own: the reverse proxy protects it."""
+
+    enabled: bool = False
+    require_header: str | None = Field(
+        default=None,
+        min_length=1,
+        description="A header your proxy sets after authentication (for example"
+        " X-authentik-username). A request without it is refused: a second net against a route"
+        " that bypasses the proxy, not a login.",
+    )
+
+
 class Rules(_Rule):
     correlation: Correlation = Field(default_factory=Correlation)
     maintenance: tuple[MaintenanceWindow, ...] = ()
@@ -271,6 +284,7 @@ class Rules(_Rule):
     digest: Digest = Field(default_factory=Digest)
     investigation: Investigation = Field(default_factory=Investigation)
     postmortems: Postmortems = Field(default_factory=Postmortems)
+    ui: Ui = Field(default_factory=Ui)
 
     @model_validator(mode="after")
     def _models_exist(self) -> Rules:

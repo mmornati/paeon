@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_strip.html" import strip %}
+{% from "_rows.html" import rows as record %}
+{% set i = view.strip.incident %}
+{% block title %}{{ i.id }} {{ i.title }}{% endblock %}
+{% block main %}
+<p class="back"><a href="/ui">Board</a></p>
+{{ strip(view.strip, heading="h1", link=false) }}
+
+<section class="block" aria-labelledby="h-alerts">
+  <h2 id="h-alerts">Alerts</h2>
+  <ul class="alerts">
+    {% for alert in i.alerts -%}
+    <li class="alert-line"><span class="state state-{{ alert.status.value }}">{{ alert.status.value }}</span> <span>{{ alert.title }}</span> <span class="dim">{{ alert.source }}</span></li>
+    {% endfor -%}
+  </ul>
+</section>
+
+<section class="block" id="triage" aria-labelledby="h-triage">
+  <h2 id="h-triage">Triage</h2>
+  {% if view.verdict %}
+    {% set v = view.verdict %}
+    {% if v.fail_open %}
+    <p class="lead">Treated as real: triage failed open ({{ v.fail_open }}).</p>
+    {% if v.verdict %}<p class="pen">The model had said {{ v.verdict }}, {{ v.confidence|percent }} sure. {{ v.reason }}</p>{% endif %}
+    {% else %}
+    <p class="lead pen">{{ v.verdict }}, {{ v.confidence|percent }} sure</p>
+    <p class="pen">{{ v.reason }}</p>
+    {% endif %}
+    <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
+    <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
+    <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/feedback">
+      <p class="vote-ask">{% if view.feedback == "up" %}You said triage was right.{% elif view.feedback == "down" %}You said triage was wrong.{% else %}Was triage right? Your answer is what decides whether it can be trusted later.{% endif %}</p>
+      <label class="field"><span>Note, optional</span><input type="text" name="note" maxlength="1000" autocomplete="off"></label>
+      <div class="vote-buttons">
+        <button class="btn" name="vote" value="up"{% if view.feedback == "up" %} aria-pressed="true"{% endif %}>Triage was right</button>
+        <button class="btn" name="vote" value="down"{% if view.feedback == "down" %} aria-pressed="true"{% endif %}>Triage was wrong</button>
+      </div>
+    </form>
+  {% elif view.triage_skip %}
+    <p class="lead">Not sent to a model ({{ view.triage_skip }}). Treated as real.</p>
+  {% elif i.triage.value == "pending" %}
+    <p class="lead">Waiting: related alerts get a moment to join before the model is asked.</p>
+  {% else %}
+    <p class="lead">Triage was off when this incident opened.</p>
+  {% endif %}
+</section>
+
+<section class="block" id="investigation" aria-labelledby="h-investigation">
+  <h2 id="h-investigation">Investigation</h2>
+  {% if view.analysis %}
+    {% set a = view.analysis %}{% set f = a.findings %}
+    <p class="lead pen">{{ f.summary }}</p>
+    <dl class="findings">
+      <div><dt>Impact</dt><dd class="pen">{{ f.impact }}</dd></div>
+      <div><dt>Root cause, {{ f.root_cause.confidence|percent }} sure</dt><dd class="pen">{{ f.root_cause.statement }}</dd></div>
+    </dl>
+    <p class="facts">{{ a.model }} read with {{ a.tool_calls }} tool call{{ "" if a.tool_calls == 1 else "s" }} in {{ a.duration }}. It cannot change anything.</p>
+
+    <h3>Evidence</h3>
+    {% if f.evidence %}
+    <ul class="evidence">
+      {% for item in f.evidence -%}
+      <li><span class="pen">{{ item.claim }}</span>
+        {% if item.verified and item.call in view.calls %}<a class="cite" href="#call-{{ item.call }}">{{ item.call }}</a>
+        {%- else %}<span class="cite cite-missing">no tool call behind this</span>{% endif %}</li>
+      {% endfor -%}
+    </ul>
+    {% else %}<p class="dim">The model cited no evidence.</p>{% endif %}
+
+    {% if f.hypotheses_rejected %}
+    <h3>Ruled out</h3>
+    <ul class="evidence">
+      {% for item in f.hypotheses_rejected -%}
+      <li><span class="pen">{{ item.hypothesis }}</span> <span class="pen dim-pen">{{ item.reason }}</span></li>
+      {% endfor -%}
+    </ul>
+    {% endif %}
+
+    <h3>Suggested, for you to do</h3>
+    {% if f.plan %}
+    <ol class="plan">
+      {% for step in f.plan -%}
+      <li><span class="pen">{{ step.action }}</span> <span class="risk risk-{{ step.risk }}">{{ step.risk }} risk</span>{% if step.why %}<br><span class="pen dim-pen">{{ step.why }}</span>{% endif %}</li>
+      {% endfor -%}
+    </ol>
+    <p class="note">Advice only. Paeon runs none of it.</p>
+    {% else %}<p class="pen">No action needed.</p>{% endif %}
+  {% elif view.failure %}
+    <p class="lead">{{ view.failure }}.</p>
+    <p class="note">The alert reached you by its usual path. The model and tool calls made so far are in the record below.</p>
+  {% elif i.investigation.value == "pending" %}
+    <p class="lead">{{ "Running. Tool calls appear in the record as they are made." if view.rows|selectattr("kind", "equalto", "investigation.started")|list else "Queued." }}</p>
+  {% else %}
+    <p class="lead">Investigation was off when this incident opened.</p>
+  {% endif %}
+  {% if view.postmortem %}<p class="facts">Postmortem draft written to {{ view.postmortem }}.</p>{% endif %}
+</section>
+
+<section class="block" id="record" aria-labelledby="h-record">
+  <h2 id="h-record">Record</h2>
+  <p class="facts">{{ view.rows|length }} events, cost {{ view.cost|money }}.</p>
+  {{ record(view.rows) }}
+</section>
+{% endblock %}

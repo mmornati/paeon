@@ -1,0 +1,1026 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-18T12:38:23+00:00",
+  "title": "Design System: Paeon",
+  "extensions": {
+    "colorMeta": {
+      "rack": {
+        "role": "neutral",
+        "displayName": "Rack",
+        "scheme": "light",
+        "cssVariable": "--rack",
+        "canonical": "#c5cfcb",
+        "oklch": "oklch(84.6% 0.012 170)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 170)",
+          "oklch(27.0% 0.012 170)",
+          "oklch(39.0% 0.012 170)",
+          "oklch(51.0% 0.012 170)",
+          "oklch(63.0% 0.012 170)",
+          "oklch(75.0% 0.012 170)",
+          "oklch(87.0% 0.012 170)",
+          "oklch(95.0% 0.012 170)"
+        ]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Well",
+        "scheme": "light",
+        "cssVariable": "--well",
+        "canonical": "#b4bfbb",
+        "oklch": "oklch(79.5% 0.013 172)",
+        "tonalRamp": [
+          "oklch(15.0% 0.013 172)",
+          "oklch(27.0% 0.013 172)",
+          "oklch(39.0% 0.013 172)",
+          "oklch(51.0% 0.013 172)",
+          "oklch(63.0% 0.013 172)",
+          "oklch(75.0% 0.013 172)",
+          "oklch(87.0% 0.013 172)",
+          "oklch(95.0% 0.013 172)"
+        ]
+      },
+      "strip": {
+        "role": "neutral",
+        "displayName": "Strip",
+        "scheme": "light",
+        "cssVariable": "--strip",
+        "canonical": "#f4f6f2",
+        "oklch": "oklch(97.1% 0.006 129)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 129)",
+          "oklch(27.0% 0.006 129)",
+          "oklch(39.0% 0.006 129)",
+          "oklch(51.0% 0.006 129)",
+          "oklch(63.0% 0.006 129)",
+          "oklch(75.0% 0.006 129)",
+          "oklch(87.0% 0.006 129)",
+          "oklch(95.0% 0.006 129)"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "scheme": "light",
+        "cssVariable": "--edge",
+        "canonical": "#8a9793",
+        "oklch": "oklch(66.5% 0.016 175)",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 175)",
+          "oklch(27.0% 0.016 175)",
+          "oklch(39.0% 0.016 175)",
+          "oklch(51.0% 0.016 175)",
+          "oklch(63.0% 0.016 175)",
+          "oklch(75.0% 0.016 175)",
+          "oklch(87.0% 0.016 175)",
+          "oklch(95.0% 0.016 175)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "scheme": "light",
+        "cssVariable": "--rule",
+        "canonical": "#c3ccc8",
+        "oklch": "oklch(83.7% 0.011 168)",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 168)",
+          "oklch(27.0% 0.011 168)",
+          "oklch(39.0% 0.011 168)",
+          "oklch(51.0% 0.011 168)",
+          "oklch(63.0% 0.011 168)",
+          "oklch(75.0% 0.011 168)",
+          "oklch(87.0% 0.011 168)",
+          "oklch(95.0% 0.011 168)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Printed Ink",
+        "scheme": "light",
+        "cssVariable": "--ink",
+        "canonical": "#101820",
+        "oklch": "oklch(20.5% 0.020 249)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 249)",
+          "oklch(27.0% 0.020 249)",
+          "oklch(39.0% 0.020 249)",
+          "oklch(51.0% 0.020 249)",
+          "oklch(63.0% 0.020 249)",
+          "oklch(75.0% 0.020 249)",
+          "oklch(87.0% 0.020 249)",
+          "oklch(95.0% 0.020 249)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Second Ink",
+        "scheme": "light",
+        "cssVariable": "--ink-2",
+        "canonical": "#3a474e",
+        "oklch": "oklch(38.9% 0.021 232)",
+        "tonalRamp": [
+          "oklch(15.0% 0.021 232)",
+          "oklch(27.0% 0.021 232)",
+          "oklch(39.0% 0.021 232)",
+          "oklch(51.0% 0.021 232)",
+          "oklch(63.0% 0.021 232)",
+          "oklch(75.0% 0.021 232)",
+          "oklch(87.0% 0.021 232)",
+          "oklch(95.0% 0.021 232)"
+        ]
+      },
+      "pen": {
+        "role": "primary",
+        "displayName": "Pen Blue",
+        "scheme": "light",
+        "cssVariable": "--pen",
+        "canonical": "#1b3fa8",
+        "oklch": "oklch(41.5% 0.174 265)",
+        "tonalRamp": [
+          "oklch(15.0% 0.174 265)",
+          "oklch(27.0% 0.174 265)",
+          "oklch(39.0% 0.174 265)",
+          "oklch(51.0% 0.174 265)",
+          "oklch(63.0% 0.174 265)",
+          "oklch(75.0% 0.174 265)",
+          "oklch(87.0% 0.174 265)",
+          "oklch(95.0% 0.174 265)"
+        ]
+      },
+      "pen-2": {
+        "role": "primary",
+        "displayName": "Faded Pen",
+        "scheme": "light",
+        "cssVariable": "--pen-2",
+        "canonical": "#3d58a6",
+        "oklch": "oklch(48.1% 0.129 267)",
+        "tonalRamp": [
+          "oklch(15.0% 0.129 267)",
+          "oklch(27.0% 0.129 267)",
+          "oklch(39.0% 0.129 267)",
+          "oklch(51.0% 0.129 267)",
+          "oklch(63.0% 0.129 267)",
+          "oklch(75.0% 0.129 267)",
+          "oklch(87.0% 0.129 267)",
+          "oklch(95.0% 0.129 267)"
+        ]
+      },
+      "bar": {
+        "role": "neutral",
+        "displayName": "Bar",
+        "scheme": "light",
+        "cssVariable": "--bar",
+        "canonical": "#101820",
+        "oklch": "oklch(20.5% 0.020 249)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 249)",
+          "oklch(27.0% 0.020 249)",
+          "oklch(39.0% 0.020 249)",
+          "oklch(51.0% 0.020 249)",
+          "oklch(63.0% 0.020 249)",
+          "oklch(75.0% 0.020 249)",
+          "oklch(87.0% 0.020 249)",
+          "oklch(95.0% 0.020 249)"
+        ]
+      },
+      "bar-ink": {
+        "role": "neutral",
+        "displayName": "Bar Ink",
+        "scheme": "light",
+        "cssVariable": "--bar-ink",
+        "canonical": "#f4f6f2",
+        "oklch": "oklch(97.1% 0.006 129)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 129)",
+          "oklch(27.0% 0.006 129)",
+          "oklch(39.0% 0.006 129)",
+          "oklch(51.0% 0.006 129)",
+          "oklch(63.0% 0.006 129)",
+          "oklch(75.0% 0.006 129)",
+          "oklch(87.0% 0.006 129)",
+          "oklch(95.0% 0.006 129)"
+        ]
+      },
+      "bar-dim": {
+        "role": "neutral",
+        "displayName": "Bar Dim",
+        "scheme": "light",
+        "cssVariable": "--bar-dim",
+        "canonical": "#a9b6b2",
+        "oklch": "oklch(76.5% 0.016 176)",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 176)",
+          "oklch(27.0% 0.016 176)",
+          "oklch(39.0% 0.016 176)",
+          "oklch(51.0% 0.016 176)",
+          "oklch(63.0% 0.016 176)",
+          "oklch(75.0% 0.016 176)",
+          "oklch(87.0% 0.016 176)",
+          "oklch(95.0% 0.016 176)"
+        ]
+      },
+      "sev-critical": {
+        "role": "secondary",
+        "displayName": "Critical Red",
+        "scheme": "light",
+        "cssVariable": "--sev-critical",
+        "canonical": "#b3261e",
+        "oklch": "oklch(50.1% 0.178 29)",
+        "tonalRamp": [
+          "oklch(15.0% 0.178 29)",
+          "oklch(27.0% 0.178 29)",
+          "oklch(39.0% 0.178 29)",
+          "oklch(51.0% 0.178 29)",
+          "oklch(63.0% 0.178 29)",
+          "oklch(75.0% 0.178 29)",
+          "oklch(87.0% 0.178 29)",
+          "oklch(95.0% 0.178 29)"
+        ]
+      },
+      "sev-critical-ink": {
+        "role": "secondary",
+        "displayName": "Critical Ink",
+        "scheme": "light",
+        "cssVariable": "--sev-critical-ink",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 90)",
+          "oklch(27.0% 0.000 90)",
+          "oklch(39.0% 0.000 90)",
+          "oklch(51.0% 0.000 90)",
+          "oklch(63.0% 0.000 90)",
+          "oklch(75.0% 0.000 90)",
+          "oklch(87.0% 0.000 90)",
+          "oklch(95.0% 0.000 90)"
+        ]
+      },
+      "sev-warning": {
+        "role": "secondary",
+        "displayName": "Warning Amber",
+        "scheme": "light",
+        "cssVariable": "--sev-warning",
+        "canonical": "#d9a400",
+        "oklch": "oklch(74.8% 0.153 85)",
+        "tonalRamp": [
+          "oklch(15.0% 0.153 85)",
+          "oklch(27.0% 0.153 85)",
+          "oklch(39.0% 0.153 85)",
+          "oklch(51.0% 0.153 85)",
+          "oklch(63.0% 0.153 85)",
+          "oklch(75.0% 0.153 85)",
+          "oklch(87.0% 0.153 85)",
+          "oklch(95.0% 0.153 85)"
+        ]
+      },
+      "sev-warning-ink": {
+        "role": "secondary",
+        "displayName": "Warning Ink",
+        "scheme": "light",
+        "cssVariable": "--sev-warning-ink",
+        "canonical": "#101820",
+        "oklch": "oklch(20.5% 0.020 249)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 249)",
+          "oklch(27.0% 0.020 249)",
+          "oklch(39.0% 0.020 249)",
+          "oklch(51.0% 0.020 249)",
+          "oklch(63.0% 0.020 249)",
+          "oklch(75.0% 0.020 249)",
+          "oklch(87.0% 0.020 249)",
+          "oklch(95.0% 0.020 249)"
+        ]
+      },
+      "sev-info": {
+        "role": "secondary",
+        "displayName": "Info Green",
+        "scheme": "light",
+        "cssVariable": "--sev-info",
+        "canonical": "#1d6f5c",
+        "oklch": "oklch(48.8% 0.083 174)",
+        "tonalRamp": [
+          "oklch(15.0% 0.083 174)",
+          "oklch(27.0% 0.083 174)",
+          "oklch(39.0% 0.083 174)",
+          "oklch(51.0% 0.083 174)",
+          "oklch(63.0% 0.083 174)",
+          "oklch(75.0% 0.083 174)",
+          "oklch(87.0% 0.083 174)",
+          "oklch(95.0% 0.083 174)"
+        ]
+      },
+      "sev-info-ink": {
+        "role": "secondary",
+        "displayName": "Info Ink",
+        "scheme": "light",
+        "cssVariable": "--sev-info-ink",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 90)",
+          "oklch(27.0% 0.000 90)",
+          "oklch(39.0% 0.000 90)",
+          "oklch(51.0% 0.000 90)",
+          "oklch(63.0% 0.000 90)",
+          "oklch(75.0% 0.000 90)",
+          "oklch(87.0% 0.000 90)",
+          "oklch(95.0% 0.000 90)"
+        ]
+      },
+      "sev-unknown": {
+        "role": "secondary",
+        "displayName": "Unknown Grey",
+        "scheme": "light",
+        "cssVariable": "--sev-unknown",
+        "canonical": "#5d6b70",
+        "oklch": "oklch(51.8% 0.019 221)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 221)",
+          "oklch(27.0% 0.019 221)",
+          "oklch(39.0% 0.019 221)",
+          "oklch(51.0% 0.019 221)",
+          "oklch(63.0% 0.019 221)",
+          "oklch(75.0% 0.019 221)",
+          "oklch(87.0% 0.019 221)",
+          "oklch(95.0% 0.019 221)"
+        ]
+      },
+      "sev-unknown-ink": {
+        "role": "secondary",
+        "displayName": "Unknown Ink",
+        "scheme": "light",
+        "cssVariable": "--sev-unknown-ink",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 90)",
+        "tonalRamp": [
+          "oklch(15.0% 0.000 90)",
+          "oklch(27.0% 0.000 90)",
+          "oklch(39.0% 0.000 90)",
+          "oklch(51.0% 0.000 90)",
+          "oklch(63.0% 0.000 90)",
+          "oklch(75.0% 0.000 90)",
+          "oklch(87.0% 0.000 90)",
+          "oklch(95.0% 0.000 90)"
+        ]
+      },
+      "rack-dark": {
+        "role": "neutral",
+        "displayName": "Rack (dark)",
+        "scheme": "dark",
+        "cssVariable": "--rack",
+        "canonical": "#0f1613",
+        "oklch": "oklch(19.2% 0.012 167)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 167)",
+          "oklch(27.0% 0.012 167)",
+          "oklch(39.0% 0.012 167)",
+          "oklch(51.0% 0.012 167)",
+          "oklch(63.0% 0.012 167)",
+          "oklch(75.0% 0.012 167)",
+          "oklch(87.0% 0.012 167)",
+          "oklch(95.0% 0.012 167)"
+        ]
+      },
+      "well-dark": {
+        "role": "neutral",
+        "displayName": "Well (dark)",
+        "scheme": "dark",
+        "cssVariable": "--well",
+        "canonical": "#080d0b",
+        "oklch": "oklch(15.3% 0.009 169)",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 169)",
+          "oklch(27.0% 0.009 169)",
+          "oklch(39.0% 0.009 169)",
+          "oklch(51.0% 0.009 169)",
+          "oklch(63.0% 0.009 169)",
+          "oklch(75.0% 0.009 169)",
+          "oklch(87.0% 0.009 169)",
+          "oklch(95.0% 0.009 169)"
+        ]
+      },
+      "strip-dark": {
+        "role": "neutral",
+        "displayName": "Strip (dark)",
+        "scheme": "dark",
+        "cssVariable": "--strip",
+        "canonical": "#1c2622",
+        "oklch": "oklch(25.8% 0.016 169)",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 169)",
+          "oklch(27.0% 0.016 169)",
+          "oklch(39.0% 0.016 169)",
+          "oklch(51.0% 0.016 169)",
+          "oklch(63.0% 0.016 169)",
+          "oklch(75.0% 0.016 169)",
+          "oklch(87.0% 0.016 169)",
+          "oklch(95.0% 0.016 169)"
+        ]
+      },
+      "edge-dark": {
+        "role": "neutral",
+        "displayName": "Edge (dark)",
+        "scheme": "dark",
+        "cssVariable": "--edge",
+        "canonical": "#38443e",
+        "oklch": "oklch(37.4% 0.019 164)",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 164)",
+          "oklch(27.0% 0.019 164)",
+          "oklch(39.0% 0.019 164)",
+          "oklch(51.0% 0.019 164)",
+          "oklch(63.0% 0.019 164)",
+          "oklch(75.0% 0.019 164)",
+          "oklch(87.0% 0.019 164)",
+          "oklch(95.0% 0.019 164)"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Rule (dark)",
+        "scheme": "dark",
+        "cssVariable": "--rule",
+        "canonical": "#2c3933",
+        "oklch": "oklch(33.1% 0.020 165)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 165)",
+          "oklch(27.0% 0.020 165)",
+          "oklch(39.0% 0.020 165)",
+          "oklch(51.0% 0.020 165)",
+          "oklch(63.0% 0.020 165)",
+          "oklch(75.0% 0.020 165)",
+          "oklch(87.0% 0.020 165)",
+          "oklch(95.0% 0.020 165)"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Printed Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--ink",
+        "canonical": "#e8eeea",
+        "oklch": "oklch(94.3% 0.008 157)",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 157)",
+          "oklch(27.0% 0.008 157)",
+          "oklch(39.0% 0.008 157)",
+          "oklch(51.0% 0.008 157)",
+          "oklch(63.0% 0.008 157)",
+          "oklch(75.0% 0.008 157)",
+          "oklch(87.0% 0.008 157)",
+          "oklch(95.0% 0.008 157)"
+        ]
+      },
+      "ink-2-dark": {
+        "role": "neutral",
+        "displayName": "Second Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--ink-2",
+        "canonical": "#a3b3ac",
+        "oklch": "oklch(75.2% 0.020 168)",
+        "tonalRamp": [
+          "oklch(15.0% 0.020 168)",
+          "oklch(27.0% 0.020 168)",
+          "oklch(39.0% 0.020 168)",
+          "oklch(51.0% 0.020 168)",
+          "oklch(63.0% 0.020 168)",
+          "oklch(75.0% 0.020 168)",
+          "oklch(87.0% 0.020 168)",
+          "oklch(95.0% 0.020 168)"
+        ]
+      },
+      "pen-dark": {
+        "role": "primary",
+        "displayName": "Pen Blue (dark)",
+        "scheme": "dark",
+        "cssVariable": "--pen",
+        "canonical": "#9db8ff",
+        "oklch": "oklch(78.9% 0.106 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.106 268)",
+          "oklch(27.0% 0.106 268)",
+          "oklch(39.0% 0.106 268)",
+          "oklch(51.0% 0.106 268)",
+          "oklch(63.0% 0.106 268)",
+          "oklch(75.0% 0.106 268)",
+          "oklch(87.0% 0.106 268)",
+          "oklch(95.0% 0.106 268)"
+        ]
+      },
+      "pen-2-dark": {
+        "role": "primary",
+        "displayName": "Faded Pen (dark)",
+        "scheme": "dark",
+        "cssVariable": "--pen-2",
+        "canonical": "#8ea2d6",
+        "oklch": "oklch(71.6% 0.080 268)",
+        "tonalRamp": [
+          "oklch(15.0% 0.080 268)",
+          "oklch(27.0% 0.080 268)",
+          "oklch(39.0% 0.080 268)",
+          "oklch(51.0% 0.080 268)",
+          "oklch(63.0% 0.080 268)",
+          "oklch(75.0% 0.080 268)",
+          "oklch(87.0% 0.080 268)",
+          "oklch(95.0% 0.080 268)"
+        ]
+      },
+      "bar-dark": {
+        "role": "neutral",
+        "displayName": "Bar (dark)",
+        "scheme": "dark",
+        "cssVariable": "--bar",
+        "canonical": "#050907",
+        "oklch": "oklch(13.3% 0.010 165)",
+        "tonalRamp": [
+          "oklch(15.0% 0.010 165)",
+          "oklch(27.0% 0.010 165)",
+          "oklch(39.0% 0.010 165)",
+          "oklch(51.0% 0.010 165)",
+          "oklch(63.0% 0.010 165)",
+          "oklch(75.0% 0.010 165)",
+          "oklch(87.0% 0.010 165)",
+          "oklch(95.0% 0.010 165)"
+        ]
+      },
+      "bar-ink-dark": {
+        "role": "neutral",
+        "displayName": "Bar Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--bar-ink",
+        "canonical": "#e8eeea",
+        "oklch": "oklch(94.3% 0.008 157)",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 157)",
+          "oklch(27.0% 0.008 157)",
+          "oklch(39.0% 0.008 157)",
+          "oklch(51.0% 0.008 157)",
+          "oklch(63.0% 0.008 157)",
+          "oklch(75.0% 0.008 157)",
+          "oklch(87.0% 0.008 157)",
+          "oklch(95.0% 0.008 157)"
+        ]
+      },
+      "bar-dim-dark": {
+        "role": "neutral",
+        "displayName": "Bar Dim (dark)",
+        "scheme": "dark",
+        "cssVariable": "--bar-dim",
+        "canonical": "#8d9c99",
+        "oklch": "oklch(68.0% 0.018 182)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 182)",
+          "oklch(27.0% 0.018 182)",
+          "oklch(39.0% 0.018 182)",
+          "oklch(51.0% 0.018 182)",
+          "oklch(63.0% 0.018 182)",
+          "oklch(75.0% 0.018 182)",
+          "oklch(87.0% 0.018 182)",
+          "oklch(95.0% 0.018 182)"
+        ]
+      },
+      "sev-critical-dark": {
+        "role": "secondary",
+        "displayName": "Critical Red (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-critical",
+        "canonical": "#ef6a5e",
+        "oklch": "oklch(68.5% 0.167 27)",
+        "tonalRamp": [
+          "oklch(15.0% 0.167 27)",
+          "oklch(27.0% 0.167 27)",
+          "oklch(39.0% 0.167 27)",
+          "oklch(51.0% 0.167 27)",
+          "oklch(63.0% 0.167 27)",
+          "oklch(75.0% 0.167 27)",
+          "oklch(87.0% 0.167 27)",
+          "oklch(95.0% 0.167 27)"
+        ]
+      },
+      "sev-critical-ink-dark": {
+        "role": "secondary",
+        "displayName": "Critical Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-critical-ink",
+        "canonical": "#0f1613",
+        "oklch": "oklch(19.2% 0.012 167)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 167)",
+          "oklch(27.0% 0.012 167)",
+          "oklch(39.0% 0.012 167)",
+          "oklch(51.0% 0.012 167)",
+          "oklch(63.0% 0.012 167)",
+          "oklch(75.0% 0.012 167)",
+          "oklch(87.0% 0.012 167)",
+          "oklch(95.0% 0.012 167)"
+        ]
+      },
+      "sev-warning-dark": {
+        "role": "secondary",
+        "displayName": "Warning Amber (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-warning",
+        "canonical": "#e6b422",
+        "oklch": "oklch(79.4% 0.155 87)",
+        "tonalRamp": [
+          "oklch(15.0% 0.155 87)",
+          "oklch(27.0% 0.155 87)",
+          "oklch(39.0% 0.155 87)",
+          "oklch(51.0% 0.155 87)",
+          "oklch(63.0% 0.155 87)",
+          "oklch(75.0% 0.155 87)",
+          "oklch(87.0% 0.155 87)",
+          "oklch(95.0% 0.155 87)"
+        ]
+      },
+      "sev-warning-ink-dark": {
+        "role": "secondary",
+        "displayName": "Warning Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-warning-ink",
+        "canonical": "#0f1613",
+        "oklch": "oklch(19.2% 0.012 167)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 167)",
+          "oklch(27.0% 0.012 167)",
+          "oklch(39.0% 0.012 167)",
+          "oklch(51.0% 0.012 167)",
+          "oklch(63.0% 0.012 167)",
+          "oklch(75.0% 0.012 167)",
+          "oklch(87.0% 0.012 167)",
+          "oklch(95.0% 0.012 167)"
+        ]
+      },
+      "sev-info-dark": {
+        "role": "secondary",
+        "displayName": "Info Green (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-info",
+        "canonical": "#49b79b",
+        "oklch": "oklch(70.8% 0.109 173)",
+        "tonalRamp": [
+          "oklch(15.0% 0.109 173)",
+          "oklch(27.0% 0.109 173)",
+          "oklch(39.0% 0.109 173)",
+          "oklch(51.0% 0.109 173)",
+          "oklch(63.0% 0.109 173)",
+          "oklch(75.0% 0.109 173)",
+          "oklch(87.0% 0.109 173)",
+          "oklch(95.0% 0.109 173)"
+        ]
+      },
+      "sev-info-ink-dark": {
+        "role": "secondary",
+        "displayName": "Info Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-info-ink",
+        "canonical": "#0f1613",
+        "oklch": "oklch(19.2% 0.012 167)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 167)",
+          "oklch(27.0% 0.012 167)",
+          "oklch(39.0% 0.012 167)",
+          "oklch(51.0% 0.012 167)",
+          "oklch(63.0% 0.012 167)",
+          "oklch(75.0% 0.012 167)",
+          "oklch(87.0% 0.012 167)",
+          "oklch(95.0% 0.012 167)"
+        ]
+      },
+      "sev-unknown-dark": {
+        "role": "secondary",
+        "displayName": "Unknown Grey (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-unknown",
+        "canonical": "#8d9ca0",
+        "oklch": "oklch(68.2% 0.018 216)",
+        "tonalRamp": [
+          "oklch(15.0% 0.018 216)",
+          "oklch(27.0% 0.018 216)",
+          "oklch(39.0% 0.018 216)",
+          "oklch(51.0% 0.018 216)",
+          "oklch(63.0% 0.018 216)",
+          "oklch(75.0% 0.018 216)",
+          "oklch(87.0% 0.018 216)",
+          "oklch(95.0% 0.018 216)"
+        ]
+      },
+      "sev-unknown-ink-dark": {
+        "role": "secondary",
+        "displayName": "Unknown Ink (dark)",
+        "scheme": "dark",
+        "cssVariable": "--sev-unknown-ink",
+        "canonical": "#0f1613",
+        "oklch": "oklch(19.2% 0.012 167)",
+        "tonalRamp": [
+          "oklch(15.0% 0.012 167)",
+          "oklch(27.0% 0.012 167)",
+          "oklch(39.0% 0.012 167)",
+          "oklch(51.0% 0.012 167)",
+          "oklch(63.0% 0.012 167)",
+          "oklch(75.0% 0.012 167)",
+          "oklch(87.0% 0.012 167)",
+          "oklch(95.0% 0.012 167)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "Title",
+        "purpose": "Page heading, and the strip title on an incident page."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "First statement of a section: verdict, summary, the day's spend. The wordmark at weight 700."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, capped at 70ch. Tabular numerals are on page-wide."
+      },
+      "strip-title": {
+        "displayName": "Strip title",
+        "purpose": "The title of a strip on the board, one line."
+      },
+      "entry": {
+        "displayName": "Entry",
+        "purpose": "The value in a cell and the text of a record row. Weight 500 in pen. A literal 0.875rem in the stylesheet, not a custom property."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Standing lines, facts, notes, navigation, buttons, tables. --t-small."
+      },
+      "heading-label": {
+        "displayName": "Heading label",
+        "purpose": "Uppercase bay names and section headings over a 2px ink rule."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase cell labels, column heads, record tags, flags, the stage line. --t-label, tracking 0.04em to 0.06em."
+      },
+      "holder-id": {
+        "displayName": "Holder id",
+        "purpose": "The incident number in the holder. The severity word under it is sans 700 at 0.625rem, uppercase."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Counts, costs and table cells in monospace."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Times, event kinds, payloads. A literal 0.75rem in the stylesheet, not a custom property."
+      }
+    },
+    "colorSchemes": {
+      "switch": "prefers-color-scheme",
+      "note": "Each CSS custom property has one light and one dark value. Frontmatter keys ending in -dark are the dark value of the same variable. A print palette puts strips on white (#ffffff) with a #eef1ef well and the light inks."
+    },
+    "shadows": [],
+    "insetFrames": [
+      {
+        "name": "resolved-holder-frame",
+        "value": "inset 0 0 0 3px var(--holder)",
+        "purpose": "The severity colour kept as a frame on a resolved strip. A frame, not elevation."
+      },
+      {
+        "name": "target-row-ring",
+        "value": "inset 0 0 0 2px var(--ink)",
+        "purpose": "The record row a citation points to."
+      }
+    ],
+    "focus": [
+      {
+        "name": "focus",
+        "value": "outline: 2px solid var(--pen); outline-offset: 2px",
+        "purpose": "Every focusable element. On a board strip the outline surrounds the whole strip."
+      },
+      {
+        "name": "focus-bar",
+        "value": "outline: 2px solid var(--bar-ink); outline-offset: -3px",
+        "purpose": "Focus inside the dark bar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The one easing curve (--ease)."
+      },
+      {
+        "name": "strip-slide",
+        "value": "420ms",
+        "purpose": "A strip sliding between bays on live refresh, as a view transition. Names are set per strip from script through the CSSOM. Off under prefers-reduced-motion."
+      },
+      {
+        "name": "board-crossfade",
+        "value": "120ms",
+        "purpose": "Cross-fade of the rest of the page during the same view transition."
+      },
+      {
+        "name": "state-ease",
+        "value": "160ms",
+        "purpose": "Colour changes on hover and press (navigation, buttons, chips, strip border). State feedback, not movement."
+      },
+      {
+        "name": "refresh-interval",
+        "value": "10000ms",
+        "purpose": "The board refetches itself; paused while the tab is hidden or focus is on the board."
+      },
+      {
+        "name": "changed-offset",
+        "value": "translate: 0.5rem 0",
+        "purpose": "A changed strip stands out of line, with no transition, until pointed at, pressed or focused."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "44rem",
+        "purpose": "Gutter 1.5rem, bar on one line, board in two columns, full table columns."
+      },
+      {
+        "name": "desk",
+        "value": "78rem",
+        "purpose": "Board in four columns, wells at least 60vh."
+      }
+    ],
+    "containers": [
+      {
+        "name": "page",
+        "value": "54rem"
+      },
+      {
+        "name": "page-wide",
+        "value": "96rem"
+      },
+      {
+        "name": "prose",
+        "value": "70ch"
+      }
+    ],
+    "delivery": {
+      "contentSecurityPolicy": "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "note": "No inline style or script, no other host. Meter widths are SVG attributes; view-transition names are set from script through the CSSOM."
+    }
+  },
+  "components": [
+    {
+      "name": "Bar",
+      "kind": "nav",
+      "refersTo": "bar",
+      "description": "The dark band on every page: wordmark, three destinations, and the line that says which stages are on and that actions are none.",
+      "html": "<header class=\"ds-bar\"><div class=\"ds-bar-line\"><a class=\"ds-mark\" href=\"#\">Paeon</a><nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Board</a><a href=\"#\">Log</a><a href=\"#\">Ledger</a></nav></div><ul class=\"ds-stages\"><li>Triage <b>shadow</b></li><li>Investigation <b>read-only</b></li><li class=\"ds-stage-off\">Postmortems <b>off</b></li><li>Actions <b>none</b></li></ul></header>",
+      "css": ".ds-bar { background: var(--bar); color: var(--bar-ink); padding: 0 0.75rem; font-family: var(--sans); } .ds-bar-line { display: flex; align-items: stretch; justify-content: space-between; gap: 1rem; } .ds-mark { font-weight: 700; font-size: 1.0625rem; letter-spacing: 0.01em; color: inherit; text-decoration: none; display: flex; align-items: center; min-height: 2.75rem; } .ds-nav { display: flex; } .ds-nav a { display: flex; align-items: center; min-height: 2.75rem; padding: 0 0.75rem; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; text-decoration: none; color: var(--bar-dim); transition: color 160ms var(--ease), background-color 160ms var(--ease); } .ds-nav a:hover { color: var(--bar-ink); } .ds-nav a[aria-current] { background: var(--rack); color: var(--ink); } .ds-bar :focus-visible { outline: 2px solid var(--bar-ink); outline-offset: -3px; } .ds-stages { margin: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 0.125rem 0.875rem; padding: 0.3125rem 0 0.4375rem; border-top: 1px solid color-mix(in srgb, var(--bar-ink) 22%, transparent); font-size: 0.6875rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--bar-dim); } .ds-stages b { color: var(--bar-ink); font-weight: 700; } .ds-stage-off b { color: var(--bar-dim); font-weight: 600; }"
+    },
+    {
+      "name": "Bay with strips",
+      "kind": "custom",
+      "refersTo": "strip",
+      "description": "A stage as a labelled rack, holding strips in their fixed board form: holder with id and written severity, one-line title and standing, six boxes. Pen blue italic marks what a model said.",
+      "html": "<section class=\"ds-bay\"><header class=\"ds-bay-head\"><h2 class=\"ds-bay-name\">Open</h2><span class=\"ds-bay-count\">2</span></header><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-critical\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">4</span><span class=\"ds-holder-sev\">critical</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">vpn_unhealthy</a></h3><p class=\"ds-strip-standing\"><span>13:03, open 30 min</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>1 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd>skipped</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>running</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0580</dd></div></dl></div></article><article class=\"ds-strip ds-sev-warning\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">3</span><span class=\"ds-holder-sev\">warning</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">slo_traefik_5xx</a></h3><p class=\"ds-strip-standing\"><span>12:08, open 85 min</span> <span class=\"ds-flag\">flapping</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>2 of 2 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd class=\"ds-pen\">real 86%</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd class=\"ds-pen\">78%, 3 calls</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.21</dd></div></dl></div></article></div></section>",
+      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; }"
+    },
+    {
+      "name": "Resolved strip",
+      "kind": "custom",
+      "refersTo": "strip-holder-resolved",
+      "description": "A resolved strip is turned over: the holder keeps its severity colour as a 3px frame only, on a clear ground with printed ink.",
+      "html": "<div class=\"ds-bay\"><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-info ds-is-resolved\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">1</span><span class=\"ds-holder-sev\">info</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">backup_late</a></h3><p class=\"ds-strip-standing\"><span>10:02, resolved in 20 min</span> <span class=\"ds-flag\">maintenance</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>0 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd class=\"ds-pen\">noise 91%</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>skipped</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0021</dd></div></dl></div></article></div></div>",
+      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; }"
+    },
+    {
+      "name": "Changed strip",
+      "kind": "custom",
+      "refersTo": "changed-tag",
+      "description": "After a live refresh, a strip that moved or changed stands 0.5rem out of line and carries an outlined tag until it is pointed at, pressed or focused.",
+      "html": "<div class=\"ds-bay\"><div class=\"ds-bay-strips\"><article class=\"ds-strip ds-sev-critical ds-is-resolved ds-is-changed\"><div class=\"ds-holder\"><span class=\"ds-holder-id\">2</span><span class=\"ds-holder-sev\">critical</span></div><div><h3 class=\"ds-strip-title\"><a href=\"#\">Source openobserve is stale</a></h3><p class=\"ds-strip-standing\"><span>10:42, resolved in 30 min</span><span class=\"ds-changed\">changed</span></p><dl class=\"ds-cells\"><div class=\"ds-cell\"><dt>Host</dt><dd>server-1</dd></div><div class=\"ds-cell\"><dt>Alerts</dt><dd>0 of 1 firing</dd></div><div class=\"ds-cell\"><dt>Triage</dt><dd>failed open</dd></div><div class=\"ds-cell\"><dt>Investigation</dt><dd>failed</dd></div><div class=\"ds-cell\"><dt>Postmortem</dt><dd>off</dd></div><div class=\"ds-cell\"><dt>Cost</dt><dd>0.0019</dd></div></dl></div></article></div></div>",
+      "css": ".ds-bay { font: 400 0.9375rem/1.45 var(--sans); font-variant-numeric: tabular-nums; color: var(--ink); width: 22rem; } .ds-bay-head { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 0.1875rem; } .ds-bay-name { margin: 0; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; } .ds-bay-count { font-family: var(--mono); font-size: 0.8125rem; font-weight: 600; } .ds-bay-strips { display: grid; gap: 0.3125rem; padding: 0.3125rem; background: var(--well); } .ds-strip { --holder: var(--sev-unknown); --holder-ink: var(--sev-unknown-ink); position: relative; display: grid; grid-template-columns: 4rem minmax(0, 1fr); background: var(--strip); border: 1px solid var(--edge); transition: border-color 160ms var(--ease); } .ds-strip:hover { border-color: var(--ink); } .ds-strip:hover .ds-strip-title a { text-decoration: underline; text-decoration-thickness: 1px; } .ds-strip:has(a:focus-visible) { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-sev-critical { --holder: var(--sev-critical); --holder-ink: var(--sev-critical-ink); } .ds-sev-warning { --holder: var(--sev-warning); --holder-ink: var(--sev-warning-ink); } .ds-sev-info { --holder: var(--sev-info); --holder-ink: var(--sev-info-ink); } .ds-holder { background: var(--holder); color: var(--holder-ink); display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.125rem 0.375rem; font-family: var(--mono); } .ds-holder-id { font-size: 1.125rem; font-weight: 700; line-height: 1; } .ds-holder-sev { font-family: var(--sans); font-size: 0.625rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; } .ds-is-resolved .ds-holder { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 3px var(--holder); } .ds-strip-title { margin: 0; padding: 0.4375rem 0.625rem 0.0625rem; font-size: 0.9375rem; font-weight: 650; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-strip-title a { color: inherit; text-decoration: none; outline: none; } .ds-strip-title a::after { content: ''; position: absolute; inset: 0; } .ds-strip-standing { margin: 0; display: flex; align-items: baseline; gap: 0.375rem; white-space: nowrap; padding: 0.0625rem 0.625rem 0.4375rem; font-size: 0.8125rem; color: var(--ink-2); } .ds-flag { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding: 0 0.3125rem; border: 1px solid var(--ink-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink); } .ds-cells { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--rule); overflow: hidden; } .ds-cell { min-width: 0; padding: 0.25rem 0.625rem 0.375rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0 -1px -1px 0; } .ds-cell dt { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-cell dd { margin: 0; font-size: 0.875rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-cell dd.ds-pen { color: var(--pen); font-style: italic; font-weight: 500; } .ds-strip.ds-is-changed { translate: 0.5rem 0; } .ds-changed { flex: none; padding: 0 0.3125rem; color: var(--ink); border: 2px solid var(--ink); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; }"
+    },
+    {
+      "name": "Record rows and voice tags",
+      "kind": "custom",
+      "refersTo": "record-row",
+      "description": "Events of the log. The tag names the voice: in, code and you in second ink, model and tool in pen blue, sent reversed out of ink because it left the server.",
+      "html": "<ol class=\"ds-record\"><li class=\"ds-row-day\">Wed 18 Nov</li><li class=\"ds-row\"><time class=\"ds-row-time\">12:08:16</time><span class=\"ds-row-tag\">in</span><div><p class=\"ds-row-text\">slo_traefik_5xx is firing (warning)</p><p class=\"ds-row-meta\"><span>alert.firing</span></p></div></li><li class=\"ds-row\"><time class=\"ds-row-time\">12:08:16</time><span class=\"ds-row-tag\">code</span><div><p class=\"ds-row-text\">Incident opened</p><p class=\"ds-row-meta\"><span>incident.opened</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:16</time><span class=\"ds-row-tag\">model</span><div><p class=\"ds-row-text\">Model call for triage: claude-haiku-5-5, 1840 in, 212 out</p><p class=\"ds-row-meta\"><span>model.call</span> <span>cost 0.0024</span> <span>1310 ms</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:16</time><span class=\"ds-row-tag\">model</span><div><p class=\"ds-row-text ds-pen\">Triage verdict: real, 86%</p><p class=\"ds-row-meta\"><span>triage.verdict</span></p></div></li><li class=\"ds-row ds-voice-model\"><time class=\"ds-row-time\">12:09:58</time><span class=\"ds-row-tag\">tool</span><div><p class=\"ds-row-text\">c1 search_logs {\"stream\": \"traefik\"}</p><p class=\"ds-row-meta\"><span>tool.call</span> <span>240 ms</span></p></div></li><li class=\"ds-row ds-voice-out\"><time class=\"ds-row-time\">12:12:04</time><span class=\"ds-row-tag\">sent</span><div><p class=\"ds-row-text\">Sent to ntfy topic incidents: the investigation</p><p class=\"ds-row-meta\"><span>notification.sent</span></p></div></li></ol>",
+      "css": ".ds-record { margin: 0; padding: 0; list-style: none; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font-family: var(--sans); font-variant-numeric: tabular-nums; } .ds-row-day { padding: 0.25rem 0.625rem; background: var(--well); border-bottom: 1px solid var(--rule); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-row { display: grid; grid-template-columns: 4.5rem 3.25rem minmax(0, 1fr); column-gap: 0.625rem; align-items: baseline; padding: 0.375rem 0.625rem 0.4375rem; border-bottom: 1px solid var(--rule); } .ds-row:last-child { border-bottom: 0; } .ds-row:target { box-shadow: inset 0 0 0 2px var(--ink); } .ds-row p { margin: 0; } .ds-row-time { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); } .ds-row-tag { justify-self: start; font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); } .ds-voice-model .ds-row-tag { color: var(--pen); } .ds-voice-out .ds-row-tag { background: var(--ink); color: var(--strip); padding: 0 0.25rem; } .ds-row-text { font-size: 0.875rem; line-height: 1.35; overflow-wrap: anywhere; } .ds-row-text.ds-pen { color: var(--pen); font-style: italic; } .ds-row-meta { display: flex; flex-wrap: wrap; gap: 0 0.75rem; font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); }"
+    },
+    {
+      "name": "Evidence with cite chips",
+      "kind": "chip",
+      "refersTo": "cite",
+      "description": "A model's claim in pen, tied to the tool call behind it by an upright monospace chip. A claim with no call behind it gets a dashed chip that says so.",
+      "html": "<ul class=\"ds-evidence\"><li><span class=\"ds-pen\">Traefik logs 502 for media.example from 21:03:58.</span> <a class=\"ds-cite\" href=\"#\">c1</a></li><li><span class=\"ds-pen\">/srv has 0 bytes available.</span> <a class=\"ds-cite\" href=\"#\">c3</a></li><li><span class=\"ds-pen\">The backup job was changed last week.</span> <span class=\"ds-cite ds-cite-missing\">no tool call behind this</span></li></ul>",
+      "css": ".ds-evidence { margin: 0; padding: 0; list-style: none; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font: 400 0.9375rem/1.45 var(--sans); } .ds-evidence li { padding: 0.4375rem 0.625rem; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; } .ds-evidence li:last-child { border-bottom: 0; } .ds-pen { color: var(--pen); font-style: italic; } .ds-cite { font-family: var(--mono); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-width: 2.25rem; min-height: 1.75rem; margin-left: 0.25rem; padding: 0 0.4375rem; border: 1px solid var(--ink-2); color: var(--ink); font-style: normal; text-decoration: none; vertical-align: middle; } a.ds-cite:hover { background: var(--ink); color: var(--strip); } a.ds-cite:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-cite-missing { font-family: var(--sans); text-transform: uppercase; border-style: dashed; }"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The one button style: strip ground, ink hairline, square. Hover and the pressed state reverse it to ink.",
+      "html": "<div class=\"ds-buttons\"><button class=\"ds-btn\">Triage was right</button><button class=\"ds-btn\" aria-pressed=\"true\">Triage was wrong</button><button class=\"ds-btn\" disabled>Older</button></div>",
+      "css": ".ds-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: 0 0.875rem; font: 600 0.8125rem/1 var(--sans); letter-spacing: 0.02em; color: var(--ink); background: var(--strip); border: 1px solid var(--ink); border-radius: 0; cursor: pointer; transition: background-color 160ms var(--ease), color 160ms var(--ease); } .ds-btn:hover, .ds-btn[aria-pressed='true'] { background: var(--ink); color: var(--strip); } .ds-btn:active { background: var(--ink-2); color: var(--strip); } .ds-btn:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-btn:disabled { border-color: var(--edge); color: var(--ink-2); cursor: default; background: transparent; }"
+    },
+    {
+      "name": "Filter chips",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "The log's filters: a scrolling line of square links; the current one is reversed to ink.",
+      "html": "<nav class=\"ds-chips\"><a href=\"#\" aria-current=\"true\">Everything</a><a href=\"#\">Model calls</a><a href=\"#\">Tool calls</a><a href=\"#\">Sent</a></nav>",
+      "css": ".ds-chips { display: flex; gap: 0.3125rem; padding: 0.125rem 0; overflow-x: auto; scrollbar-width: none; } .ds-chips a { flex: none; display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.6875rem; font: 600 0.8125rem/1 var(--sans); color: var(--ink); text-decoration: none; background: var(--strip); border: 1px solid var(--edge); transition: background-color 160ms var(--ease), color 160ms var(--ease); } .ds-chips a:hover { border-color: var(--ink); } .ds-chips a:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; } .ds-chips a[aria-current] { background: var(--ink); border-color: var(--ink); color: var(--strip); }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labelled square input on the rack ground, set into a strip-coloured form.",
+      "html": "<div class=\"ds-vote\"><label class=\"ds-field\"><span>Note, optional</span><input type=\"text\"></label></div>",
+      "css": ".ds-vote { padding: 0.625rem; background: var(--strip); border: 1px solid var(--edge); font: 400 0.9375rem/1.45 var(--sans); } .ds-field { display: grid; gap: 0.1875rem; } .ds-field span { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-field input { font: inherit; color: var(--ink); background: var(--rack); border: 1px solid var(--edge); border-radius: 0; padding: 0.5rem 0.5625rem; min-height: 2.75rem; width: 100%; box-sizing: border-box; caret-color: var(--pen); } .ds-field input:hover { border-color: var(--ink-2); } .ds-field input:focus-visible { outline: 2px solid var(--pen); outline-offset: 0; border-color: var(--pen); }"
+    },
+    {
+      "name": "Table with meters",
+      "kind": "custom",
+      "refersTo": "table",
+      "description": "Ledger table: label heads, monospace cells, right-aligned figures, a 2px ink rule over the total, and flat ink meters drawn as SVG with the share as an attribute.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Day, UTC</th><th class=\"ds-num\">Calls</th><th class=\"ds-num\">Cost</th><th></th></tr></thead><tbody><tr><td>2026-11-18</td><td class=\"ds-num\">7</td><td class=\"ds-num\">0.27</td><td class=\"ds-meter-cell\"><svg class=\"ds-meter\" viewBox=\"0 0 100 6\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><rect class=\"ds-meter-track\" width=\"100\" height=\"6\"/><rect class=\"ds-meter-fill\" width=\"100.0\" height=\"6\"/></svg></td></tr><tr><td>2026-11-17</td><td class=\"ds-num\">3</td><td class=\"ds-num\">0.0840</td><td class=\"ds-meter-cell\"><svg class=\"ds-meter\" viewBox=\"0 0 100 6\" preserveAspectRatio=\"none\" aria-hidden=\"true\"><rect class=\"ds-meter-track\" width=\"100\" height=\"6\"/><rect class=\"ds-meter-fill\" width=\"31.1\" height=\"6\"/></svg></td></tr></tbody><tfoot><tr><th>All</th><td class=\"ds-num\">10</td><td class=\"ds-num\">0.35</td><td></td></tr></tfoot></table>",
+      "css": ".ds-table { width: 100%; border-collapse: collapse; background: var(--strip); border: 1px solid var(--edge); color: var(--ink); font-family: var(--sans); font-size: 0.8125rem; font-variant-numeric: tabular-nums; } .ds-table th, .ds-table td { padding: 0.3125rem 0.625rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: baseline; } .ds-table th { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); } .ds-table td { font-family: var(--mono); } .ds-table .ds-num { text-align: right; white-space: nowrap; } .ds-table tfoot th, .ds-table tfoot td { border-top: 2px solid var(--ink); border-bottom: 0; font-weight: 700; color: var(--ink); } .ds-table .ds-meter-cell { width: 38%; vertical-align: middle; } .ds-meter { display: block; width: 100%; height: 0.375rem; } .ds-meter-track { fill: var(--rule); } .ds-meter-fill { fill: var(--ink); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Strip Bay",
+    "overview": "The console is an air traffic control strip board. The ground is a grey-green rack. An incident is an off-white printed strip in a holder, ruled into labelled boxes. A bay is a stage of the pipeline: Triage, Investigation, Open, Resolved. Where a strip sits says what it is waiting for, so the board answers \"where does everything stand\" before a word is read.\n\nEverything on a strip is either printed or written in pen. Printed ink is what code recorded. Pen blue, slanted, is what a model said. The operator reads the model's words as annotation and never as fact, then opens the strip and finds each claim tied to the tool call behind it. The system is flat and dense: hairlines, square corners, no shadow, no gradient, no picture. It is the opposite of the dark observability dashboard of stat tiles over a table, which this world refuses.\n\nThe console is server-rendered and makes no request to another host. That constraint shapes the look as much as the metaphor does: system fonts only, one stylesheet, one small script, no inline style anywhere.",
+    "keyCharacteristics": [
+      "A rack, bays and strips: position carries state.",
+      "Two voices, one rule everywhere: printed ink for code, blue italic for a model.",
+      "Severity is the fill of the holder, and is always also written as a word.",
+      "Hairlines and square corners; depth comes from three flat tones (rack, well, strip).",
+      "Small uppercase labels over plain values, figures in monospace with tabular numerals.",
+      "Light and dark follow the system setting; a print palette puts the strips on white paper."
+    ],
+    "rules": [
+      {
+        "name": "The Two Voices Rule",
+        "body": "What code recorded is printed ink, upright. What a model said is pen blue and italic. One rule on every page: a verdict, a summary, a claim, a suggested step are pen; a fact about a model call (its tokens, cost, duration, failure) is printed ink. The slant means the voice never rests on colour alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reversed Tag Rule",
+        "body": "A tag reversed out of solid ink marks what left the server (a notification that was sent), and nothing else. A tag for anything that stayed inside is plain or outlined.",
+        "section": "colors"
+      },
+      {
+        "name": "The Written Severity Rule",
+        "body": "Severity lives in the fill of the holder and is always also written there as a word (critical, warning, info, unknown). Severity colour is never used for text, borders of other parts, or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Turned Over Rule",
+        "body": "A resolved strip keeps its severity colour as a 3px frame inside the holder, with a clear ground and printed ink. The colour says what it was; the empty holder says it is over.",
+        "section": "colors"
+      },
+      {
+        "name": "The Same Host Rule",
+        "body": "System fonts only. The pages load nothing from another host, so no webfont is ever added, whether hosted elsewhere or bundled.",
+        "section": "typography"
+      },
+      {
+        "name": "The Counted In Mono Rule",
+        "body": "Monospace is for what is counted or cited: ids, counts, costs, times, event kinds, payloads. A sentence is never set in it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Form Rule",
+        "body": "On the board a strip is six boxes, one line each, always the same height. Reasons and long values belong to the incident page, not to the board.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Surfaces are separated by tone and a 1px line. No drop shadow, no blur, no gradient, no translucent layer.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do set every word a model produced in pen blue italic, and every fact code recorded in upright printed ink, on every page.",
+      "Do write severity as a word in the holder whenever the holder is filled or framed with its colour.",
+      "Do keep the reversed ink tag for what left the server.",
+      "Do build new surfaces from the strip ground with a 1px edge hairline and 1px rule hairlines inside, corners square.",
+      "Do label every box with a small uppercase label and put the value under it in plain type.",
+      "Do set ids, counts, costs, times and event kinds in monospace.",
+      "Do say what was not done in a printed line: a stage that is off, a call that failed, a budget that is spent, a claim with no tool call behind it.",
+      "Do keep interactive targets at 2.75rem tall for buttons, fields and navigation.",
+      "Do set per-element values without inline style: SVG attributes for meters, the CSSOM from script for view-transition names.",
+      "Do define every new colour for light and dark together, and check the print palette."
+    ],
+    "donts": [
+      "Don't use pen blue for anything code recorded, or use italic for emphasis: the slant belongs to the model.",
+      "Don't use a severity colour outside a holder, or let colour be the only sign of severity.",
+      "Don't reverse a tag for anything that stayed on the server; the changed tag is outlined.",
+      "Don't add a shadow, a gradient, a blur or a rounded corner.",
+      "Don't load a font, script, image or style from another host, and don't add a webfont.",
+      "Don't write a `style` attribute or a `<style>` block: the content policy refuses them.",
+      "Don't let a strip on the board grow: no wrapped title, no seventh box, no reason text.",
+      "Don't add a second motion. A strip sliding between bays is the only movement, and it is off under reduced motion.",
+      "Don't build the dashboard of stat tiles over a table.",
+      "Don't show approvals, actions or autonomy controls as if they existed."
+    ]
+  }
+}

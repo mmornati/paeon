@@ -23,7 +23,7 @@ ntfy topic you configure. The roadmap is in
 | 1. Observe | Correlation into incidents, flap and maintenance flags, change calendar, triage in shadow mode, daily digest with feedback | built |
 | 2. Investigate | Read-only investigation by a strong model, analysis by notification, postmortem drafts | built, see the limits below |
 | 3. Approve and act | Action catalog, signed Go / No-go, executor, verification, rollback | planned |
-| 4. UI and MCP | Incident pages, autonomy matrix | planned |
+| 4. UI and MCP | Incident pages, autonomy matrix | console built (board, incident, log, ledger); the rest is planned |
 | 5. Earned autonomy | Promotion proposals, `auto` for the first actions, Undo | planned |
 | 6. Open-source release | Docs, threat model, contribution guide | planned |
 
@@ -64,6 +64,10 @@ What exists:
   `status: draft`.
 - **Model clients** (`paeon.models`): the Anthropic Messages API (through the `anthropic` SDK)
   and the OpenAI-compatible chat API, each with a configurable base URL, both with tool calls.
+- **Console** (`paeon.ui`): the event log rendered for a person, under `/ui`. A board of
+  incidents by the stage they wait for, each incident with its verdict, its analysis and every
+  event behind them, the whole log with filters, and the cost ledger. Read-only, apart from
+  saying whether triage was right. Off by default, see [Console](#console).
 - **Digest and feedback** (`paeon.digest`): `paeon digest`, `GET /digest`, and optionally one ntfy
   message a day. `paeon feedback <id> up|down` records whether triage was right.
 
@@ -129,6 +133,38 @@ limited to search, a Docker socket proxy limited to GET), so that the allow-list
 net and not the only one.
 
 A deployment example is in [examples/compose.yaml](examples/compose.yaml).
+
+### Console
+
+```yaml
+ui:
+  enabled: true
+  require_header: X-authentik-username   # optional
+```
+
+Then open `http://paeon:8080/ui`. Three pages:
+
+- **Board**: every open incident and those resolved in the last 7 days, as strips in four bays
+  (waiting for triage, under investigation, open, resolved). It refreshes itself; a strip that
+  changed is marked until you touch it.
+- **Incident**: the alerts, what triage said and whether you agreed, the investigation's
+  findings with each claim tied to the tool call behind it, and the full record of events with
+  their payloads.
+- **Log** and **Ledger**: everything recorded, filtered by who spoke (came in, decided by code,
+  said by a model, read by a tool, left the server), and the cost of model calls by day, stage
+  and model against the daily budgets.
+
+What a model said is shown in blue, what code recorded in black: a verdict is never dressed as a
+fact.
+
+The console has **no login**. It is off until you enable it, and it must sit behind a reverse
+proxy that authenticates (Traefik with Authentik forward-auth, for example): route `/ui` through
+it and do not publish Paeon's port. `require_header` names a header your proxy sets once the
+user is authenticated; a request without it is refused. That is a second net against a route
+that bypasses the proxy, not a login: anyone who can reach the port directly can send the
+header. The ingest endpoints keep their bearer token either way.
+
+Payloads are redacted again before they are shown, and pages load nothing from another host.
 
 ### Change calendar
 

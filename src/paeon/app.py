@@ -34,6 +34,7 @@ from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
 from paeon.tools import Tool, Toolbox, docker_tools, openobserve_tools, paeon_tools
 from paeon.triage import Triager
+from paeon.ui import mount_ui
 
 log = logging.getLogger(__name__)
 
@@ -308,6 +309,9 @@ def create_app(
         now = _now()
         report = digests.build(store, since=now - timedelta(hours=hours), until=now)
         return {**report.as_dict(), "text": digests.render(report)}
+
+    if rules.ui.enabled:
+        mount_ui(app, store, rules, now=_now)
 
     app.state.triager = triager
     app.state.investigator = investigator

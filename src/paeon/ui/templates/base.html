@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>{% block title %}Board{% endblock %} · Paeon</title>
+<link rel="icon" href="/ui/static/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/ui/static/console.css?v={{ version }}">
+<script src="/ui/static/console.js?v={{ version }}" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="bar">
+  <div class="bar-line">
+    <a class="mark" href="/ui">Paeon</a>
+    <nav class="nav" aria-label="Console">
+      <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>Board</a>
+      <a href="/ui/log"{% if here == "log" %} aria-current="page"{% endif %}>Log</a>
+      <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>Ledger</a>
+    </nav>
+  </div>
+  <ul class="stages" aria-label="Stages">
+    {% for name, state in stages -%}
+    <li class="stage{% if state == "off" %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
+    {% endfor -%}
+    <li class="stage">Actions <b>none</b></li>
+  </ul>
+</header>
+<main id="main" class="{% block layout %}page{% endblock %}">
+{% block main %}{% endblock %}
+</main>
+<footer class="foot">
+  <p>Paeon {{ version }} records and advises. It takes no action on this server.</p>
+  <p>Times are in {{ zone }}. Budget days are UTC.</p>
+</footer>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_rows.html" import rows as record %}
+{% block title %}Log{% endblock %}
+{% block main %}
+<div class="head">
+  <h1>Log</h1>
+  <p class="live">Every event Paeon recorded, newest first. Nothing is ever edited or removed.</p>
+</div>
+<nav class="chips" aria-label="Show">
+  <a href="/ui/log"{% if not show %} aria-current="true"{% endif %}>Everything</a>
+  {% for key, item in filters.items() -%}
+  <a href="/ui/log?show={{ key }}"{% if show == key %} aria-current="true"{% endif %}>{{ item[0] }}</a>
+  {% endfor -%}
+</nav>
+{% if rows %}
+{{ record(rows, linked=true) }}
+<nav class="pager" aria-label="Pages">
+  {% if before %}<a class="btn" href="/ui/log{% if show %}?show={{ show }}{% endif %}">Newest</a>{% endif %}
+  {% if older %}<a class="btn" href="/ui/log?{% if show %}show={{ show }}&amp;{% endif %}before={{ older }}">Older</a>{% endif %}
+</nav>
+{% elif show or before %}
+<p class="empty">No event of this kind was recorded{% if before %} before this point{% endif %}. <a href="/ui/log">Show everything</a>.</p>
+{% else %}
+<div class="empty">
+  <p>The log is empty: nothing has reached Paeon yet.</p>
+  <p>Point a webhook at <code>/ingest/uptime-kuma</code> or <code>/ingest/alertmanager</code>, or set the <code>PAEON_OPENOBSERVE_*</code> variables. The first alert that fires shows up here and opens a strip on the board.</p>
+</div>
+{% endif %}
+{% endblock %}

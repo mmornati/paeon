@@ -1,0 +1,25 @@
+{% macro strip(s, heading="h3", link=true) %}
+{#- On the board every strip has the same height: one line each, the reason in the title.
+    On its own page (link=false) the strip has room and says everything. -#}
+{%- set i = s.incident -%}
+<article class="strip sev-{{ i.severity.value }}{% if i.status.value == "resolved" %} is-resolved{% endif %}{% if link %} strip-fixed{% endif %}" data-id="{{ i.id }}" data-rev="{{ s.rev }}">
+  <div class="holder">
+    <span class="holder-id"><span class="sr">Incident </span>{{ i.id }}</span>
+    <span class="holder-sev">{{ i.severity.value }}</span>
+  </div>
+  <div class="strip-body">
+    <{{ heading }} class="strip-title">
+      {%- if link %}<a href="/ui/incidents/{{ i.id }}" title="{{ i.title }}">{{ i.title }}</a>{% else %}{{ i.title }}{% endif -%}
+    </{{ heading }}>
+    <p class="strip-standing">
+      <span class="standing-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ (i.opened_at|brief) if link else (i.opened_at|stamp) }}</time>, {{ s.standing }}</span>
+      {%- for flag in s.flags %} <span class="flag"{% if link %} title="{{ flag }}"{% endif %}>{{ flag.split(":")[0] if link else flag }}</span>{% endfor %}
+    </p>
+    <dl class="cells">
+      {% for cell in s.cells -%}
+      <div class="cell"><dt>{{ cell.label }}</dt><dd{% if cell.pen %} class="pen"{% endif %}{% if link %} title="{{ cell.full }}"{% endif %}>{{ cell.value if link else cell.full }}</dd></div>
+      {% endfor -%}
+    </dl>
+  </div>
+</article>
+{% endmacro %}

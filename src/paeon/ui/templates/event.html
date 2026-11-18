@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_rows.html" import rows as record %}
+{% block title %}Event {{ row.id }}{% endblock %}
+{% block main %}
+<p class="back"><a href="/ui/log">Log</a>{% if row.incident_id %} <a href="/ui/incidents/{{ row.incident_id }}#e{{ row.id }}">Incident {{ row.incident_id }}</a>{% endif %}</p>
+<div class="head">
+  <h1>Event {{ row.id }}</h1>
+  <p class="live">{{ row.at|day }}{% if source %}, from {{ source }}{% endif %}. Shown redacted; the stored payload is unchanged.</p>
+</div>
+<ol class="record">
+  <li class="row voice-{{ row.voice }}">
+    <time class="row-time" datetime="{{ row.at.isoformat() }}">{{ row.at|clock }}</time>
+    <span class="row-tag">{{ row.tag }}</span>
+    <div class="row-main">
+      <p class="row-text">{{ row.text }}</p>
+      <p class="row-meta"><span>{{ row.kind }}</span></p>
+      <pre class="payload-open" tabindex="0">{{ row.detail }}</pre>
+    </div>
+  </li>
+</ol>
+{% endblock %}
