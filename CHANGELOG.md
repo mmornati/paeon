@@ -2,7 +2,12 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.3.0
+
+Sources: twelve monitoring services named in the rules file, for their alerts and for
+read-only tools, and a configuration reference generated from the schema.
+
+A rules file and an environment of 0.2.0 work unchanged: nothing has to be migrated.
 
 ### Sources
 
