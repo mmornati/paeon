@@ -63,7 +63,8 @@ ui:
 Set `PAEON_UI_ADMIN_PASSWORD` (12 characters or more) and `PAEON_SECRET_KEY` (32 or more, any
 long random value). Whoever signs in is the admin. The session is a signed cookie that lasts 14
 days; changing the password or the key signs everyone out. After five wrong passwords in a row
-from one address, no password from that address is looked at for a minute. There is one account and no user list: for several
+from one address, no password from that address is looked at for a minute; after fifty
+in a row from anywhere, none is for anyone. There is one account and no user list: for several
 people, use a proxy and roles. Serve it over TLS as soon as it leaves your own network.
 
 ### Roles

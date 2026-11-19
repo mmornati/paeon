@@ -532,3 +532,41 @@ def test_wrong_passwords_from_one_address_do_not_keep_another_out() -> None:
     assert sessions.sign_in(PASSWORD, "203.0.113.9") is None
     assert sessions.locked("192.0.2.4") == 0
     assert sessions.sign_in(PASSWORD, "192.0.2.4") is not None
+
+
+def test_a_retyped_webhook_address_takes_no_kept_secret_along(store: Store) -> None:
+    outbox = Outbox()
+    client = app_for(store, PROXIED_UI, outbox)
+    hook = {
+        "name": "hook",
+        "url": "https://n8n.example.org/hook/abc",
+        "authorization": "Bearer kept_secret_value",
+        "then": "save",
+    }
+    assert client.post("/ui/channels/add/webhook", data=hook, headers=ADMIN).status_code == 303
+    moved = {"url": "https://collector.example.net/x", "then": "test"}
+    refused = client.post("/ui/channels/hook/edit", data=moved, headers=ADMIN)
+    assert refused.status_code == 422
+    assert "Type it again. Where it is sent changed" in refused.text
+    assert outbox.requests == []
+    # Nothing typed: nothing moved, and the kept secrets still go where they went.
+    same = client.post("/ui/channels/hook/edit", data={"then": "test"}, headers=ADMIN)
+    assert same.status_code == 303
+    assert outbox.requests[-1].url.host == "n8n.example.org"
+    assert outbox.requests[-1].headers["authorization"] == "Bearer kept_secret_value"
+
+
+def test_many_addresses_do_not_get_five_tries_each() -> None:
+    sessions = Sessions(KEY, PASSWORD)
+    for number in range(50):
+        assert sessions.sign_in("nope", f"198.51.100.{number}") is None
+    assert sessions.locked("192.0.2.4") > 0
+    assert sessions.sign_in(PASSWORD, "192.0.2.4") is None
+
+
+def test_one_ipv6_network_is_one_client() -> None:
+    sessions = Sessions(KEY, PASSWORD)
+    for number in range(5):
+        sessions.sign_in("nope", f"2001:db8:1:2::{number + 1}")
+    assert sessions.locked("2001:db8:1:2:ffff::9") > 0
+    assert sessions.locked("2001:db8:1:3::1") == 0

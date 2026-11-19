@@ -220,7 +220,9 @@ allows. An approval is exactly as strong as its channel.
   cross-site requests. Pages load nothing from another host (a strict Content-Security-Policy),
   so text from a log cannot load or run anything.
 - With `ui.auth: local` the console asks for one password itself. It is compared in constant
-  time, five wrong ones in a row from one address pause sign-in from that address for a minute, and the session is a signed,
+  time, five wrong ones in a row from one address (one /64 for IPv6) pause sign-in from that address
+  for a minute, fifty in a row from anywhere pause it for everyone, so someone guessing hard
+  enough can keep the admin out of the console while they do, and the session is a signed,
   HttpOnly, SameSite=Strict cookie. There is no TLS in Paeon: put one in front before the
   console leaves your network.
 - With `ui.roles`, what a request may do comes from the groups header of the proxy, and only

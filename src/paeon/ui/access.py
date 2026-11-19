@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import ipaddress
 import json
 import threading
 import time
@@ -31,6 +32,19 @@ RANK: dict[str, int] = {"viewer": 0, "operator": 1, "admin": 2}
 COOKIE = "paeon_session"
 SESSION_SECONDS = 14 * 24 * 3600
 MAX_GATES = 4096
+EVERYONE_TRIES = 50  # wrong passwords in a row, from anywhere, before everyone waits
+
+
+def _network(client: str) -> str:
+    """What a client is counted by: its address, or its /64 for IPv6, where one subscriber
+    holds that many addresses."""
+    try:
+        address = ipaddress.ip_address(client)
+    except ValueError:
+        return client
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return str(address)
 
 
 def allows(role: str, needed: Role) -> bool:
@@ -57,31 +71,39 @@ class Sessions:
         self._password = hashlib.sha256(password.encode()).digest()
         self._clock = clock
         self._gates: dict[str, Gate] = {}
+        # Whatever the address: many addresses are cheap (a /64 of IPv6 is one network), so
+        # wrong passwords are also counted together, with a wider allowance.
+        self._everyone = Gate(tries=EVERYONE_TRIES, clock=clock)
         self._lock = threading.Lock()
 
     def _gate(self, client: str) -> Gate:
-        """The gate of one client address. Counted by the address of the connection itself,
-        never by a header, which anyone can write. Behind a proxy that is the proxy's address,
-        so everyone shares one gate, as a single account would."""
+        """The gate of one client. Counted by the address of the connection, never by a header
+        Paeon read itself. Behind a proxy that is the proxy's address, so everyone shares one
+        gate, as a single account would."""
+        key = _network(client)
         with self._lock:
-            gate = self._gates.get(client)
+            gate = self._gates.get(key)
             if gate is None:
-                if len(self._gates) >= MAX_GATES:  # forget the oldest: memory stays bounded
-                    self._gates.pop(next(iter(self._gates)))
-                gate = self._gates[client] = Gate(clock=self._clock)
+                if len(self._gates) >= MAX_GATES:
+                    # Room is made from the gates that are open: a closed one is never
+                    # forgotten, or a flood of addresses would reopen it.
+                    self._gates = {k: g for k, g in self._gates.items() if g.locked()}
+                gate = self._gates[key] = Gate(clock=self._clock)
             return gate
 
     def sign_in(self, password: str, client: str = "") -> str | None:
         """A cookie value for the right password. None for a wrong one, or while too many
-        wrong ones were just tried from this client (see `locked`)."""
+        wrong ones were just tried, from this client or from all of them (see `locked`)."""
         gate = self._gate(client)
-        if gate.locked():
+        if gate.locked() or self._everyone.locked():
             return None
         given = hashlib.sha256(password.encode()).digest()
         if not hmac.compare_digest(given, self._password):
             gate.failed()
+            self._everyone.failed()
             return None
         gate.passed()
+        self._everyone.passed()
         body = json.dumps({"exp": int(self._clock()) + SESSION_SECONDS}).encode()
         payload = base64.urlsafe_b64encode(body).decode().rstrip("=")
         return f"{payload}.{self._sign(payload)}"
@@ -89,7 +111,7 @@ class Sessions:
     def locked(self, client: str = "") -> int:
         """Seconds until a password from this client is looked at again; 0 when one can be
         tried now."""
-        return self._gate(client).locked()
+        return max(self._gate(client).locked(), self._everyone.locked())
 
     def valid(self, cookie: str | None) -> bool:
         payload, _, signature = (cookie or "").partition(".")

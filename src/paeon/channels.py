@@ -46,7 +46,7 @@ STORED = "(kept by the console)"
 # would be a way to have a secret one never saw delivered to an address of one's choice.
 DESTINATION = frozenset({"url", "api_url", "homeserver", "host", "port", "security"})
 
-Kind = Literal["text", "url", "number", "select", "list", "lines"]
+Kind = Literal["text", "url", "number", "select", "list", "lines", "bool", "map"]
 
 
 @dataclass(frozen=True)
@@ -290,16 +290,29 @@ def read_form(
         elif spec.secret:
             if raw:
                 secrets[spec.key] = raw
+        elif spec.kind == "bool":
+            config[spec.key] = bool(raw)
         elif not raw:
             if spec.required and not spec.default:
                 problems[spec.key] = f"{spec.label} is needed."
         elif spec.kind == "number":
             if raw.isdecimal():
                 config[spec.key] = int(raw)
+            elif re.fullmatch(r"\d+\.\d+", raw):
+                config[spec.key] = float(raw)
             else:
                 problems[spec.key] = f"{spec.label} is a number."
         elif spec.kind == "list":
             config[spec.key] = [part for part in re.split(r"[,\s]+", raw) if part]
+        elif spec.kind == "map":
+            pairs: dict[str, str] = {}
+            for line in filter(None, (line.strip() for line in raw.splitlines())):
+                name, colon, value = line.partition(":")
+                if not colon or not name.strip() or not value.strip():
+                    problems[spec.key] = f"{spec.label}: one `name: value` per line."
+                    break
+                pairs[name.strip()] = value.strip()
+            config[spec.key] = pairs
         else:
             config[spec.key] = raw
     return config, secrets, problems
@@ -410,10 +423,16 @@ class Channels:
                 spec = service.field(key)
                 if spec is not None and spec.secret and not spec.required:
                     sealed.pop(key, None)
+            # Moved: a plain destination setting differs, or a destination that is itself a
+            # secret (a webhook's URL) was typed again. Either way no other kept secret goes
+            # along: an `authorization` kept from before would reach the new address.
             moved = (
                 before is not None
                 and not creating
-                and any(before.config.get(key) != config.get(key) for key in DESTINATION)
+                and any(
+                    before.config.get(key) != config.get(key) or key in secrets
+                    for key in DESTINATION
+                )
             )
             for key in sealed if moved else ():
                 spec = service.field(key)
