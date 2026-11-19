@@ -303,9 +303,81 @@ class WebhookChannel(_Channel):
         return found
 
 
+class GotifyChannel(_Channel):
+    """An application of a Gotify server. Links are lines of the message."""
+
+    type: Literal["gotify"]
+    url: str = Field(pattern=r"^https?://[^\s]+$", description="The server, without `/message`.")
+    token_env: str = Field(min_length=1, description="The application's token.")
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"token": (self.token_env, True)}
+
+
+class PushoverChannel(_Channel):
+    """Pushover. Links are in the message; the page a tap opens is its one extra URL."""
+
+    type: Literal["pushover"]
+    token_env: str = Field(min_length=1, description="The application's API token.")
+    user_env: str = Field(min_length=1, description="The user or group key.")
+    device: str | None = Field(default=None, min_length=1, max_length=25)
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"token": (self.token_env, True), "user": (self.user_env, True)}
+
+
+class TeamsChannel(_Channel):
+    """Microsoft Teams, through a Workflows webhook. Buttons open the link."""
+
+    type: Literal["teams"]
+    webhook_env: str = Field(
+        min_length=1, description="The workflow's URL. It is a secret: whoever has it can post."
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"webhook": (self.webhook_env, True)}
+
+
+class MatrixChannel(_Channel):
+    """A room on a Matrix homeserver. Links are in the message."""
+
+    type: Literal["matrix"]
+    homeserver: str = Field(pattern=r"^https?://[^\s]+$")
+    room_id: str = Field(pattern=r"^![^\s]+$", description="The room's id (`!abc:example.org`).")
+    token_env: str = Field(min_length=1, description="An access token of the account that posts.")
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"token": (self.token_env, True)}
+
+
+class AppriseChannel(_Channel):
+    """Any service Apprise knows, for what Paeon has no adapter of its own. Needs the optional
+    install (`paeon[apprise]`). Links are lines of the message."""
+
+    type: Literal["apprise"]
+    urls_env: str = Field(
+        min_length=1,
+        description="One or more Apprise URLs, separated by spaces or new lines. They hold the"
+        " services' secrets.",
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"urls": (self.urls_env, True)}
+
+
 # One entry of `notifiers`, told apart by its `type`.
 Channel = Annotated[
-    NtfyChannel | TelegramChannel | DiscordChannel | SlackChannel | EmailChannel | WebhookChannel,
+    NtfyChannel
+    | TelegramChannel
+    | DiscordChannel
+    | SlackChannel
+    | EmailChannel
+    | WebhookChannel
+    | GotifyChannel
+    | PushoverChannel
+    | TeamsChannel
+    | MatrixChannel
+    | AppriseChannel,
     Field(discriminator="type"),
 ]
 _CHANNEL_NAME = r"^[a-z0-9][a-z0-9_-]{0,31}$"
