@@ -262,8 +262,6 @@ def test_a_listed_channel_without_its_secret_stops_the_start(tmp_path: Path) -> 
 
 
 def test_email_connects_the_way_security_says(monkeypatch: pytest.MonkeyPatch) -> None:
-    from paeon.notify import email as module
-
     opened: list[tuple[str, str, int]] = []
 
     class Plain(FakeSmtp):
@@ -279,8 +277,8 @@ def test_email_connects_the_way_security_says(monkeypatch: pytest.MonkeyPatch) -
             FakeSmtp.__init__(self)
             opened.append(("tls", host, port))
 
-    monkeypatch.setattr(module.smtplib, "SMTP", Plain)
-    monkeypatch.setattr(module.smtplib, "SMTP_SSL", Tls)
+    monkeypatch.setattr(smtplib, "SMTP", Plain)
+    monkeypatch.setattr(smtplib, "SMTP_SSL", Tls)
     for security, port in (("starttls", 587), ("tls", 465), ("none", 25)):
         rules = parse_rules({"notifiers": {"mail": {**MAIL, "security": security, "port": port}}})
         built = notify.build("mail", rules.notifiers["mail"], {"password": "not-a-real-password"})
