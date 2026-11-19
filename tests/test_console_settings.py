@@ -567,6 +567,14 @@ def test_many_addresses_do_not_get_five_tries_each() -> None:
 def test_one_ipv6_network_is_one_client() -> None:
     sessions = Sessions(KEY, PASSWORD)
     for number in range(5):
-        sessions.sign_in("nope", f"2001:db8:1:2::{number + 1}")
-    assert sessions.locked("2001:db8:1:2:ffff::9") > 0
-    assert sessions.locked("2001:db8:1:3::1") == 0
+        sessions.sign_in("nope", f"2a00:1450:1:2::{number + 1}")
+    assert sessions.locked("2a00:1450:1:2:ffff::9") > 0
+    assert sessions.locked("2a00:1450:1:3::1") == 0
+
+
+def test_an_ipv4_client_on_a_dual_stack_socket_is_itself() -> None:
+    sessions = Sessions(KEY, PASSWORD)
+    for _ in range(5):
+        sessions.sign_in("nope", "::ffff:203.0.113.9")
+    assert sessions.locked("203.0.113.9") > 0
+    assert sessions.locked("::ffff:203.0.113.10") == 0

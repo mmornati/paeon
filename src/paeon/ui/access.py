@@ -43,7 +43,12 @@ def _network(client: str) -> str:
     except ValueError:
         return client
     if address.version == 6:
-        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+        if address.ipv4_mapped is not None:
+            # An IPv4 client seen through a dual-stack socket: all of IPv4 shares one /64
+            # there, and must not share one gate.
+            return str(address.ipv4_mapped)
+        if address.is_global and address.sixtofour is None and address.teredo is None:
+            return str(ipaddress.ip_network(f"{address}/64", strict=False))
     return str(address)
 
 
