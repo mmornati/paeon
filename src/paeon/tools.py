@@ -178,6 +178,7 @@ def paeon_tools(store: Store, knowledge_paths: Sequence[Path | str]) -> list[Too
         hits = knowledge.search(knowledge_paths, query, limit=5)
         return [
             {"path": h.path, "title": h.title, "section": h.heading, "excerpt": h.excerpt}
+            | ({"unreviewed_draft": True} if h.draft else {})
             for h in hits
         ]
 
@@ -249,7 +250,9 @@ def paeon_tools(store: Store, knowledge_paths: Sequence[Path | str]) -> list[Too
         Tool(
             ToolSpec(
                 "search_knowledge",
-                "Keyword search in the postmortems and runbooks of this server. Returns excerpts.",
+                "Keyword search in the postmortems and runbooks of this server. Returns excerpts."
+                " One marked `unreviewed_draft` was written by a model and read by nobody:"
+                " a lead to check, not a fact.",
                 _schema({"query": {"type": "string"}}, ["query"]),
             ),
             search_knowledge,

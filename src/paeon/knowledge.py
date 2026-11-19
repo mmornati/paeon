@@ -30,6 +30,7 @@ class Hit:
     excerpt: str
     score: float
     heading: str = ""
+    draft: bool = False  # a postmortem nobody has reviewed yet: a model wrote it
 
 
 def _words(text: str) -> list[str]:
@@ -41,6 +42,17 @@ def _title(text: str, fallback: str) -> str:
         if line.startswith("# "):
             return line[2:].strip()
     return fallback
+
+
+_DRAFT = re.compile(r"^status:\s*[\"']?draft[\"']?\s*$", re.MULTILINE)
+
+
+def _is_draft(text: str) -> bool:
+    """Whether the YAML front matter says `status: draft` (what Paeon writes on its own)."""
+    if not text.startswith("---"):
+        return False
+    end = text.find("\n---", 3)
+    return end > 0 and _DRAFT.search(text, 3, end) is not None
 
 
 def sections(text: str) -> list[tuple[str, str]]:
@@ -63,6 +75,7 @@ class Index:
         self._db.execute(
             "CREATE VIRTUAL TABLE sections USING fts5("
             "title, heading, body, root UNINDEXED, path UNINDEXED, doc_title UNINDEXED,"
+            " draft UNINDEXED,"
             " tokenize = 'porter unicode61')"
         )
         self._seen: dict[tuple[str, str], tuple[int, int]] = {}
@@ -91,15 +104,16 @@ class Index:
                     continue
                 self._drop(key)
                 title = _title(text, file.stem)
+                draft = int(_is_draft(text))
                 # A heading with nothing under it has no excerpt to give: the title is searched
                 # with every section anyway.
                 parts = [part for part in sections(text) if part[1]] or [("", "")]
                 # The file name is searched with the title: `2026-11-02-proxy-outage.md`.
                 head = f"{title} {file.stem}"
                 self._db.executemany(
-                    "INSERT INTO sections (title, heading, body, root, path, doc_title)"
-                    " VALUES (?, ?, ?, ?, ?, ?)",
-                    [(head, heading, body, *key, title) for heading, body in parts],
+                    "INSERT INTO sections (title, heading, body, root, path, doc_title, draft)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [(head, heading, body, *key, title, draft) for heading, body in parts],
                 )
                 self._seen[key] = stamp
         scanned = {str(base) for base in roots}
@@ -110,7 +124,9 @@ class Index:
     def _drop(self, key: tuple[str, str]) -> None:
         self._db.execute("DELETE FROM sections WHERE root = ? AND path = ?", key)
 
-    def search(self, paths: Iterable[Path | str], query: str, *, limit: int = 5) -> list[Hit]:
+    def search(
+        self, paths: Iterable[Path | str], query: str, *, limit: int = 5, drafts: bool = True
+    ) -> list[Hit]:
         terms = list(dict.fromkeys(_words(query)))
         roots = [Path(root) for root in paths]
         if not terms or not roots:
@@ -120,13 +136,14 @@ class Index:
         with self._lock:
             self._sync(roots)
             rows = self._db.execute(
-                "SELECT path, doc_title, heading, body, bm25(sections, 6.0, 3.0, 1.0) AS rank"  # noqa: S608
-                f" FROM sections WHERE sections MATCH ? AND root IN ({marks})"
-                " ORDER BY rank, path LIMIT 200",
+                "SELECT path, doc_title, heading, body, bm25(sections, 6.0, 3.0, 1.0) AS rank,"  # noqa: S608
+                f" draft FROM sections WHERE sections MATCH ? AND root IN ({marks})"
+                + ("" if drafts else " AND draft = 0")
+                + " ORDER BY rank, path LIMIT 200",
                 [match, *map(str, roots)],
             ).fetchall()
         hits: dict[str, Hit] = {}
-        for path, title, heading, body, rank in rows:
+        for path, title, heading, body, rank, draft in rows:
             if path in hits:  # the best section of each file
                 continue
             lowered = body.lower()
@@ -134,7 +151,12 @@ class Index:
             start = max(first - _EXCERPT // 4, 0)
             excerpt = " ".join(body[start : start + _EXCERPT].split())
             hits[path] = Hit(
-                path=path, title=title, excerpt=excerpt, score=round(-rank, 3), heading=heading
+                path=path,
+                title=title,
+                excerpt=excerpt,
+                score=round(-rank, 3),
+                heading=heading,
+                draft=bool(draft),
             )
             if len(hits) >= limit:
                 break
@@ -144,6 +166,12 @@ class Index:
 _INDEX = Index()
 
 
-def search(paths: Iterable[Path | str], query: str, *, limit: int = 5) -> list[Hit]:
-    """The markdown files that answer the query best, each with its best section."""
-    return _INDEX.search(paths, query, limit=limit)
+def search(
+    paths: Iterable[Path | str], query: str, *, limit: int = 5, drafts: bool = True
+) -> list[Hit]:
+    """The markdown files that answer the query best, each with its best section.
+
+    `drafts=False` leaves out the postmortems still marked `status: draft`: text a model wrote
+    from an incident, which nobody has read yet.
+    """
+    return _INDEX.search(paths, query, limit=limit, drafts=drafts)

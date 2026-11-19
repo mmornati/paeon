@@ -7,6 +7,26 @@ Paeon is pre-1.0: anything may change between versions. Dates are the day of the
 The first version that covers the whole design: record, observe, investigate, approve and act,
 earn autonomy.
 
+### Security
+
+From a review of the code and of a deployment behind Traefik and Authentik.
+
+- `ui.proxy_secret`: the console can require a secret value that only the reverse proxy adds.
+  `require_header` alone is satisfied by any container on the proxy's network.
+- A request with a body is refused before the body is read when it has no token, or is larger
+  than 2 MB (256 kB on the executor).
+- Redaction no longer takes quadratic time on a text full of unclosed private keys, looks at a
+  bounded part of a very long text, and masks more shapes: an empty user in a URL, any
+  `Authorization` or `Cookie` header, `private_key`, `signing_key`, `access_key`, `passphrase`,
+  GitLab and Google keys, a numeric password.
+- A link whose signature holds a character outside ASCII is answered 410, not 500.
+- Triage is no longer shown postmortem drafts, only reviewed ones; the investigation sees a
+  draft marked `unreviewed_draft`.
+- `git` no longer runs the signature program a repository's own configuration names.
+- A warning at start for a budget on a model alias without a price: it would never be reached.
+- The documentation said nothing acts on a triage verdict. It decides whether the incident is
+  investigated; the threat model now says so.
+
 ### Acting (new, off by default)
 
 - Six actions in the closed catalog. Besides the three on a container's state:

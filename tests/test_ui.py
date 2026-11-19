@@ -390,3 +390,38 @@ def test_postmortem_cell_and_stage_names(store: Store, tmp_path: Path) -> None:
         ("Postmortems", "off"),
         ("Actions", "none"),
     )
+
+
+def test_proxy_secret_refuses_a_neighbour_that_only_knows_the_header(store: Store) -> None:
+    base = load({"PAEON_INGEST_TOKEN": TOKEN})
+    rules = parse_rules({"ui": {"enabled": True, "require_header": "X-User", "proxy_secret": {}}})
+    secret = "s" * 32
+    settings = Settings(
+        db_path=base.db_path,
+        host=base.host,
+        port=base.port,
+        ingest_token=TOKEN,
+        openobserve=None,
+        heartbeat_url=None,
+        heartbeat_seconds=60,
+        rules=rules,
+        ui_proxy_secret=secret,
+    )
+    http = TestClient(create_app(settings, store))
+    assert http.get("/ui", headers={"X-User": "me"}).status_code == 403
+    assert http.get("/ui", headers={"X-User": "me", "X-Paeon-Proxy": "guess"}).status_code == 403
+    assert http.get("/ui", headers={"X-User": "me", "X-Paeon-Proxy": secret}).status_code == 200
+    assert http.get("/", headers={"X-User": "me"}, follow_redirects=False).status_code == 403
+
+
+def test_proxy_secret_must_be_in_the_environment(tmp_path: Path) -> None:
+    from paeon.config import ConfigError
+
+    path = tmp_path / "paeon.yaml"
+    path.write_text("ui:\n  enabled: true\n  proxy_secret: {}\n")
+    env = {"PAEON_INGEST_TOKEN": TOKEN, "PAEON_CONFIG": str(path)}
+    with pytest.raises(ConfigError, match="PAEON_UI_PROXY_SECRET"):
+        load(env)
+    with pytest.raises(ConfigError):
+        load({**env, "PAEON_UI_PROXY_SECRET": "short"})
+    assert load({**env, "PAEON_UI_PROXY_SECRET": "s" * 24}).ui_proxy_secret == "s" * 24

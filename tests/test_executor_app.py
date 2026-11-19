@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -186,3 +187,23 @@ def test_the_access_log_keeps_no_link_and_no_poll() -> None:
     assert (
         sum(isinstance(f, _QuietAccess) for f in logging.getLogger("uvicorn.access").filters) <= 1
     )
+
+
+def test_a_link_with_any_characters_is_gone_not_an_error(tmp_path: Path) -> None:
+    with app(Bench(tmp_path)) as client:
+        assert client.get("/act/eA.é").status_code == 410
+        assert client.post("/act/eA.é").status_code == 410
+
+
+def test_a_body_is_refused_before_it_is_read(tmp_path: Path) -> None:
+    with app(Bench(tmp_path)) as client:
+        big = b"x" * 300_000
+        assert client.post("/proposals", content=big).status_code == 401
+        assert client.post("/proposals", content=big, headers=AUTH).status_code == 413
+        assert client.post("/act/x.y", content=big).status_code == 413
+
+        def chunks() -> Iterator[bytes]:
+            for _ in range(30):
+                yield b"x" * 10_000
+
+        assert client.post("/proposals", content=chunks(), headers=AUTH).status_code == 413

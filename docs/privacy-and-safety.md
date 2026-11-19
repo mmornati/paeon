@@ -7,7 +7,7 @@ of secret-shaped strings:
 
 | Stage | Sent to the model |
 |---|---|
-| Triage | Alert titles, descriptions and labels, and excerpts of the three runbooks or past postmortems that match them. No raw payload, no log line. |
+| Triage | Alert titles, descriptions and labels, and excerpts of the three runbooks or reviewed postmortems that match them. No raw payload, no log line. |
 | Investigation | The same, plus what its tools return: rows of the log streams you listed, the metrics you listed, container state without the environment, log lines of the containers you listed, the definition of an OpenObserve alert, monitor names and states, commit subjects and file names of the repositories you listed, the output of the commands you prepared on other hosts, and excerpts of your runbooks and postmortems. |
 | Postmortems | The incident's timeline and the investigation's findings. |
 | Actions | Nothing: no model is involved. The catalog (action names, target name patterns, the Coolify resource names and the files and keys you allow) is part of the investigator's prompt when actions are on. |

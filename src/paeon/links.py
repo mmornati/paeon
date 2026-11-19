@@ -54,7 +54,9 @@ class Signer:
     def authentic(self, token: str) -> dict[str, Any]:
         """The payload of a link this key signed, whether or not it is still in time."""
         body, _, signature = token.partition(".")
-        if not body or not hmac.compare_digest(signature, self._sign(body)):
+        # Compared as bytes: a path can carry any character, and `compare_digest` refuses
+        # strings that are not ASCII.
+        if not body or not hmac.compare_digest(signature.encode(), self._sign(body).encode()):
             raise LinkError("this link is not valid")
         try:
             payload = json.loads(_decode(body))

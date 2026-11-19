@@ -29,6 +29,7 @@ from paeon import digest as digests
 from paeon import postmortem as postmortems
 from paeon.config import Settings
 from paeon.correlation import Correlator
+from paeon.guard import BodyGuard
 from paeon.investigation import Investigator
 from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
 from paeon.postmortem import PostmortemWriter
@@ -54,6 +55,7 @@ from paeon.ui import mount_ui
 
 log = logging.getLogger(__name__)
 
+MAX_BODY_BYTES = 2_000_000  # an Alertmanager group of a few hundred alerts is far under
 TRIAGE_TICK_SECONDS = 15
 INVESTIGATION_TICK_SECONDS = 15
 POSTMORTEM_TICK_SECONDS = 60
@@ -336,6 +338,11 @@ def create_app(
                 close()
 
     app = FastAPI(title="Paeon", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    # Before any body is read: the token, and a size. The console's forms have no token (the
+    # proxy authenticates them); they are only limited.
+    app.add_middleware(
+        BodyGuard, token=settings.ingest_token, max_bytes=MAX_BODY_BYTES, open_prefixes=("/ui",)
+    )
 
     def authorized(authorization: Annotated[str | None, Header()] = None) -> None:
         expected = f"Bearer {settings.ingest_token}".encode()
@@ -468,7 +475,14 @@ def create_app(
         }
 
     if rules.ui.enabled:
-        mount_ui(app, store, rules, now=_now, stop=None if remediator is None else remediator.stop)
+        mount_ui(
+            app,
+            store,
+            rules,
+            now=_now,
+            stop=None if remediator is None else remediator.stop,
+            proxy_secret=settings.ui_proxy_secret,
+        )
 
     app.state.exporter = exporter
     app.state.remediator = remediator

@@ -145,6 +145,20 @@ def test_knowledge_search_ranks_titles_and_skips_what_it_cannot_read(tmp_path: P
     assert knowledge.search([tmp_path], "unrelated-term") == []
 
 
+def test_knowledge_search_knows_a_draft_and_can_leave_it_out(tmp_path: Path) -> None:
+    (tmp_path / "draft.md").write_text(
+        "---\nid: x\nstatus: draft\n---\n\n# Proxy outage\n\nProxy alerts are noise.\n"
+    )
+    (tmp_path / "read.md").write_text(
+        "---\nid: y\nstatus: reviewed\n---\n\n# Proxy outage in May\n\nThe proxy died.\n"
+    )
+    (tmp_path / "plain.md").write_text("# Proxy runbook\n\nstatus: draft is only a sentence.\n")
+    drafts = {hit.path: hit.draft for hit in knowledge.search([tmp_path], "proxy")}
+    assert drafts == {"draft.md": True, "read.md": False, "plain.md": False}
+    kept = knowledge.search([tmp_path], "proxy", drafts=False)
+    assert sorted(hit.path for hit in kept) == ["plain.md", "read.md"]
+
+
 # --- OpenObserve ----------------------------------------------------------------------------------
 
 

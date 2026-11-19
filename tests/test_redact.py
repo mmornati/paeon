@@ -81,3 +81,48 @@ def test_a_long_run_of_word_characters_is_redacted_in_linear_time() -> None:
 def test_a_secret_under_a_very_long_key_is_still_masked() -> None:
     for key in ("x_" * 60 + "password", "token" + "_x" * 60, "a" * 100 + "secret" + "b" * 100):
         assert "hunter2" not in redact_text(f"{key}=hunter2hunter2"), key
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "redis://:hunter2secret@redis:6379",
+        "Authorization: abcdef1234567890",
+        "Cookie: session=abc123; other=1",
+        "private_key: abcdefgh",
+        "signing_key=zzzzzzzz",
+        "push failed for glpat-abcdefghijklmnopqrst",
+        '{\\"password\\":\\"hunter2\\"}',
+    ],
+)
+def test_more_secret_shapes_are_masked(text: str) -> None:
+    out = redact_text(text)
+    assert MASK in out
+    for secret in ("hunter2", "abcdef1234567890", "abc123", "abcdefgh", "zzzzzzzz", "glpat-"):
+        assert secret not in out
+
+
+def test_many_unclosed_private_keys_take_no_time() -> None:
+    import time
+
+    start = time.monotonic()
+    out = redact_text("-----BEGIN PRIVATE KEY-----" * 150_000, max_length=10_000_000)
+    assert time.monotonic() - start < 2
+    assert MASK not in out  # nothing closed: nothing to mask, and no quadratic search for it
+    closed = "a -----BEGIN RSA PRIVATE KEY-----\nMIIE\n-----END RSA PRIVATE KEY----- b"
+    assert redact_text(closed) == f"a {MASK} b"
+
+
+def test_a_very_long_text_is_cut_before_it_is_searched() -> None:
+    out = redact_text("word " * 400_000, max_length=100)
+    assert out.startswith("word word")
+    assert out.endswith("characters cut]")
+    assert len(out) < 200
+
+
+def test_a_number_is_masked_under_a_password_but_not_a_count() -> None:
+    assert redact({"password": 12345678, "input_tokens": 1200, "pass": "x"}) == {
+        "password": MASK,
+        "input_tokens": 1200,
+        "pass": MASK,
+    }
