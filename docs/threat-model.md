@@ -212,12 +212,28 @@ allows. An approval is exactly as strong as its channel.
 
 - The API has one bearer token and no TLS. It is built for an internal network. A request with
   a body is refused before the body is read if it has no token or is over 2 MB.
-- The console has no login and is off by default. It needs a reverse proxy that authenticates;
+- The console is off by default and, unless `ui.auth: local` is set, has no login. It then
+  needs a reverse proxy that authenticates;
   `require_header` refuses requests the proxy did not mark, and anyone who reaches the port can
   send that header: with `proxy_secret` the proxy adds a secret value too, which a neighbour on
   the same Docker network does not know. State-changing forms refuse
   cross-site requests. Pages load nothing from another host (a strict Content-Security-Policy),
   so text from a log cannot load or run anything.
+- With `ui.auth: local` the console asks for one password itself. It is compared in constant
+  time, five wrong ones in a row pause sign-in for a minute, and the session is a signed,
+  HttpOnly, SameSite=Strict cookie. There is no TLS in Paeon: put one in front before the
+  console leaves your network.
+- With `ui.roles`, what a request may do comes from the groups header of the proxy, and only
+  with `proxy_secret`. A viewer reads; an operator rates triage and stops automation; an admin
+  changes channels.
+- With `ui.settings`, an admin adds notification channels. Their secrets are encrypted with
+  `PAEON_SECRET_KEY` before they reach the database and are never sent back to a page; the
+  log records who changed which channel, without an address or a secret. A console channel
+  carries the digest and the analysis and can never carry an approval: the executor sends
+  those from its own rules file. **Residual risk:** an admin of the console can make Paeon
+  post its digest and analyses to an address of their choice, including one on your internal
+  network, and whoever holds both the database and the key reads the stored secrets. Give
+  the admin role to people you would give the rules file to.
 - The console can stop automation. It cannot approve and cannot resume.
 - The MCP server speaks on stdio, reads the database file, and has no tool that writes.
 

@@ -48,6 +48,8 @@ class Settings:
     uptime_kuma_key: str | None = None
     telemetry_authorization: str | None = None
     ui_proxy_secret: str | None = None  # what the proxy adds to each console request
+    ui_admin_password: str | None = None  # the console's own login, with `ui.auth: local`
+    secret_key: str | None = None  # seals what the console stores, signs its sessions
     notifier_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # by channel
     source_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # by source
 
@@ -189,6 +191,20 @@ def load(env: Mapping[str, str]) -> Settings:
             "actions.enabled is set: PAEON_EXECUTOR_TOKEN (or _FILE) is required, 24 characters"
             " or more, the same as the executor's"
         )
+    secret_key = _secret(env, "PAEON_SECRET_KEY")
+    keyed = rules.ui.enabled and (rules.ui.settings or rules.ui.auth == "local")
+    if keyed and len(secret_key) < 32:
+        raise ConfigError(
+            "ui.settings or ui.auth: local is set: PAEON_SECRET_KEY (or _FILE) is required,"
+            " 32 characters or more"
+        )
+    admin_password = _secret(env, "PAEON_UI_ADMIN_PASSWORD")
+    if rules.ui.enabled and rules.ui.auth == "local" and len(admin_password) < 12:
+        # Fail closed: with no proxy in front, this password is all that guards the console.
+        raise ConfigError(
+            "ui.auth: local is set: PAEON_UI_ADMIN_PASSWORD (or _FILE) is required,"
+            " 12 characters or more"
+        )
     kuma = rules.investigation.tools.uptime_kuma
     kuma_key = _secret(env, kuma.api_key_env) if kuma is not None and kuma.api_key_env else ""
 
@@ -225,6 +241,8 @@ def load(env: Mapping[str, str]) -> Settings:
         uptime_kuma_key=kuma_key or None,
         telemetry_authorization=telemetry_authorization or None,
         ui_proxy_secret=proxy_secret or None,
+        ui_admin_password=admin_password or None,
+        secret_key=secret_key or None,
         notifier_secrets=_notifier_secrets(env, rules, ("digest", "investigation")),
         source_secrets={name: source_secrets(env, rules, name) for name in rules.sources},
     )

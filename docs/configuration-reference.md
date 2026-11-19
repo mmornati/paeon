@@ -721,14 +721,28 @@ One file of the deployment repository in which `config_change` may change values
 
 The console. See [The console](console.md).
 
-The console under `/ui`. It has no login of its own: the reverse proxy protects it.
+The console under `/ui`. Your reverse proxy protects it, or it asks for a password itself (`auth: local`).
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `enabled` | boolean | `false` | Serves the console under `/ui`. |
+| `auth` | `proxy` \| `local` | `proxy` | `proxy`: the console has no login, and a reverse proxy that authenticates stands in front of it. `local`: the console asks for one password itself (PAEON_UI_ADMIN_PASSWORD), for a deployment with no such proxy; whoever signs in is the admin. Needs PAEON_SECRET_KEY. |
+| `settings` | boolean | `false` | Lets an admin add, change, test and remove notification channels in the console. They are kept in the database, next to those of this file, which the console never changes. Needs PAEON_SECRET_KEY, and `auth: local` or `roles`. Off: channels added in the console are ignored, and this file is all there is. |
+| `roles` | section |  | With `auth: proxy`: the groups that are admins and operators. Needs `proxy_secret`, since a header anyone can send proves nothing. Without `roles`, everyone the proxy lets in is an operator and nobody is an admin. |
 | `require_header` | text |  | A header your proxy sets after authentication (for example X-authentik-username). A request without it is refused: a second net against a route that bypasses the proxy, not a login: whoever reaches the port can send the header. |
 | `proxy_secret` | section |  | A header and a secret value your proxy adds (in Traefik, a `headers` middleware with `customRequestHeaders`). A request without that exact value is refused: what reaches Paeon's port without passing the proxy cannot open the console. |
 | `public_url` | text |  | Where you reach the console (https://paeon.example.org). Notifications link to the incident page there. |
+
+### `ui.roles`
+
+Who may do what in the console, from the groups your proxy names for each request. Someone in no listed group can read, and nothing else.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `header` | text | `X-authentik-groups` | The header your proxy fills with the groups of whoever is signed in. |
+| `separator` | text | `|` | What separates two groups in that header: `\|` for Authentik, `,` for Authelia's Remote-Groups. |
+| `admin` | list of text |  | Groups that may change what the console can change (`ui.settings`), and do what an operator does. |
+| `operator` | list of text |  | Groups that may say whether triage was right and stop automation. |
 
 ### `ui.proxy_secret`
 

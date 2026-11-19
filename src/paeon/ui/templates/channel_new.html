@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Add a channel{% endblock %}
+{% block main %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/ui/channels">Channels</a><span>Add</span></nav>
+<div class="head">
+  <div>
+    <h1>Add a channel</h1>
+    <p class="sub">Choose where Paeon should send. You will name the channel and give its settings next, and can send a test before relying on it.</p>
+  </div>
+</div>
+
+<section class="block" aria-labelledby="h-services">
+  <div class="block-head"><h2 id="h-services">Services</h2></div>
+  <ul class="pick">
+    {% for service in services -%}
+    <li>
+      <a href="/ui/channels/add/{{ service.type }}">
+        <span class="pick-name">{{ service.label }}</span>
+        <span class="pick-what">{{ service.summary }}</span>
+        {{ icon("next") }}
+      </a>
+    </li>
+    {% endfor -%}
+  </ul>
+</section>
+{% endblock %}

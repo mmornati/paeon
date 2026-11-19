@@ -1,23 +1,28 @@
 """The console under `/ui`: the event log rendered for a person.
 
-Read-only, apart from two things: saying whether triage was right, and stopping automation
-(the kill switch, which the console can engage and cannot release). It shows plans, approvals
-and what the executor did; it cannot approve anything: a Go is a signed link on your phone.
+It reads, and changes three things. An operator says whether triage was right and stops
+automation (the kill switch, which the console can engage and cannot release). An admin, when
+`ui.settings` is on, adds and changes the channels the digest and the analysis go to. It shows
+plans, approvals and what the executor did; it cannot approve anything, and no channel added
+here carries an approval: a Go is a signed link, sent by the executor from its own rules file.
 
-It has no login. It is mounted only when `ui.enabled` is set, and it expects a reverse proxy
-that authenticates in front of it (Traefik with forward-auth, for example); `ui.require_header`
-refuses requests the proxy did not mark. Pages make no request to any other host and are served
-with a policy that forbids it, so that nothing a log line contains can load or run.
+It is mounted only when `ui.enabled` is set. By default it has no login and expects a reverse
+proxy that authenticates in front of it (Traefik with forward-auth, for example);
+`ui.require_header` refuses requests the proxy did not mark, and `ui.roles` reads who may do
+what from the groups the proxy names. With `ui.auth: local` it asks for one password itself
+(see `access`). Pages make no request to any other host and are served with a policy that
+forbids it, so that nothing a log line contains can load or run.
 """
 
 from __future__ import annotations
 
 import hmac
+import re
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Literal
-from urllib.parse import urlsplit
+from typing import Annotated, Any, Literal
+from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Query, Request, status
@@ -28,10 +33,12 @@ from markupsafe import Markup
 
 from paeon import __version__
 from paeon import postmortem as postmortems
+from paeon.channels import SERVICES, STAGES, ChannelError, Channels, Service, read_form
 from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
 from paeon.ui import markdown, views
+from paeon.ui.access import COOKIE, SESSION_SECONDS, Role, Sessions, allows, role_from_groups
 
 _HERE = Path(__file__).parent
 PAGE = 100
@@ -67,6 +74,20 @@ def _same_origin(request: Request) -> None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "cross-site request")
 
 
+async def _fields(request: Request) -> dict[str, str]:
+    """A posted form as text fields. A file, or a field given twice, is not something a
+    console form sends."""
+    form = await request.form()
+    return {key: value for key, value in form.items() if isinstance(value, str)}
+
+
+def _next(value: str | None) -> str:
+    """Where to go after signing in: a page of the console, or its first one."""
+    if value and re.fullmatch(r"/ui(/[A-Za-z0-9/_.?=&%-]*)?", value) and "//" not in value:
+        return value
+    return "/ui"
+
+
 def mount_ui(
     app: FastAPI,
     store: Store,
@@ -76,7 +97,13 @@ def mount_ui(
     stop: Callable[[], None] | None = None,
     proxy_secret: str | None = None,
     sources: Sequence[views.SourceShown] = (),
+    channels: Channels | None = None,
+    sessions: Sessions | None = None,
 ) -> None:
+    local = rules.ui.auth == "local"
+    if local and sessions is None:
+        # Fail closed: with no proxy in front, a console without its login would be open.
+        raise RuntimeError("ui.auth: local needs PAEON_SECRET_KEY and PAEON_UI_ADMIN_PASSWORD")
     acting = rules.actions.enabled
     keeps = rules.postmortems.enabled
     clock = now or (lambda: datetime.now(UTC))
@@ -118,7 +145,10 @@ def mount_ui(
         "filters": views.FILTERS,
         "acting": acting,
         "keeps_postmortems": rules.postmortems.enabled,
-        "notifies": any(rules.channels(stage) for stage in ("digest", "investigation", "actions")),
+        "notifies": channels is not None
+        or any(rules.channels(stage) for stage in ("digest", "investigation", "actions")),
+        "local": local,
+        "settings": channels is not None,
     }
 
     def proxied(request: Request) -> None:
@@ -132,10 +162,108 @@ def mount_ui(
             if not proxy_secret or not hmac.compare_digest(given, proxy_secret.encode()):
                 raise HTTPException(status.HTTP_403_FORBIDDEN, "not behind the proxy")
 
-    router = APIRouter(prefix="/ui", dependencies=[Depends(proxied)], include_in_schema=False)
+    def known(request: Request) -> None:
+        """Who is asking. Leaves the role on the request, or sends them to sign in."""
+        proxied(request)
+        role: Role
+        if sessions is not None:
+            if not sessions.valid(request.cookies.get(COOKIE)):
+                if request.method != "GET" or request.url.path == "/ui/board":
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "signed out")
+                here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+                raise HTTPException(
+                    status.HTTP_303_SEE_OTHER,
+                    headers={**HEADERS, "Location": f"/ui/signin?next={quote(here, safe='')}"},
+                )
+            role = "admin"
+        elif rules.ui.roles is not None:
+            role = role_from_groups(rules.ui.roles, request.headers.get(rules.ui.roles.header))
+        else:
+            role = "operator"  # as before roles existed: the proxy decides who comes in
+        request.state.role = role
 
-    def page(request: Request, name: str, **context: object) -> Response:
-        return templates.TemplateResponse(request, name, context, headers=HEADERS)
+    def need(least: Role) -> Callable[[Request], None]:
+        def check(request: Request) -> None:
+            if not allows(request.state.role, least):
+                raise HTTPException(status.HTTP_403_FORBIDDEN, f"this needs the {least} role")
+
+        return check
+
+    def who(request: Request) -> str:
+        """The name the log gives whoever changed something: the proxy's, or the role."""
+        header = rules.ui.require_header
+        named = request.headers.get(header, "").strip() if header else ""
+        return named[:80] or str(request.state.role)
+
+    router = APIRouter(prefix="/ui", dependencies=[Depends(known)], include_in_schema=False)
+    door = APIRouter(prefix="/ui", dependencies=[Depends(proxied)], include_in_schema=False)
+
+    def page(
+        request: Request, template: str, /, status_code: int = 200, **context: object
+    ) -> Response:
+        role = getattr(request.state, "role", "viewer")
+        context |= {
+            "role": role,
+            "can_operate": allows(role, "operator"),
+            "can_admin": allows(role, "admin"),
+        }
+        return templates.TemplateResponse(
+            request, template, context, status_code=status_code, headers=HEADERS
+        )
+
+    def back(where: str) -> Response:
+        return RedirectResponse(where, status.HTTP_303_SEE_OTHER, headers=HEADERS)
+
+    if sessions is not None:
+        gate = sessions
+
+        @door.get("/signin", response_class=HTMLResponse)
+        def signin(request: Request, next: Annotated[str | None, Query()] = None) -> Response:
+            if gate.valid(request.cookies.get(COOKIE)):
+                return back(_next(next))
+            return page(request, "signin.html", next=_next(next), wait=gate.locked(), wrong=False)
+
+        @door.post("/signin", dependencies=[Depends(_same_origin)])
+        def signin_post(
+            request: Request,
+            password: Annotated[str, Form(max_length=1024)] = "",
+            next: Annotated[str, Form(max_length=2048)] = "/ui",
+        ) -> Response:
+            was_locked = gate.locked()
+            cookie = gate.sign_in(password)
+            if cookie is None:
+                wait = gate.locked()
+                if wait and not was_locked:
+                    store.append("console.signin_locked", {"seconds": wait})
+                return page(
+                    request,
+                    "signin.html",
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                    if wait
+                    else status.HTTP_401_UNAUTHORIZED,
+                    next=_next(next),
+                    wait=wait,
+                    wrong=not was_locked,
+                )
+            store.append("console.signin", {"role": "admin"})
+            response = back(_next(next))
+            secure = "https" in (request.url.scheme, request.headers.get("x-forwarded-proto"))
+            response.set_cookie(
+                COOKIE,
+                cookie,
+                max_age=SESSION_SECONDS,
+                path="/ui",
+                httponly=True,
+                samesite="strict",
+                secure=secure,
+            )
+            return response
+
+        @door.post("/signout", dependencies=[Depends(_same_origin)])
+        def signout() -> Response:
+            response = back("/ui/signin")
+            response.delete_cookie(COOKIE, path="/ui")
+            return response
 
     @router.get("", response_class=HTMLResponse)
     def board(request: Request) -> Response:
@@ -155,7 +283,10 @@ def mount_ui(
         view = views.incident_view(store, found, clock(), acting=acting)
         return page(request, "incident.html", view=view, here="board")
 
-    @router.post("/incidents/{incident_id}/feedback", dependencies=[Depends(_same_origin)])
+    @router.post(
+        "/incidents/{incident_id}/feedback",
+        dependencies=[Depends(_same_origin), Depends(need("operator"))],
+    )
     def feedback(
         incident_id: int,
         vote: Annotated[Literal["up", "down"], Form()],
@@ -203,9 +334,201 @@ def mount_ui(
         return page(request, "ledger.html", ledger=view, here="ledger")
 
     @router.get("/channels", response_class=HTMLResponse)
-    def channels(request: Request) -> Response:
-        lines = views.channels_view(store, rules, clock())
-        return page(request, "channels.html", lines=lines, days=30, here="channels")
+    def channels_page(
+        request: Request,
+        saved: Annotated[str | None, Query(max_length=40)] = None,
+        removed: Annotated[str | None, Query(max_length=40)] = None,
+        tested: Annotated[str | None, Query(max_length=40)] = None,
+        ok: Annotated[str | None, Query(max_length=1)] = None,
+    ) -> Response:
+        current = rules if channels is None else channels.rules
+        lines = views.channels_view(store, current, clock(), console=channels)
+        return page(
+            request,
+            "channels.html",
+            lines=lines,
+            days=30,
+            here="channels",
+            saved=saved,
+            removed=removed,
+            tested=tested,
+            delivered=ok == "1",
+        )
+
+    if channels is not None:
+        book = channels
+        admin = [Depends(need("admin"))]
+        change = [Depends(_same_origin), Depends(need("admin"))]
+
+        def form_page(
+            request: Request,
+            service: Service,
+            *,
+            name: str,
+            values: dict[str, Any],
+            stages: Sequence[str],
+            kept: frozenset[str] = frozenset(),
+            problems: dict[str, str] | None = None,
+            editing: bool,
+            broken: str | None = None,
+        ) -> Response:
+            # Only what is not a secret goes back to the page, whatever was posted.
+            plain = {spec.key for spec in service.fields if not spec.secret}
+            shown_values = {
+                key: ", ".join(value) if isinstance(value, list | tuple) else str(value)
+                for key, value in values.items()
+                if key in plain
+            }
+            return page(
+                request,
+                "channel_form.html",
+                status_code=422 if problems else 200,
+                service=service,
+                name=name,
+                values=shown_values,
+                carries=tuple(stages),
+                stage_on={
+                    "digest": True,
+                    "investigation": rules.investigation.enabled,
+                },
+                kept=kept,
+                problems=problems or {},
+                editing=editing,
+                broken=broken,
+                here="channels",
+            )
+
+        def submitted(
+            service: Service, fields: dict[str, str]
+        ) -> tuple[dict[str, Any], dict[str, str], dict[str, str], list[str], list[str]]:
+            config, secrets, problems = read_form(service, fields)
+            stages = [stage for stage in STAGES if fields.get(f"carry_{stage}")]
+            forget = [spec.key for spec in service.fields if fields.get(f"forget_{spec.key}")]
+            return config, secrets, problems, stages, forget
+
+        def after_save(request: Request, name: str, fields: dict[str, str]) -> Response:
+            if fields.get("then") != "test":
+                return back(f"/ui/channels?saved={quote(name)}")
+            return send_test(name)
+
+        def send_test(name: str) -> Response:
+            base = rules.ui.public_url
+            click = None if base is None else f"{base.rstrip('/')}/ui/channels"
+            delivery = book.test(name, click=click)
+            if delivery is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            return back(f"/ui/channels?tested={quote(name)}&ok={int(delivery.ok)}")
+
+        @router.get("/channels/add", response_class=HTMLResponse, dependencies=admin)
+        def channel_pick(request: Request) -> Response:
+            return page(request, "channel_new.html", services=SERVICES.values(), here="channels")
+
+        @router.get("/channels/{name}/edit", response_class=HTMLResponse, dependencies=admin)
+        def channel_edit(request: Request, name: str) -> Response:
+            found = book.find(name)
+            if found is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            return form_page(
+                request,
+                found.service,
+                name=name,
+                values=found.config,
+                stages=found.stages,
+                kept=found.kept,
+                editing=True,
+                broken=found.broken,
+            )
+
+        @router.post("/channels/{name}/edit", dependencies=change)
+        def channel_update(
+            request: Request, name: str, fields: Annotated[dict[str, str], Depends(_fields)]
+        ) -> Response:
+            found = book.find(name)
+            if found is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            config, secrets, problems, stages, forget = submitted(found.service, fields)
+            if not problems:
+                try:
+                    book.save(
+                        name,
+                        found.service,
+                        config,
+                        secrets,
+                        stages=stages,
+                        forget=forget,
+                        creating=False,
+                        by=who(request),
+                        now=clock(),
+                    )
+                except ChannelError as exc:
+                    problems = exc.problems
+            if problems:
+                return form_page(
+                    request,
+                    found.service,
+                    name=name,
+                    values=fields,
+                    stages=stages,
+                    kept=found.kept,
+                    problems=problems,
+                    editing=True,
+                )
+            return after_save(request, name, fields)
+
+        @router.post("/channels/{name}/test", dependencies=change)
+        def channel_test(name: str) -> Response:
+            return send_test(name)
+
+        @router.post("/channels/{name}/remove", dependencies=change)
+        def channel_remove(request: Request, name: str) -> Response:
+            if not book.remove(name, by=who(request), now=clock()):
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            return back(f"/ui/channels?removed={quote(name)}")
+
+        @router.get("/channels/add/{kind}", response_class=HTMLResponse, dependencies=admin)
+        def channel_new(request: Request, kind: str) -> Response:
+            service = SERVICES.get(kind)
+            if service is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            defaults = {spec.key: spec.default for spec in service.fields if spec.default}
+            return form_page(
+                request, service, name="", values=defaults, stages=tuple(STAGES), editing=False
+            )
+
+        @router.post("/channels/add/{kind}", dependencies=change)
+        def channel_create(
+            request: Request, kind: str, fields: Annotated[dict[str, str], Depends(_fields)]
+        ) -> Response:
+            service = SERVICES.get(kind)
+            if service is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            name = fields.get("name", "").strip()
+            config, secrets, problems, stages, _ = submitted(service, fields)
+            if not problems:
+                try:
+                    book.save(
+                        name,
+                        service,
+                        config,
+                        secrets,
+                        stages=stages,
+                        creating=True,
+                        by=who(request),
+                        now=clock(),
+                    )
+                except ChannelError as exc:
+                    problems = exc.problems
+            if problems:
+                return form_page(
+                    request,
+                    service,
+                    name=name,
+                    values=fields,
+                    stages=stages,
+                    problems=problems,
+                    editing=False,
+                )
+            return after_save(request, name, fields)
 
     @router.get("/sources", response_class=HTMLResponse)
     def sources_page(request: Request) -> Response:
@@ -228,7 +551,7 @@ def mount_ui(
             here="actions",
         )
 
-    @router.post("/actions/stop", dependencies=[Depends(_same_origin)])
+    @router.post("/actions/stop", dependencies=[Depends(_same_origin), Depends(need("operator"))])
     def stop_automation() -> Response:
         """Engage the kill switch. There is no way back from here: that takes the owner."""
         if stop is None:
@@ -279,5 +602,6 @@ def mount_ui(
     def home() -> Response:
         return RedirectResponse("/ui", status.HTTP_307_TEMPORARY_REDIRECT)
 
+    app.include_router(door)
     app.include_router(router)
     app.mount("/ui/static", StaticFiles(directory=_HERE / "static"), name="ui-static")

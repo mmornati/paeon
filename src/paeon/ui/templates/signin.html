@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Sign in · Paeon</title>
+<link rel="icon" href="/ui/static/mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/ui/static/console.css?v={{ version }}">
+<script src="/ui/static/theme.js?v={{ version }}"></script>
+</head>
+<body class="door">
+<main class="door-card">
+  <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="28" height="28"><span>Paeon</span></a>
+  <h1>Sign in</h1>
+  <p class="sub">This console is guarded by one password: the admin password of this Paeon, set where it was installed.</p>
+  {% if wait %}
+  <p class="banner" role="alert">Too many wrong passwords. Wait {{ wait }} second{{ "" if wait == 1 else "s" }}, then try again.</p>
+  {% elif wrong %}
+  <p class="banner" role="alert">That is not the password.</p>
+  {% endif %}
+  <form class="form" method="post" action="/ui/signin">
+    <input type="hidden" name="next" value="{{ next }}">
+    <input class="sr" type="text" name="username" value="admin" autocomplete="username" tabindex="-1" aria-hidden="true" readonly>
+    <div class="field">
+      <label for="f-password"><span>Password</span></label>
+      <input id="f-password" type="password" name="password" autocomplete="current-password" required autofocus{% if wrong or wait %} aria-invalid="true"{% endif %}>
+    </div>
+    <button class="btn btn-primary">Sign in</button>
+  </form>
+  <p class="door-foot">Paeon {{ version }}. The session lasts 14 days on this device.</p>
+</main>
+</body>
+</html>

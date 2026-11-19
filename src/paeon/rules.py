@@ -713,10 +713,60 @@ class ProxySecret(_Rule):
     )
 
 
+class Roles(_Rule):
+    """Who may do what in the console, from the groups your proxy names for each request.
+
+    Someone in no listed group can read, and nothing else."""
+
+    header: str = Field(
+        default="X-authentik-groups",
+        min_length=1,
+        pattern=r"^[A-Za-z0-9-]+$",
+        description="The header your proxy fills with the groups of whoever is signed in.",
+    )
+    separator: str = Field(
+        default="|",
+        min_length=1,
+        max_length=1,
+        description="What separates two groups in that header: `|` for Authentik, `,` for"
+        " Authelia's Remote-Groups.",
+    )
+    admin: tuple[str, ...] = Field(
+        default=(),
+        description="Groups that may change what the console can change (`ui.settings`), and"
+        " do what an operator does.",
+    )
+    operator: tuple[str, ...] = Field(
+        default=(),
+        description="Groups that may say whether triage was right and stop automation.",
+    )
+
+
 class Ui(_Rule):
-    """The console under `/ui`. It has no login of its own: the reverse proxy protects it."""
+    """The console under `/ui`. Your reverse proxy protects it, or it asks for a password
+    itself (`auth: local`)."""
 
     enabled: bool = Field(default=False, description="Serves the console under `/ui`.")
+    auth: Literal["proxy", "local"] = Field(
+        default="proxy",
+        description="`proxy`: the console has no login, and a reverse proxy that authenticates"
+        " stands in front of it. `local`: the console asks for one password itself"
+        " (PAEON_UI_ADMIN_PASSWORD), for a deployment with no such proxy; whoever signs in is"
+        " the admin. Needs PAEON_SECRET_KEY.",
+    )
+    settings: bool = Field(
+        default=False,
+        description="Lets an admin add, change, test and remove notification channels in the"
+        " console. They are kept in the database, next to those of this file, which the"
+        " console never changes. Needs PAEON_SECRET_KEY, and `auth: local` or `roles`. Off:"
+        " channels added in the console are ignored, and this file is all there is.",
+    )
+    roles: Roles | None = Field(
+        default=None,
+        description="With `auth: proxy`: the groups that are admins and operators. Needs"
+        " `proxy_secret`, since a header anyone can send proves nothing. Without `roles`,"
+        " everyone the proxy lets in is an operator and nobody is an admin.",
+    )
     require_header: str | None = Field(
         default=None,
         min_length=1,
@@ -736,6 +786,21 @@ class Ui(_Rule):
         description="Where you reach the console (https://paeon.example.org). Notifications"
         " link to the incident page there.",
     )
+
+    @model_validator(mode="after")
+    def _who_may_change(self) -> Ui:
+        if self.roles is not None and self.auth == "local":
+            raise ValueError("roles are read from a proxy: they do not go with `auth: local`")
+        if self.roles is not None and self.proxy_secret is None:
+            raise ValueError(
+                "roles needs `proxy_secret`: without it anyone who reaches the port can"
+                " name their own groups"
+            )
+        if self.settings and self.auth == "proxy" and (self.roles is None or not self.roles.admin):
+            raise ValueError(
+                "settings needs an admin: set `auth: local`, or list the admin groups under `roles`"
+            )
+        return self
 
 
 class Telemetry(_Rule):

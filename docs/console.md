@@ -20,11 +20,11 @@ ui:
 
 Then open `http://paeon:8080/ui`.
 
-!!! warning "The console has no login"
+!!! warning "By default the console has no login"
 
-    It is off until you enable it, and it must sit behind a reverse proxy that authenticates
-    (Traefik with Authentik forward-auth, for example): route `/ui` through it and do not publish
-    Paeon's port. `require_header` names a header your proxy sets once the user is authenticated;
+    It is off until you enable it, and unless you set `auth: local` (below) it must sit behind
+    a reverse proxy that authenticates (Traefik with Authentik forward-auth, for example): route
+    `/ui` through it and do not publish Paeon's port. `require_header` names a header your proxy sets once the user is authenticated;
     a request without it is refused. That is a second net against a route that bypasses the
     proxy, not a login: anyone who can reach the port directly can send the header. The ingest
     endpoints keep their bearer token either way.
@@ -49,6 +49,75 @@ http:
     paeon:
       middlewares: [authentik@file, paeon-proxy-secret]
 ```
+
+### Without a proxy: one password
+
+For a server with no authenticating proxy, the console can ask for a password itself:
+
+```yaml
+ui:
+  enabled: true
+  auth: local
+```
+
+Set `PAEON_UI_ADMIN_PASSWORD` (12 characters or more) and `PAEON_SECRET_KEY` (32 or more, any
+long random value). Whoever signs in is the admin. The session is a signed cookie that lasts 14
+days; changing the password or the key signs everyone out. After five wrong passwords in a row
+no password is looked at for a minute. There is one account and no user list: for several
+people, use a proxy and roles. Serve it over TLS as soon as it leaves your own network.
+
+### Roles
+
+Behind a proxy, `roles` says who may do what, from the groups the proxy names for each request:
+
+```yaml
+ui:
+  enabled: true
+  proxy_secret: {}
+  roles:
+    header: X-authentik-groups     # the default; Authelia: Remote-Groups, separator ","
+    admin: [paeon-admins]
+    operator: [paeon-operators]
+```
+
+| Role | Can |
+|---|---|
+| viewer | Read every page. Anyone the proxy lets in who is in no listed group. |
+| operator | Also say whether triage was right, and stop automation. |
+| admin | Also add, change, test and remove channels, when `settings` is on. |
+
+`roles` needs `proxy_secret`: a groups header anyone on the network can send would prove
+nothing. Without `roles`, everyone the proxy lets in is an operator, as in earlier versions,
+and nobody is an admin.
+
+## Channels in the console
+
+```yaml
+ui:
+  enabled: true
+  auth: local        # or roles with an admin group
+  settings: true
+```
+
+With `settings` on, an admin adds notification channels on the Channels page: choose the
+service, name the channel, fill in its settings, choose what it carries, and send a test.
+A channel added there takes effect at once, without a restart. This also needs
+`PAEON_SECRET_KEY`.
+
+- **The rules file stays the source for what it defines.** The console never writes it. Its
+  channels are shown marked `rules file` and can be tested from the console, not changed. A
+  name the file defines cannot be taken in the console; if the file later claims a name the
+  console used, the console's channel is set aside and the page says so.
+- **Console channels live in the database**, next to the event log. A secret typed in the
+  browser is encrypted with `PAEON_SECRET_KEY` before it is stored, is never shown again, and
+  is deleted with its channel. Lose the key and those channels are set aside until you save
+  them again with their secrets. Back up the database and keep the key somewhere else.
+- **They carry the digest and the analysis, never an approval.** Approvals are sent by the
+  executor, from its own copy of the rules file, next to the key that signs them.
+- **The log says who changed what**: the service, what the channel carries and who saved it.
+  It holds neither an address nor a secret.
+- **With `settings` off, the file is all there is**: channels added in the console are kept and
+  ignored. That is the setting for a deployment configured from git.
 
 ## The pages
 
@@ -114,7 +183,9 @@ system's light or dark setting unless you use the switch.
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
 a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set.
 
-The console is read-only, apart from two things: saying whether triage was right, and
-stopping automation. **It cannot approve a plan**, and it cannot resume what it stopped.
+The console reads, apart from three things: an operator says whether triage was right and
+stops automation, and with `settings` on an admin manages the channels the digest and the
+analysis go to. **It cannot approve a plan**, it cannot resume what it stopped, and nothing it
+configures can carry an approval.
 
 Everything shown is redacted again first, and pages load nothing from another host.

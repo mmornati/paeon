@@ -19,7 +19,7 @@ import json
 import logging
 import re
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -39,7 +39,7 @@ from paeon.models import (
     UserTurn,
     cost_of,
 )
-from paeon.notify import Button, Message, Notifier, deliver
+from paeon.notify import Button, Message, Notifier, Roster, deliver
 from paeon.redact import redact
 from paeon.rules import Actions, CatalogEntry, Rules
 from paeon.schema import Alert, Incident, StageState
@@ -284,7 +284,7 @@ class Investigator:
         client: ModelClient,
         toolbox: Toolbox,
         *,
-        notifiers: Sequence[Notifier] = (),
+        notifiers: Iterable[Notifier] = (),
         fallback: ModelClient | None = None,
         extras: Callable[[Incident], Extras] | None = None,
         after: Callable[[Incident, Findings], None] | None = None,
@@ -294,7 +294,8 @@ class Investigator:
         self._client = client
         self._fallback = fallback
         self._toolbox = toolbox
-        self._notifiers = tuple(notifiers)
+        # Kept as given when it is a roster: its channels can change while Paeon runs.
+        self._notifiers = notifiers if isinstance(notifiers, Roster) else tuple(notifiers)
         self._extras = extras
         self._after = after
         actions = rules.actions

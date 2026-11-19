@@ -2,6 +2,26 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+Channels can be added in the console, by an admin, next to those of the rules file.
+
+A rules file and an environment of 0.3.0 work unchanged: everything below is off by default.
+
+### Console
+
+- `ui.settings`: an admin adds, changes, tests and removes notification channels on the
+  Channels page. They take effect at once, are kept in the database with their secrets
+  encrypted (`PAEON_SECRET_KEY`), and carry the digest and the analysis, never an approval.
+  The rules file is never written, wins on a name both define, and its channels are shown
+  locked. With `ui.settings` off, the file is all there is.
+- `ui.roles`: viewer, operator and admin, from the groups header of the proxy. Without it,
+  everyone the proxy lets in is an operator, as before.
+- `ui.auth: local`: the console asks for one password itself (`PAEON_UI_ADMIN_PASSWORD`), for
+  a deployment with no authenticating proxy.
+- The log records sign-ins and every change to a channel, with who made it.
+- New dependency: `cryptography`.
+
 ## 0.3.0
 
 Sources: twelve monitoring services named in the rules file, for their alerts and for

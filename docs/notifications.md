@@ -21,6 +21,13 @@ monitoring already sends you.
 | Your own receiver | `webhook` | yes | a list in the JSON body | [Webhook](#webhook) |
 | Anything else | `apprise` | depends | lines of text | [Apprise](#apprise) |
 
+!!! tip "Or add them in the console"
+
+    With `ui.settings` on, an admin can add a channel on the console's Channels page instead
+    of writing it here: same services, same settings, the secret typed in the browser and
+    stored encrypted. See [The console](console.md#channels-in-the-console). Channels that
+    carry approvals are always defined in the executor's rules file.
+
 ## Set up a channel
 
 1. **Define it** under `notifiers`, with a name of yours and the keys of its service (below).

@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 from paeon import autonomy, ledger, remediation
 from paeon import postmortem as postmortems
+from paeon.channels import Channels
 from paeon.redact import redact
 from paeon.rules import Rules
 from paeon.schema import Incident, IncidentStatus, StageState, Status
@@ -42,6 +43,7 @@ _VOICES: dict[str, Voice] = {
     "digest": "out",
     "postmortem": "out",
     "approval": "in",
+    "console": "in",
 }
 _CODE_KINDS = {
     "triage.skipped",
@@ -328,6 +330,20 @@ def describe(event: Event) -> str:
             )
         case "autonomy.reinstated":
             return f"{_text(p.get('action'))}({_text(p.get('target'))}) is reinstated"
+        case "console.channel.saved":
+            verb = "added" if p.get("created") else "changed"
+            carries = p.get("carries")
+            what = ", ".join(map(str, carries)) if isinstance(carries, list) and carries else ""
+            return (
+                f"Channel {_text(p.get('name'))} ({_text(p.get('channel'))}) {verb} in the"
+                f" console by {_text(p.get('by'))}: carries {what or 'nothing'}"
+            )
+        case "console.channel.removed":
+            return f"Channel {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
+        case "console.signin":
+            return "Signed in to the console"
+        case "console.signin_locked":
+            return "Sign-in paused for a minute: too many wrong passwords"
         case "killswitch.engaged":
             return f"Automation stopped (from the {_text(p.get('via'))})"
         case "killswitch.released":
@@ -366,7 +382,7 @@ class Row:
     def tag(self) -> str:
         if self.kind == "tool.call":
             return "tool"
-        if self.kind == "feedback.recorded":
+        if self.kind == "feedback.recorded" or self.kind.startswith("console."):
             return "you"
         return "sent" if self.voice == "out" else self.voice
 
@@ -904,6 +920,9 @@ class ChannelLine:
     last_at: datetime | None
     last_ok: bool
     last_error: str | None
+    origin: str = "file"  # file: the rules file defines it; console: an admin added it here
+    broken: str | None = None  # why a console channel is set aside, when it is
+    can_test: bool = False
 
     @property
     def state(self) -> str:
@@ -913,12 +932,22 @@ class ChannelLine:
 
 
 def channels_view(
-    store: Store, rules: Rules, now: datetime, *, days: int = 30
+    store: Store,
+    rules: Rules,
+    now: datetime,
+    *,
+    days: int = 30,
+    console: Channels | None = None,
 ) -> tuple[ChannelLine, ...]:
     """Every channel a stage sends to, and how its deliveries went. Never where to: a webhook's
-    address is its secret, and the rules file is where the rest is read."""
+    address is its secret, and the rules file is where the rest is read. With `console`, the
+    channels added there too, even one that carries nothing yet or is set aside."""
     carries: dict[str, list[str]] = {}
     kinds: dict[str, str] = {}
+    added = {} if console is None else {one.name: one for one in console.shown()}
+    for one in added.values():
+        carries[one.name] = []
+        kinds[one.name] = one.service.type
     for stage, what in _STAGE_SENDS:
         for name, config in rules.channels(stage):
             carries.setdefault(name, []).append(what)
@@ -945,8 +974,11 @@ def channels_view(
             last_at=last[name].recorded_at if name in last else None,
             last_ok=name in last and last[name].kind == "notification.sent",
             last_error=_error(last.get(name)),
+            origin="console" if name in added else "file",
+            broken=added[name].broken if name in added else None,
+            can_test=console is not None and console.can_test(name),
         )
-        for name in carries
+        for name in sorted(carries, key=lambda name: name in added)  # the file's first
     )
 
 

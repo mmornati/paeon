@@ -10,6 +10,10 @@
   "sources": '<path d="M5 13a7 7 0 0 1 14 0"/><path d="M8.500 13a3.500 3.500 0 0 1 7 0"/><path d="M12 13v8"/><path d="M12 13v.01"/>',
   "search": '<circle cx="11" cy="11" r="6.500"/><path d="m20 20-4.250-4.250"/>',
   "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2.500v2M12 19.500v2M2.500 12h2M19.500 12h2M5.300 5.300l1.400 1.400M17.300 17.300l1.400 1.400M5.300 18.700l1.400-1.400M17.300 6.700l1.400-1.400"/>',
+  "plus": '<path d="M12 5v14M5 12h14"/>',
+  "lock": '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  "out": '<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/>',
+  "next": '<path d="m9 6 6 6-6 6"/>',
   "moon": '<path d="M20 14.500A8.500 8.500 0 0 1 9.500 4a8.500 8.500 0 1 0 10.500 10.500Z"/>',
 } %}
 {% macro icon(name, cls="") %}<svg class="icon{% if cls %} {{ cls }}{% endif %}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">{{ paths[name]|safe }}</svg>{% endmacro %}

@@ -29,6 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from paeon import autonomy, notify, sources
 from paeon import digest as digests
 from paeon import postmortem as postmortems
+from paeon.channels import Channels
 from paeon.config import Settings
 from paeon.correlation import Correlator
 from paeon.guard import BodyGuard
@@ -54,6 +55,8 @@ from paeon.tools import (
 )
 from paeon.triage import Triager
 from paeon.ui import mount_ui
+from paeon.ui.access import Sessions
+from paeon.vault import Vault
 
 log = logging.getLogger(__name__)
 
@@ -95,9 +98,11 @@ def create_app(
     toolbox: Toolbox | None = None,
     executor: ExecutorApi | None = None,
     source_transport: httpx.BaseTransport | None = None,
+    channel_transport: httpx.BaseTransport | None = None,
 ) -> FastAPI:
     """Build the app. `model_clients` (by alias), `toolbox` and `executor` replace the real
-    ones in tests, and `source_transport` answers in place of the services of `sources`."""
+    ones in tests, `source_transport` answers in place of the services of `sources`, and
+    `channel_transport` in place of the services a console channel sends to."""
     rules = settings.rules
     recorder = Recorder(store, Correlator(store, rules))
     closers: list[Callable[[], None]] = []
@@ -163,6 +168,33 @@ def create_app(
             executor = remote
         remediator = Remediator(store, rules, executor)
 
+    # Where the digest and the analysis go: the channels of the rules file, and over them,
+    # when the console may add some, a roster it can change while Paeon runs.
+    digest_channels: notify.Roster | list[notify.Notifier] = notify.for_stage(
+        rules, "digest", secrets=settings.notifier_secrets, legacy_token=settings.ntfy_token
+    )
+    analysis_channels: notify.Roster | list[notify.Notifier] = (
+        notify.for_stage(
+            rules,
+            "investigation",
+            secrets=settings.notifier_secrets,
+            legacy_token=settings.investigation_ntfy_token,
+        )
+        if rules.investigation.enabled
+        else []
+    )
+    console_channels: Channels | None = None
+    if rules.ui.enabled and rules.ui.settings and settings.secret_key:
+        console_channels = Channels(
+            store,
+            rules,
+            Vault(settings.secret_key),
+            base={"digest": digest_channels, "investigation": analysis_channels},
+            transport=channel_transport,
+        )
+        digest_channels = console_channels.rosters["digest"]
+        analysis_channels = console_channels.rosters["investigation"]
+
     investigator: Investigator | None = None
     if rules.investigation.enabled:
         if toolbox is None:
@@ -191,12 +223,7 @@ def create_app(
             rules,
             model_client(rules.investigation.model),
             toolbox,
-            notifiers=notify.for_stage(
-                rules,
-                "investigation",
-                secrets=settings.notifier_secrets,
-                legacy_token=settings.investigation_ntfy_token,
-            ),
+            notifiers=analysis_channels,
             fallback=None if fallback is None else model_client(fallback),
             extras=None if remediator is None else remediator.extras,
             after=None if remediator is None else remediator.on_findings,
@@ -282,10 +309,6 @@ def create_app(
             return
         await asyncio.to_thread(remediator.run_pending, _now())
 
-    digest_channels = notify.for_stage(
-        rules, "digest", secrets=settings.notifier_secrets, legacy_token=settings.ntfy_token
-    )
-
     def send_digest(now: datetime) -> bool:
         if not digest_channels:  # pragma: no cover - not scheduled
             return False
@@ -366,7 +389,7 @@ def create_app(
             tasks.append(
                 asyncio.create_task(_every(POSTMORTEM_TICK_SECONDS, "postmortems", run_postmortems))
             )
-        if digest_channels:
+        if digest_channels or console_channels is not None:  # one may be added later
             tasks.append(asyncio.create_task(_every(DIGEST_TICK_SECONDS, "digest", run_digest)))
         if remediator is not None:
             tasks.append(
@@ -548,9 +571,16 @@ def create_app(
             stop=None if remediator is None else remediator.stop,
             proxy_secret=settings.ui_proxy_secret,
             sources=_sources_shown(connected, source),
+            channels=console_channels,
+            sessions=(
+                Sessions(settings.secret_key, settings.ui_admin_password)
+                if rules.ui.auth == "local" and settings.secret_key and settings.ui_admin_password
+                else None
+            ),
         )
 
     app.state.sources = connected
+    app.state.channels = console_channels
     app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager
