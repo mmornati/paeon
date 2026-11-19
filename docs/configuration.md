@@ -1,12 +1,53 @@
 # Configuration
 
-Behaviour is one YAML file, named by `PAEON_CONFIG`: correlation windows, host rules, maintenance
-windows, model aliases, triage, investigation, postmortems and the digest. Start from
-[examples/paeon.yaml](https://github.com/mmornati/paeon/blob/main/examples/paeon.yaml). Every key is optional and **every stage is off until
-you enable it**.
+Paeon is configured in two places:
 
-Secrets never go in that file. It names the environment variable that holds them (`api_key_env`,
-`token_env`), and every secret also accepts `NAME_FILE=/path` for Docker secrets.
+- **The rules file**, one YAML file named by `PAEON_CONFIG`: what Paeon does. Correlation,
+  maintenance windows, models, the stages, notification channels, actions, the console.
+- **The environment**: where a process runs and every secret. The address it listens on, the
+  database path, tokens and keys.
+
+Start from [examples/paeon.yaml](https://github.com/mmornati/paeon/blob/main/examples/paeon.yaml)
+and [.env.example](https://github.com/mmornati/paeon/blob/main/.env.example). Every key is
+optional and **every stage is off until you enable it**: with an ingest token and nothing else,
+Paeon records alerts and groups them into incidents.
+
+| To configure | Read |
+|---|---|
+| Every key of the rules file, with its type and default | [Configuration reference](configuration-reference.md) |
+| Where alerts come from | [Connect your alerts](connect-alerts.md) |
+| Where Paeon sends, service by service | [Notifications](notifications.md) |
+| Plans, approvals and the executor | [Acting](acting.md) |
+| The console and its proxy | [The console](console.md) |
+
+## How the file is read
+
+- The file is read **once, when the process starts**. A change needs a restart of the process
+  that reads it (`paeon serve`, and `paeon executor` for its own copy).
+- It is checked as a whole before anything starts. A key that does not exist, a value of the
+  wrong type, a model alias or a channel that is named and not defined: each stops the start
+  and says which key is wrong.
+- Secrets never go in the file. A key ending in `_env` holds the **name** of an environment
+  variable (`api_key_env`, `token_env`, `webhook_env`), and every secret also accepts
+  `NAME_FILE=/path`, for Docker secrets.
+- The executor reads the same format from **its own copy**, and trusts only that copy. See
+  [Acting](acting.md).
+
+## The sections of the file
+
+| Section | What it holds | Reference |
+|---|---|---|
+| `correlation` | How alerts become incidents: windows, host labels, flapping. | [correlation](configuration-reference.md#correlation) |
+| `maintenance` | Weekly windows in which alerts are expected. | [maintenance](configuration-reference.md#maintenance) |
+| `models` | Model aliases: backend, model name, key, price. A stage names an alias. | [models](configuration-reference.md#models) |
+| `triage` | Stage 1: a cheap first look at each incident. | [triage](configuration-reference.md#triage) |
+| `investigation` | Stage 2: a strong model with the read-only tools you allow. | [investigation](configuration-reference.md#investigation) |
+| `postmortems` | Drafts written once an incident stays resolved. | [postmortems](configuration-reference.md#postmortems) |
+| `digest` | The daily summary and its feedback questions. | [digest](configuration-reference.md#digest) |
+| `notifiers` | Named notification channels, one per service. | [notifiers](configuration-reference.md#notifiers) |
+| `actions` | Stages 3 and 4: the catalog, policies, runbooks, the executor. | [actions](configuration-reference.md#actions) |
+| `ui` | The console. | [ui](configuration-reference.md#ui) |
+| `telemetry` | Traces of Paeon's own work over OTLP. | [telemetry](configuration-reference.md#telemetry) |
 
 ## Stages
 
@@ -28,7 +69,56 @@ knows. Channels are defined once under `notifiers` and listed per stage in `noti
 
 ## Environment
 
-The service itself is configured by `PAEON_*` variables: the ingest token, the database path, the address it listens on, the OpenObserve account, the heartbeat URL and the path of the rules file. [.env.example](https://github.com/mmornati/paeon/blob/main/.env.example) lists them all with a comment each.
+Every secret below also accepts `NAME_FILE=/path`.
+
+### The core (`paeon serve`)
+
+| Variable | Default | |
+|---|---|---|
+| `PAEON_INGEST_TOKEN` | **required** | Bearer token the webhook senders and the API clients present. 24 characters or more. |
+| `PAEON_CONFIG` | none | Path of the rules file. Without it, Paeon records and correlates with the defaults. |
+| `PAEON_DB` | `paeon.sqlite` | Where the event log lives. |
+| `PAEON_HOST` | `127.0.0.1` | The address the API listens on. `0.0.0.0` in a container. |
+| `PAEON_PORT` | `8080` | Its port. |
+| `PAEON_OPENOBSERVE_URL` | none | Switches on the OpenObserve pull adapter. The internal address, for example `http://openobserve:5080`. |
+| `PAEON_OPENOBSERVE_ORG` | `default` | The organisation. |
+| `PAEON_OPENOBSERVE_USER` | | The account. Required with the URL. |
+| `PAEON_OPENOBSERVE_PASSWORD` | | Its password. Required with the URL. |
+| `PAEON_OPENOBSERVE_POLL_SECONDS` | `60` | How often alerts are pulled. 5 at least. |
+| `PAEON_OPENOBSERVE_STALE_SECONDS` | `900` | No evaluation row for this long opens the internal `source_stale` alert. 60 at least. |
+| `PAEON_HEARTBEAT_URL` | none | A push URL called while Paeon is healthy (an uptime-kuma Push monitor). |
+| `PAEON_HEARTBEAT_SECONDS` | `60` | How often it is called. 10 at least. |
+| `PAEON_EXECUTOR_TOKEN` | | How the core proves itself to the executor. Required with `actions.enabled`, 24 characters or more, the same as the executor's. |
+| `PAEON_UI_PROXY_SECRET` | | The value your proxy adds to each console request. Required with `ui.proxy_secret`, 24 characters or more. The name can be changed there. |
+
+### The executor (`paeon executor`)
+
+| Variable | Default | |
+|---|---|---|
+| `PAEON_EXECUTOR_TOKEN` | **required** | The token the core presents. 24 characters or more. |
+| `PAEON_CONFIG` | **required** | Path of the executor's own copy of the rules file. |
+| `PAEON_SIGNING_KEY` | none | The key that signs Go / No-go links. 32 characters or more, different from the token. Without it nothing can be approved. Never give it to the core. |
+| `PAEON_EXECUTOR_DB` | `executor.sqlite` | Where the executor's journal lives. |
+| `PAEON_EXECUTOR_HOST` | `127.0.0.1` | The address it listens on. |
+| `PAEON_EXECUTOR_PORT` | `8081` | Its port. |
+| `PAEON_KILL_SWITCH` | off | `1`, `true`, `yes` or `on`: every plan is only recorded, whatever the policies say. |
+
+### Variables the rules file names
+
+These have no fixed name: a key of the rules file says which variable to read. The names below
+are the ones the examples use.
+
+| Named by | Example | Read by | Holds |
+|---|---|---|---|
+| `models.<alias>.api_key_env` | `ANTHROPIC_API_KEY` | core | A model provider's API key. |
+| `notifiers.<name>.token_env`, `webhook_env`, `password_env`, `user_env`, `url_env`, `authorization_env`, `urls_env` | `PAEON_TELEGRAM_TOKEN` | the process that sends to the channel | A channel's secret. See [Notifications](notifications.md). |
+| `digest.ntfy.token_env`, `investigation.ntfy.token_env` | `PAEON_NTFY_TOKEN` | core | The ntfy token of a stage's own `ntfy:` block. |
+| `actions.ntfy.token_env` | `PAEON_ACTIONS_NTFY_TOKEN` | executor | The ntfy token of the approval topic. |
+| `investigation.tools.uptime_kuma.api_key_env` | `PAEON_UPTIME_KUMA_API_KEY` | core | An uptime-kuma API key, for `/metrics`. |
+| `telemetry.authorization_env` | `PAEON_OTLP_AUTHORIZATION` | core | The whole `Authorization` header of the OTLP endpoint. |
+| `actions.coolify.token_env` | `PAEON_COOLIFY_TOKEN` | executor | A Coolify API token that can deploy. |
+| `actions.repository.github.token_env` | `PAEON_GITHUB_TOKEN` | executor | A token that can open pull requests on the deployment repository. |
+| `ui.proxy_secret.value_env` | `PAEON_UI_PROXY_SECRET` | core | The value the proxy adds to console requests. |
 
 ## Traces
 

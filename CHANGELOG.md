@@ -2,6 +2,21 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+### Documentation
+
+- A configuration reference (`docs/configuration-reference.md`) with every key of the rules
+  file, its type, its default and what it does. It is generated from the schema
+  (`scripts/gen_config_reference.py`), and a test fails when it is behind.
+- Every key of the rules file has a description in the schema.
+- The Notifications guide covers each service in full: what to prepare, every key, what
+  arrives, and what a failure means.
+- The Configuration guide lists the sections of the file and every environment variable of the
+  core and of the executor.
+- `paeon notify <channel>` sends a test message through one channel and says what the service
+  answered.
+
 ## 0.2.0
 
 Notification channels: ten services and Apprise, each stage sending to the ones you name.

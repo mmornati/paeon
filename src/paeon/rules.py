@@ -58,9 +58,15 @@ Timezone = Annotated[str, AfterValidator(_timezone)]
 class Matcher(_Rule):
     """Matches an alert when every field given matches. An empty matcher matches everything."""
 
-    source: str | None = None
+    source: str | None = Field(
+        default=None,
+        description="The alert's source, exactly: `uptime-kuma`, `alertmanager`, `openobserve`.",
+    )
     title: Regex | None = Field(default=None, description="Regular expression, full match.")
-    severity: Severity | None = None
+    severity: Severity | None = Field(
+        default=None,
+        description="The alert's severity, exactly: `info`, `warning`, `critical` or `unknown`.",
+    )
     labels: dict[str, str] = Field(default_factory=dict, description="Exact label values.")
 
     def matches(self, alert: Alert) -> bool:
@@ -75,14 +81,16 @@ class Matcher(_Rule):
 
 class Flap(_Rule):
     threshold: int = Field(default=3, ge=2, description="Firings within the window.")
-    window_minutes: float = Field(default=60, gt=0)
+    window_minutes: float = Field(
+        default=60, gt=0, description="The window in which the firings are counted."
+    )
 
 
 class HostRule(_Rule):
     """Gives a host to alerts whose labels carry none (OpenObserve alerts, for example)."""
 
-    match: Matcher
-    host: str = Field(min_length=1)
+    match: Matcher = Field(description="The alerts this rule gives a host to.")
+    host: str = Field(min_length=1, description="The host they are given.")
 
 
 class Correlation(_Rule):
@@ -96,9 +104,14 @@ class Correlation(_Rule):
         ge=0,
         description="An alert on the same host this soon after an incident opened joins it.",
     )
-    host_labels: tuple[str, ...] = ("host", "instance", "hostname")
-    hosts: tuple[HostRule, ...] = ()
-    flap: Flap = Field(default_factory=Flap)
+    host_labels: tuple[str, ...] = Field(
+        default=("host", "instance", "hostname"),
+        description="Labels that name the host, first match wins.",
+    )
+    hosts: tuple[HostRule, ...] = Field(
+        default=(), description="Rules that give a host to alerts whose labels carry none."
+    )
+    flap: Flap = Field(default_factory=Flap, description="When an incident is flagged as flapping.")
 
     def host_of(self, alert: Alert) -> str | None:
         for label in self.host_labels:
@@ -118,12 +131,18 @@ _DAYS: tuple[Day, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 class MaintenanceWindow(_Rule):
     """A weekly window in which alerts are expected (an updater run, a backup)."""
 
-    name: str = Field(min_length=1)
-    days: tuple[Day, ...] = _DAYS
-    start: time
-    duration_minutes: float = Field(gt=0, le=24 * 60)
-    timezone: Timezone = "UTC"
-    match: Matcher = Field(default_factory=Matcher)
+    name: str = Field(min_length=1, description="A name of yours, shown on the incident.")
+    days: tuple[Day, ...] = Field(
+        default=_DAYS, description="The days it opens on. Default: every day."
+    )
+    start: time = Field(description="The local time it opens, `HH:MM`.")
+    duration_minutes: float = Field(
+        gt=0, le=24 * 60, description="How long it stays open. It may run past midnight."
+    )
+    timezone: Timezone = Field(default="UTC", description="The timezone of `start`.")
+    match: Matcher = Field(
+        default_factory=Matcher, description="The alerts it covers. Empty: all of them."
+    )
 
     def covers(self, moment: datetime) -> bool:
         local = moment.astimezone(ZoneInfo(self.timezone))
@@ -141,16 +160,25 @@ class MaintenanceWindow(_Rule):
 class Price(_Rule):
     """Price per million tokens at call time, in the currency of your budget."""
 
-    input_per_mtok: float = Field(default=0, ge=0)
-    output_per_mtok: float = Field(default=0, ge=0)
+    input_per_mtok: float = Field(
+        default=0,
+        ge=0,
+        description="Price of a million input tokens. 0: this model's calls cost nothing and"
+        " no budget stops them.",
+    )
+    output_per_mtok: float = Field(default=0, ge=0, description="Price of a million output tokens.")
     cached_input_per_mtok: float | None = Field(
         default=None, ge=0, description="Price of input read from the cache; input price if unset."
     )
 
 
 class ModelAlias(_Rule):
-    backend: Literal["anthropic", "openai"]
-    model: str = Field(min_length=1)
+    backend: Literal["anthropic", "openai"] = Field(
+        description="The API the model is called through: Anthropic's Messages API, or the"
+        " OpenAI chat completions format that most gateways and local servers"
+        " speak."
+    )
+    model: str = Field(min_length=1, description="The model's name, as that API expects it.")
     base_url: str | None = Field(
         default=None, description="Defaults to the provider's own API. Use it for a gateway."
     )
@@ -160,32 +188,55 @@ class ModelAlias(_Rule):
     max_tokens: int = Field(
         default=2000, ge=1, description="Output ceiling; on recent models it includes thinking."
     )
-    timeout_seconds: float = Field(default=60, gt=0)
+    timeout_seconds: float = Field(default=60, gt=0, description="How long one call may take.")
     effort: Literal["low", "medium", "high", "xhigh", "max"] | None = Field(
         default=None, description="Anthropic backend only: `output_config.effort`."
     )
-    price: Price = Field(default_factory=Price)
+    price: Price = Field(
+        default_factory=Price, description="What a call costs. Budgets are counted from it."
+    )
 
 
 class Triage(_Rule):
-    enabled: bool = False
+    enabled: bool = Field(default=False, description="Switches the stage on.")
     model: str = Field(default="triage", description="An alias from `models`.")
-    confidence_threshold: float = Field(default=0.7, ge=0, le=1)
+    confidence_threshold: float = Field(
+        default=0.7,
+        ge=0,
+        le=1,
+        description="A verdict under this confidence is not trusted: the incident is treated"
+        " as real.",
+    )
     settle_seconds: float = Field(
         default=60, ge=0, description="Wait this long so that related alerts join the incident."
     )
     max_per_hour: int = Field(default=20, ge=1, description="Storm guard.")
-    daily_budget: float | None = Field(default=None, ge=0)
-    history_days: int = Field(default=30, ge=1)
+    daily_budget: float | None = Field(
+        default=None,
+        ge=0,
+        description="What triage may spend in a day, in the currency of `price`. Spent:"
+        " incidents are treated as real, with no call.",
+    )
+    history_days: int = Field(
+        default=30,
+        ge=1,
+        description="How far back the alert's own history goes in what the model is given.",
+    )
     skip: tuple[Matcher, ...] = Field(
         default=(), description="Page-level alerts: never triaged, always treated as real."
     )
 
 
 class Ntfy(_Rule):
-    url: str = Field(min_length=1)
-    topic: str = Field(min_length=1)
-    token_env: str | None = None
+    url: str = Field(
+        min_length=1, description="The ntfy server, for example https://ntfy.example.org."
+    )
+    topic: str = Field(min_length=1, description="The topic messages are published to.")
+    token_env: str | None = Field(
+        default=None,
+        description="Environment variable (or NAME_FILE) with an access token. Leave it out"
+        " for an open topic.",
+    )
 
 
 class NtfyChannel(Ntfy):
@@ -227,7 +278,12 @@ class DiscordChannel(_Channel):
     webhook_env: str = Field(
         min_length=1, description="The webhook URL. It is a secret: whoever has it can post."
     )
-    username: str | None = Field(default=None, min_length=1, max_length=80)
+    username: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=80,
+        description="The name the message is posted under. Default: the webhook's own.",
+    )
 
     def secret_envs(self) -> dict[str, tuple[str, bool]]:
         return {"webhook": (self.webhook_env, True)}
@@ -250,17 +306,33 @@ class EmailChannel(_Channel):
     """Mail through an SMTP server. Buttons are links in the body."""
 
     type: Literal["email"]
-    host: str = Field(min_length=1)
-    port: int = Field(default=587, ge=1, le=65535)
+    host: str = Field(min_length=1, description="The SMTP server.")
+    port: int = Field(
+        default=587, ge=1, le=65535, description="Its port: 587 with `starttls`, 465 with `tls`."
+    )
     security: Literal["starttls", "tls", "none"] = Field(
         default="starttls",
         description="`starttls` (port 587), `tls` from the first byte (port 465), or `none`"
         " for a relay on your own network.",
     )
-    username: str | None = Field(default=None, min_length=1)
-    password_env: str | None = Field(default=None, min_length=1)
-    sender: str = Field(min_length=3, pattern=r"^[^\s@<>]+@[^\s@<>]+$")
-    to: tuple[str, ...] = Field(min_length=1)
+    username: str | None = Field(
+        default=None,
+        min_length=1,
+        description="The login, if the server asks for one. Goes with `password_env`.",
+    )
+    password_env: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Environment variable (or NAME_FILE) with the password.",
+    )
+    sender: str = Field(
+        min_length=3,
+        pattern=r"^[^\s@<>]+@[^\s@<>]+$",
+        description="The From address, a bare address.",
+    )
+    to: tuple[str, ...] = Field(
+        min_length=1, description="The addresses the mail is sent to, one or more."
+    )
 
     @model_validator(mode="after")
     def _addresses(self) -> EmailChannel:
@@ -280,7 +352,9 @@ class WebhookChannel(_Channel):
     script of yours). Buttons are a list of labels and links in the body."""
 
     type: Literal["webhook"]
-    url: str | None = Field(default=None, pattern=r"^https?://[^\s]+$")
+    url: str | None = Field(
+        default=None, pattern=r"^https?://[^\s]+$", description="Where the message is posted."
+    )
     url_env: str | None = Field(
         default=None, min_length=1, description="Instead of `url`, when the URL holds a secret."
     )
@@ -320,7 +394,12 @@ class PushoverChannel(_Channel):
     type: Literal["pushover"]
     token_env: str = Field(min_length=1, description="The application's API token.")
     user_env: str = Field(min_length=1, description="The user or group key.")
-    device: str | None = Field(default=None, min_length=1, max_length=25)
+    device: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=25,
+        description="Limit delivery to one of your devices, by its name.",
+    )
 
     def secret_envs(self) -> dict[str, tuple[str, bool]]:
         return {"token": (self.token_env, True), "user": (self.user_env, True)}
@@ -342,7 +421,10 @@ class MatrixChannel(_Channel):
     """A room on a Matrix homeserver. Links are in the message."""
 
     type: Literal["matrix"]
-    homeserver: str = Field(pattern=r"^https?://[^\s]+$")
+    homeserver: str = Field(
+        pattern=r"^https?://[^\s]+$",
+        description="The homeserver's base URL, for example https://matrix.example.org.",
+    )
     room_id: str = Field(pattern=r"^![^\s]+$", description="The room's id (`!abc:example.org`).")
     token_env: str = Field(min_length=1, description="An access token of the account that posts.")
 
@@ -388,8 +470,15 @@ _NOTIFY = Field(
 
 
 class Digest(_Rule):
-    hour: int = Field(default=8, ge=0, le=23)
-    timezone: Timezone = "UTC"
+    hour: int = Field(
+        default=8,
+        ge=0,
+        le=23,
+        description="The hour, in `timezone`, from which the day's digest is sent.",
+    )
+    timezone: Timezone = Field(
+        default="UTC", description="The timezone of `hour`, and of the times the console shows."
+    )
     ntfy: Ntfy | None = Field(default=None, description="Short for one ntfy channel.")
     notify: tuple[str, ...] = _NOTIFY
     feedback: int = Field(
@@ -412,7 +501,9 @@ class OpenObserveTools(_Rule):
         default=(),
         description="Metric name patterns (fnmatch) that PromQL queries may read. Empty: none.",
     )
-    max_rows: int = Field(default=100, ge=1, le=1000)
+    max_rows: int = Field(
+        default=100, ge=1, le=1000, description="Rows one log search may return, at most."
+    )
 
 
 class DockerTools(_Rule):
@@ -428,7 +519,9 @@ class DockerTools(_Rule):
     mount_sources: tuple[str, ...] = Field(
         default=(), description="Host path prefixes that `inspect` may show as mount sources."
     )
-    max_log_lines: int = Field(default=200, ge=1, le=2000)
+    max_log_lines: int = Field(
+        default=200, ge=1, le=2000, description="Log lines one call may return, at most."
+    )
 
 
 class KnowledgeTools(_Rule):
@@ -452,7 +545,9 @@ class GitTools(_Rule):
     repos: dict[str, str] = Field(
         default_factory=dict, description="Name the model uses, to the path of a working copy."
     )
-    max_commits: int = Field(default=30, ge=1, le=200)
+    max_commits: int = Field(
+        default=30, ge=1, le=200, description="Commits one call may return, at most."
+    )
 
 
 _NAME = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"
@@ -460,7 +555,7 @@ _NAME = r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"
 
 class SshHost(_Rule):
     target: str = Field(pattern=r"^[A-Za-z0-9_.-]+@[A-Za-z0-9_.:-]+$", description="user@host.")
-    port: int = Field(default=22, ge=1, le=65535)
+    port: int = Field(default=22, ge=1, le=65535, description="The SSH port.")
     commands: dict[str, str] = Field(
         min_length=1,
         description="Name the model uses, to the command line you wrote. The model chooses a"
@@ -471,12 +566,17 @@ class SshHost(_Rule):
 class SshTools(_Rule):
     """Other hosts, through commands you list. Pair it with a forced command on the far side."""
 
-    hosts: dict[str, SshHost] = Field(default_factory=dict)
-    identity_file: str = Field(min_length=1)
+    hosts: dict[str, SshHost] = Field(
+        default_factory=dict,
+        description="Name the model uses, to the host and the commands it may run there.",
+    )
+    identity_file: str = Field(min_length=1, description="The private key Paeon connects with.")
     known_hosts_file: str = Field(
         min_length=1, description="Host keys are checked strictly against this file."
     )
-    timeout_seconds: float = Field(default=20, gt=0, le=120)
+    timeout_seconds: float = Field(
+        default=20, gt=0, le=120, description="How long one command may run."
+    )
 
     @model_validator(mode="after")
     def _names(self) -> SshTools:
@@ -488,19 +588,27 @@ class SshTools(_Rule):
 
 
 class InvestigationTools(_Rule):
-    openobserve: OpenObserveTools | None = None
-    docker: DockerTools | None = None
-    knowledge: KnowledgeTools = Field(default_factory=KnowledgeTools)
-    uptime_kuma: UptimeKumaTools | None = None
-    git: GitTools | None = None
-    ssh: SshTools | None = None
+    openobserve: OpenObserveTools | None = Field(
+        default=None, description="Log search and PromQL in OpenObserve."
+    )
+    docker: DockerTools | None = Field(
+        default=None, description="Container list, inspect and logs."
+    )
+    knowledge: KnowledgeTools = Field(
+        default_factory=KnowledgeTools, description="Full-text search in your runbooks and notes."
+    )
+    uptime_kuma: UptimeKumaTools | None = Field(
+        default=None, description="The state of every monitor."
+    )
+    git: GitTools | None = Field(default=None, description="Recent commits of working copies.")
+    ssh: SshTools | None = Field(default=None, description="Prepared commands on other hosts.")
 
 
 TriageVerdict = Literal["noise", "transient", "known_issue", "real"]
 
 
 class Investigation(_Rule):
-    enabled: bool = False
+    enabled: bool = Field(default=False, description="Switches the stage on.")
     model: str = Field(default="investigate", description="An alias from `models`.")
     fallback_model: str | None = Field(
         default=None,
@@ -511,16 +619,35 @@ class Investigation(_Rule):
         default=("real", "known_issue"),
         description="Triage verdicts that are investigated. Without triage, every incident is.",
     )
-    settle_seconds: float = Field(default=60, ge=0)
-    max_tool_calls: int = Field(default=25, ge=1, le=200)
-    max_seconds: float = Field(default=600, gt=0)
-    max_result_chars: int = Field(default=12000, ge=500)
+    settle_seconds: float = Field(
+        default=60,
+        ge=0,
+        description="Wait this long after the incident opened, so that related alerts join it.",
+    )
+    max_tool_calls: int = Field(
+        default=25, ge=1, le=200, description="Tool calls one investigation may make."
+    )
+    max_seconds: float = Field(
+        default=600, gt=0, description="How long one investigation may last."
+    )
+    max_result_chars: int = Field(
+        default=12000,
+        ge=500,
+        description="A tool result longer than this is cut before the model reads it.",
+    )
     max_per_hour: int = Field(default=6, ge=1, description="Storm guard.")
-    budget_per_incident: float | None = Field(default=None, ge=0)
+    budget_per_incident: float | None = Field(
+        default=None,
+        ge=0,
+        description="What one investigation may spend, in the currency of `price`.",
+    )
     daily_budget: float | None = Field(
         default=None, ge=0, description="Counts every model call of the day, all stages."
     )
-    tools: InvestigationTools = Field(default_factory=InvestigationTools)
+    tools: InvestigationTools = Field(
+        default_factory=InvestigationTools,
+        description="What the investigator may read. Each tool is off until it is configured.",
+    )
     ntfy: Ntfy | None = Field(
         default=None, description="Where the analysis is sent. Short for one ntfy channel."
     )
@@ -530,22 +657,36 @@ class Investigation(_Rule):
 class PostmortemGit(_Rule):
     """Commit each draft in the working copy that holds `postmortems.dir`."""
 
-    commit: bool = True
+    commit: bool = Field(default=True, description="Commit each draft.")
     push: bool = Field(
         default=False, description="Push after the commit, to the branch's own upstream."
     )
-    author_name: str = Field(default="Paeon", min_length=1, max_length=100)
-    author_email: str = Field(default="paeon@localhost", min_length=3, max_length=200)
+    author_name: str = Field(
+        default="Paeon", min_length=1, max_length=100, description="The commit's author."
+    )
+    author_email: str = Field(
+        default="paeon@localhost",
+        min_length=3,
+        max_length=200,
+        description="The commit's author address.",
+    )
     identity_file: str | None = Field(
         default=None, description="A deploy key for the push, if the remote is reached over SSH."
     )
-    known_hosts_file: str | None = None
+    known_hosts_file: str | None = Field(
+        default=None, description="Host keys for the push over SSH, checked strictly."
+    )
 
 
 class Postmortems(_Rule):
-    enabled: bool = False
-    dir: str = Field(default="postmortems", min_length=1)
-    git: PostmortemGit | None = None
+    enabled: bool = Field(default=False, description="Switches the stage on.")
+    dir: str = Field(
+        default="postmortems", min_length=1, description="The directory drafts are written to."
+    )
+    git: PostmortemGit | None = Field(
+        default=None,
+        description="Commit and push each draft. The directory must be inside a git working copy.",
+    )
     model: str = Field(default="postmortem", description="An alias from `models`.")
     daily_budget: float | None = Field(
         default=None,
@@ -558,7 +699,12 @@ class Postmortems(_Rule):
 class ProxySecret(_Rule):
     """A header only your proxy can send: its value is a secret the proxy adds to each request."""
 
-    header: str = Field(default="X-Paeon-Proxy", min_length=1, pattern=r"^[A-Za-z0-9-]+$")
+    header: str = Field(
+        default="X-Paeon-Proxy",
+        min_length=1,
+        pattern=r"^[A-Za-z0-9-]+$",
+        description="The header your proxy adds.",
+    )
     value_env: str = Field(
         default="PAEON_UI_PROXY_SECRET",
         min_length=1,
@@ -570,7 +716,7 @@ class ProxySecret(_Rule):
 class Ui(_Rule):
     """The console under `/ui`. It has no login of its own: the reverse proxy protects it."""
 
-    enabled: bool = False
+    enabled: bool = Field(default=False, description="Serves the console under `/ui`.")
     require_header: str | None = Field(
         default=None,
         min_length=1,
@@ -608,8 +754,15 @@ class Telemetry(_Rule):
     headers: dict[str, str] = Field(
         default_factory=dict, description="Other headers, none of them secret (stream-name)."
     )
-    service_name: str = Field(default="paeon", min_length=1, max_length=100)
-    interval_seconds: float = Field(default=30, ge=5, le=3600)
+    service_name: str = Field(
+        default="paeon",
+        min_length=1,
+        max_length=100,
+        description="The `service.name` the traces carry.",
+    )
+    interval_seconds: float = Field(
+        default=30, ge=5, le=3600, description="How often finished spans are sent."
+    )
 
 
 Level = Literal["observe", "suggest", "approve", "auto"]
@@ -619,8 +772,18 @@ LEVELS: tuple[Level, ...] = ("observe", "suggest", "approve", "auto")
 class Verify(_Rule):
     """How the executor decides that an action worked. Written by you, never by a model."""
 
-    wait_seconds: float = Field(default=15, ge=0, le=600)
-    timeout_seconds: float = Field(default=120, gt=0, le=3600)
+    wait_seconds: float = Field(
+        default=15,
+        ge=0,
+        le=600,
+        description="Wait this long after the action before the first check.",
+    )
+    timeout_seconds: float = Field(
+        default=120,
+        gt=0,
+        le=3600,
+        description="How long the checks may go on before the action is said to have failed.",
+    )
     http: str | None = Field(
         default=None,
         pattern=r"^https?://[^\s]+$",
@@ -637,7 +800,9 @@ class CatalogEntry(_Rule):
     deny: tuple[str, ...] = Field(
         default=(), description="Patterns refused even when a target pattern matches."
     )
-    verify: Verify = Field(default_factory=Verify)
+    verify: Verify = Field(
+        default_factory=Verify, description="How the executor decides that the action worked."
+    )
 
     def allows(self, target: str) -> bool:
         if any(fnmatch.fnmatchcase(target, pattern) for pattern in self.deny):
@@ -646,8 +811,10 @@ class CatalogEntry(_Rule):
 
 
 class CoolifyResource(_Rule):
-    uuid: str = Field(pattern=r"^[A-Za-z0-9]{6,64}$")
-    kind: Literal["application", "service"] = "application"
+    uuid: str = Field(pattern=r"^[A-Za-z0-9]{6,64}$", description="The resource's UUID in Coolify.")
+    kind: Literal["application", "service"] = Field(
+        default="application", description="What it is in Coolify."
+    )
 
 
 class Coolify(_Rule):
@@ -655,7 +822,11 @@ class Coolify(_Rule):
 
     url: str = Field(pattern=r"^https?://[^\s]+$", description="For example http://coolify:8000.")
     token_env: str = Field(min_length=1, description="An API token that can deploy.")
-    resources: dict[str, CoolifyResource] = Field(default_factory=dict)
+    resources: dict[str, CoolifyResource] = Field(
+        default_factory=dict,
+        description="Name of yours, to the Coolify resource it stands for. A plan names the"
+        " resource by this name.",
+    )
 
 
 class RepoFile(_Rule):
@@ -697,7 +868,11 @@ class GitHub(_Rule):
     token_env: str = Field(
         min_length=1, description="A token that can open pull requests on that repository only."
     )
-    api_url: str = Field(default="https://api.github.com", pattern=r"^https://[^\s]+$")
+    api_url: str = Field(
+        default="https://api.github.com",
+        pattern=r"^https://[^\s]+$",
+        description="Change it only for GitHub Enterprise.",
+    )
 
 
 class Repository(_Rule):
@@ -708,14 +883,38 @@ class Repository(_Rule):
     """
 
     path: str = Field(min_length=1, description="A working copy nothing else uses.")
-    remote: str = Field(default="origin", pattern=r"^[A-Za-z0-9_.-]+$")
-    base: str = Field(default="main", pattern=r"^[A-Za-z0-9_./-]+$")
-    files: dict[str, RepoFile] = Field(default_factory=dict)
-    github: GitHub | None = None
-    identity_file: str | None = None
-    known_hosts_file: str | None = None
-    author_name: str = Field(default="Paeon", min_length=1, max_length=100)
-    author_email: str = Field(default="paeon@localhost", min_length=3, max_length=200)
+    remote: str = Field(
+        default="origin",
+        pattern=r"^[A-Za-z0-9_.-]+$",
+        description="The remote branches are fetched from and pushed to.",
+    )
+    base: str = Field(
+        default="main",
+        pattern=r"^[A-Za-z0-9_./-]+$",
+        description="The branch every change starts from.",
+    )
+    files: dict[str, RepoFile] = Field(
+        default_factory=dict, description="Name of yours, to a file in which values may be changed."
+    )
+    github: GitHub | None = Field(
+        default=None,
+        description="Open a pull request for each change. Without it the branch is only pushed.",
+    )
+    identity_file: str | None = Field(
+        default=None, description="A deploy key for fetch and push over SSH."
+    )
+    known_hosts_file: str | None = Field(
+        default=None, description="Host keys for SSH, checked strictly."
+    )
+    author_name: str = Field(
+        default="Paeon", min_length=1, max_length=100, description="The commit's author."
+    )
+    author_email: str = Field(
+        default="paeon@localhost",
+        min_length=3,
+        max_length=200,
+        description="The commit's author address.",
+    )
 
 
 class Policy(_Rule):
@@ -724,30 +923,45 @@ class Policy(_Rule):
     alert: Regex = Field(default=".*", description="Alert title, regular expression, full match.")
     action: str = Field(default="*", description="A catalog action, or * for all.")
     target: str = Field(default="*", description="Container name pattern (fnmatch).")
-    level: Level
+    level: Level = Field(
+        description="`observe`: record only. `suggest`: say what would be done. `approve`:"
+        " ask, and run on your Go. `auto`: run, and tell you after."
+    )
 
 
 class Autonomy(_Rule):
     promote_after: int = Field(
         default=5, ge=1, description="Approved and verified runs before `auto` is proposed."
     )
-    window_days: int = Field(default=90, ge=1)
+    window_days: int = Field(
+        default=90, ge=1, description="The period in which those runs are counted."
+    )
     min_confidence: float = Field(
         default=0.8, ge=0, le=1, description="Under it, a plan never runs without approval."
     )
 
 
 class RunbookStep(_Rule):
-    action: str = Field(min_length=1)
-    target: str = Field(min_length=1, pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+    action: str = Field(min_length=1, description="A catalog action.")
+    target: str = Field(
+        min_length=1,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$",
+        description="The container, or Coolify resource, it is applied to.",
+    )
 
 
 class Runbook(_Rule):
     """A known signature and its fix: a hit skips both models."""
 
-    name: str = Field(min_length=1, max_length=100)
-    match: Matcher
-    steps: tuple[RunbookStep, ...] = Field(min_length=1, max_length=10)
+    name: str = Field(
+        min_length=1, max_length=100, description="A name of yours, recorded with the plan."
+    )
+    match: Matcher = Field(description="The alert this runbook answers.")
+    steps: tuple[RunbookStep, ...] = Field(
+        min_length=1,
+        max_length=10,
+        description="The actions, in order. Each must be allowed by the catalog.",
+    )
     mode: Literal["escalate", "sequence"] = Field(
         default="escalate",
         description="escalate: stop at the first step that fixes it. sequence: run them all.",
@@ -761,7 +975,10 @@ class Actions(_Rule):
     trusts only its own copy: mount it read-only there, from git.
     """
 
-    enabled: bool = False
+    enabled: bool = Field(
+        default=False,
+        description="Switches plans on. Without it nothing is proposed to the executor.",
+    )
     executor_url: str = Field(
         default="http://127.0.0.1:8081", description="Where the core reaches the executor."
     )
@@ -783,7 +1000,12 @@ class Actions(_Rule):
     lock_dir: str = Field(
         default="locks", description="One lock file per container, shared with other repairers."
     )
-    approval_minutes: float = Field(default=30, gt=0, le=24 * 60)
+    approval_minutes: float = Field(
+        default=30,
+        gt=0,
+        le=24 * 60,
+        description="How long a Go link works. After it the plan expires and nothing runs.",
+    )
     buttons: Literal["one_tap", "page"] = Field(
         default="one_tap",
         description="What a button in a notification does. `one_tap`: the phone sends the"
@@ -795,7 +1017,9 @@ class Actions(_Rule):
         default=30, ge=0, description="A runbook waits this long: the alert may clear by itself."
     )
     max_per_hour: int = Field(default=6, ge=1, description="Plans executed per hour, at most.")
-    default_level: Level = "suggest"
+    default_level: Level = Field(
+        default="suggest", description="The level of a plan no policy matches."
+    )
     ntfy: Ntfy | None = Field(
         default=None, description="The topic for approvals. Give it a token of its own."
     )
@@ -804,12 +1028,29 @@ class Actions(_Rule):
         description="Names from `notifiers`: where approvals and results are sent. Every"
         " channel listed receives the Go link: list only what you alone read.",
     )
-    catalog: dict[str, CatalogEntry] = Field(default_factory=dict)
-    policies: tuple[Policy, ...] = ()
-    autonomy: Autonomy = Field(default_factory=Autonomy)
-    runbooks: tuple[Runbook, ...] = ()
-    coolify: Coolify | None = None
-    repository: Repository | None = None
+    catalog: dict[str, CatalogEntry] = Field(
+        default_factory=dict,
+        description="The actions that exist here, each for the targets you name. An action"
+        " that is not listed cannot be proposed.",
+    )
+    policies: tuple[Policy, ...] = Field(
+        default=(),
+        description="Who decides: the level of each (alert, action, target). The first match wins.",
+    )
+    autonomy: Autonomy = Field(
+        default_factory=Autonomy, description="When `auto` is earned, and when it is not trusted."
+    )
+    runbooks: tuple[Runbook, ...] = Field(
+        default=(), description="Known alerts and their fix, run without a model."
+    )
+    coolify: Coolify | None = Field(
+        default=None, description="Executor only: the Coolify instance `coolify_restart` uses."
+    )
+    repository: Repository | None = Field(
+        default=None,
+        description="Executor only: the deployment repository `config_change` opens pull"
+        " requests on.",
+    )
 
     @property
     def one_tap(self) -> bool:
@@ -858,20 +1099,34 @@ class Actions(_Rule):
 
 
 class Rules(_Rule):
-    correlation: Correlation = Field(default_factory=Correlation)
-    maintenance: tuple[MaintenanceWindow, ...] = ()
+    correlation: Correlation = Field(
+        default_factory=Correlation, description="How alerts become incidents."
+    )
+    maintenance: tuple[MaintenanceWindow, ...] = Field(
+        default=(), description="Weekly windows in which alerts are expected."
+    )
     notifiers: dict[str, Channel] = Field(
         default_factory=dict,
         description="Named notification channels. A stage sends to those its `notify` lists.",
     )
-    models: dict[str, ModelAlias] = Field(default_factory=dict)
-    triage: Triage = Field(default_factory=Triage)
-    digest: Digest = Field(default_factory=Digest)
-    investigation: Investigation = Field(default_factory=Investigation)
-    postmortems: Postmortems = Field(default_factory=Postmortems)
-    ui: Ui = Field(default_factory=Ui)
-    actions: Actions = Field(default_factory=Actions)
-    telemetry: Telemetry | None = None
+    models: dict[str, ModelAlias] = Field(
+        default_factory=dict, description="Model aliases: a stage names an alias, never a model."
+    )
+    triage: Triage = Field(
+        default_factory=Triage, description="Stage 1: a cheap first look at each incident."
+    )
+    digest: Digest = Field(default_factory=Digest, description="The daily summary.")
+    investigation: Investigation = Field(
+        default_factory=Investigation, description="Stage 2: a strong model with read-only tools."
+    )
+    postmortems: Postmortems = Field(
+        default_factory=Postmortems, description="Drafts written once an incident stays resolved."
+    )
+    ui: Ui = Field(default_factory=Ui, description="The console.")
+    actions: Actions = Field(
+        default_factory=Actions, description="Stages 3 and 4: plans, approval, execution."
+    )
+    telemetry: Telemetry | None = Field(default=None, description="Traces of Paeon's own work.")
 
     @model_validator(mode="after")
     def _actions_known(self) -> Rules:

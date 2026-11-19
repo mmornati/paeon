@@ -138,3 +138,46 @@ def test_an_approval_goes_to_every_channel_and_the_first_tap_wins(tmp_path: Path
     assert [b["label"] for b in kept[0]["actions"]] == ["Go", "No-go"]
     assert other.last("notification.failed")["name"] == "ntfy"
     assert other.last("notification.sent")["name"] == "chat"
+
+
+def test_cli_notify_sends_a_test_message_through_one_channel(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from paeon.cli import main
+
+    path = tmp_path / "paeon.yaml"
+    path.write_text(
+        "ui: {public_url: 'https://paeon.example.org'}\n"
+        "actions: {public_url: 'https://act.example.org'}\n"
+        "notifiers:\n"
+        "  phone: {type: ntfy, url: 'https://ntfy.example.org', topic: act, token_env: T_PHONE}\n"
+        "  chat: {type: telegram, chat_id: '1', token_env: T_CHAT}\n"
+    )
+    monkeypatch.setenv("PAEON_CONFIG", str(path))
+    monkeypatch.setenv("T_PHONE", "phone-token")
+    monkeypatch.delenv("T_CHAT", raising=False)
+    sent: list[tuple[str | None, Message]] = []
+    monkeypatch.setattr(
+        NtfyNotifier, "send", lambda self, message: sent.append((self._token, message))
+    )
+
+    assert main(["notify", "phone"]) == 0
+    assert capsys.readouterr().out == "sent by ntfy to act\n"
+    ((token, message),) = sent
+    assert token == "phone-token"
+    assert message.click == "https://paeon.example.org/ui/channels"
+    assert [(b.label, b.url) for b in message.buttons] == [
+        ("Example", "https://act.example.org/act/test")  # not a signed link: it does nothing
+    ]
+
+    assert main(["notify", "pager"]) == 2
+    assert "no channel 'pager' under `notifiers` (chat, phone)" in capsys.readouterr().err
+    assert main(["notify", "chat"]) == 2  # its secret is not in the environment
+    assert "notifiers.chat: T_CHAT" in capsys.readouterr().err
+
+    def refused(self: NtfyNotifier, message: Message) -> None:
+        raise NotifyError("ntfy answered HTTP 403")
+
+    monkeypatch.setattr(NtfyNotifier, "send", refused)
+    assert main(["notify", "phone"]) == 1
+    assert "not sent: ntfy answered HTTP 403" in capsys.readouterr().err

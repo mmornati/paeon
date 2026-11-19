@@ -58,6 +58,44 @@ def _rules() -> Rules:
     return load_rules(Path(path)) if path else Rules()
 
 
+def _notify(name: str) -> int:
+    """Send one test message through a channel, the way a stage would."""
+    from paeon import notify
+    from paeon.config import channel_secrets
+
+    rules = _rules()
+    if name not in rules.notifiers:
+        known = ", ".join(sorted(rules.notifiers)) or "none is defined"
+        sys.stderr.write(f"paeon: no channel {name!r} under `notifiers` ({known})\n")
+        return 2
+    try:
+        channel = notify.build(
+            name, rules.notifiers[name], channel_secrets(os.environ, rules, name)
+        )
+    except notify.NotifyError as exc:
+        sys.stderr.write(f"paeon: {exc}\n")
+        return 2
+    console = rules.ui.public_url
+    executor = rules.actions.public_url
+    message = notify.Message(
+        title="Paeon: test message",
+        text=f"Sent by `paeon notify {name}`. If you read this, the channel works."
+        + ("\nThe button shows how Go and No-go will look. It does nothing." if executor else ""),
+        tags=("white_check_mark",),
+        click=None if console is None else f"{console.rstrip('/')}/ui/channels",
+        # Not a signed link: the executor answers that it is not valid, and nothing happens.
+        buttons=()
+        if executor is None
+        else (notify.Button("Example", f"{executor.rstrip('/')}/act/test"),),
+    )
+    (delivery,) = notify.deliver([channel], message)
+    if delivery.ok:
+        sys.stdout.write(f"sent by {delivery.kind} to {delivery.where}\n")
+        return 0
+    sys.stderr.write(f"paeon: not sent: {delivery.error}\n")
+    return 1
+
+
 def _mcp(db: str) -> int:
     from paeon import mcp
 
@@ -235,6 +273,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     feedback.add_argument("--note", default="")
     feedback.add_argument("--db", default=default_db)
     commands.add_parser("executor", help="run the executor (PAEON_EXECUTOR_* variables)")
+    test = commands.add_parser("notify", help="send a test message through one channel")
+    test.add_argument("channel", help="a name from `notifiers` in the rules file")
     mcp = commands.add_parser("mcp", help="serve the record read-only over MCP, on stdio")
     mcp.add_argument("--db", default=default_db)
     matrix = commands.add_parser("autonomy", help="print each action's level and track record")
@@ -274,6 +314,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _serve()
         if args.command == "executor":
             return _executor()
+        if args.command == "notify":
+            return _notify(args.channel)
         if args.command == "mcp":
             return _mcp(args.db)
         if args.command == "autonomy":
