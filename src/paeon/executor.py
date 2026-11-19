@@ -25,7 +25,7 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -33,10 +33,11 @@ from typing import Any
 
 import httpx2 as httpx
 
-from paeon import autonomy, digest
+from paeon import autonomy
 from paeon.actuators import ActuatorError, CoolifyActuator, RepositoryActuator
 from paeon.catalog import ACTIONS, Proposal, Step
 from paeon.links import LinkError, Signer
+from paeon.notify import Button, Message, Notifier, deliver
 from paeon.rules import Level, Rules, Verify
 from paeon.store import Store
 
@@ -282,9 +283,8 @@ class Executor:
         docker: DockerActuator | None = None,
         coolify: CoolifyActuator | None = None,
         repository: RepositoryActuator | None = None,
-        ntfy_token: str | None = None,
+        notifiers: Sequence[Notifier] = (),
         kill_env: bool = False,
-        publish: Callable[..., None] = digest.publish_ntfy,
         sleep: Callable[[float], None] = time.sleep,
         http_ok: Callable[[str], bool] = _http_ok,
         spawn: Callable[[Callable[[], None]], None] | None = None,
@@ -296,9 +296,8 @@ class Executor:
         self._docker = docker
         self._coolify = coolify
         self._repository = repository
-        self._ntfy_token = ntfy_token
+        self._notifiers = tuple(notifiers)
         self._kill_env = kill_env
-        self._publish = publish
         self._sleep = sleep
         self._http_ok = http_ok
         self._spawn = spawn or self._thread
@@ -323,7 +322,7 @@ class Executor:
 
     def can_ask(self) -> bool:
         actions = self._actions
-        return self._signer is not None and bool(actions.public_url) and actions.ntfy is not None
+        return self._signer is not None and bool(actions.public_url) and bool(self._notifiers)
 
     def state(self, now: datetime) -> dict[str, Any]:
         return {
@@ -541,7 +540,7 @@ class Executor:
         if any(known.status in _SPENT for known in earlier):
             cap("approve", "a plan already ran for this incident")
         if level == "approve" and not proposal.changes and not self.can_ask():
-            cap("suggest", "there is no approval channel (signing key, public_url, ntfy)")
+            cap("suggest", "there is no approval channel (signing key, public_url, a channel)")
         return level, reasons
 
     # --- approval -------------------------------------------------------------------------
@@ -552,8 +551,8 @@ class Executor:
         token = self._signer.mint(kind, expires_at=expires_at, **data)
         return f"{self._actions.public_url.rstrip('/')}/act/{token}"
 
-    def _button(self, label: str, url: str) -> dict[str, Any]:
-        return self._actions.button(label, url)
+    def _button(self, label: str, url: str) -> Button:
+        return Button(label, url, one_tap=self._actions.one_tap)
 
     def _details(self, incident_id: int | None) -> str | None:
         base = self._rules.ui.public_url
@@ -570,37 +569,23 @@ class Executor:
         *,
         title: str,
         message: str,
-        actions: list[dict[str, Any]],
+        actions: list[Button],
         priority: int = 4,
         tags: tuple[str, ...] = ("wrench",),
         click: str | None = None,
     ) -> None:
-        ntfy = self._actions.ntfy
-        if ntfy is None:
-            return
-        try:
-            self._publish(
-                ntfy,
-                self._ntfy_token,
-                title=title,
-                message=message,
-                priority=priority,
-                tags=tags,
-                click=click or self._details(incident_id),
-                actions=actions,
-            )
-        except RuntimeError as exc:
-            self._journal(
-                "notification.failed",
-                {"channel": "ntfy", "about": about, "error": str(exc)},
-                incident_id,
-            )
-            return
-        self._journal(
-            "notification.sent",
-            {"channel": "ntfy", "about": about, "topic": ntfy.topic},
-            incident_id,
+        sent = Message(
+            title=title,
+            text=message,
+            priority=priority,
+            tags=tags,
+            click=click or self._details(incident_id),
+            buttons=tuple(actions),
         )
+        # Every channel gets the same links: they work once, so the first tap wins.
+        for delivery in deliver(self._notifiers, sent):
+            kind, payload = delivery.record(about)
+            self._journal(kind, payload, incident_id)
 
     def _ask(self, proposal_id: int, proposal: Proposal, expires: datetime, now: datetime) -> None:
         bound = {"p": proposal_id, "h": proposal.hash}
@@ -1138,7 +1123,7 @@ class Executor:
         failure: str | None,
     ) -> None:
         """Tell the owner what was done. After `auto` this is the first they hear of it."""
-        buttons: list[dict[str, Any]] = []
+        buttons: list[Button] = []
         if self.can_ask():
             expires = datetime.now(UTC) + timedelta(hours=RESULT_LINK_HOURS)
             bound = {"p": plan.id, "h": plan.hash}

@@ -19,14 +19,14 @@ import json
 import logging
 import re
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from paeon import digest, ledger
+from paeon import ledger
 from paeon.catalog import ACTIONS, TARGET_PATTERN
 from paeon.models import (
     ModelClient,
@@ -39,6 +39,7 @@ from paeon.models import (
     UserTurn,
     cost_of,
 )
+from paeon.notify import Button, Message, Notifier, deliver
 from paeon.redact import redact
 from paeon.rules import Actions, CatalogEntry, Rules
 from paeon.schema import Alert, Incident, StageState
@@ -272,7 +273,7 @@ class Extras:
     """What a notification carries besides its text: the page it opens, and its buttons."""
 
     click: str | None = None
-    actions: tuple[dict[str, Any], ...] = ()
+    actions: tuple[Button, ...] = ()
 
 
 class Investigator:
@@ -283,8 +284,7 @@ class Investigator:
         client: ModelClient,
         toolbox: Toolbox,
         *,
-        ntfy_token: str | None = None,
-        publish: Callable[..., None] = digest.publish_ntfy,
+        notifiers: Sequence[Notifier] = (),
         fallback: ModelClient | None = None,
         extras: Callable[[Incident], Extras] | None = None,
         after: Callable[[Incident, Findings], None] | None = None,
@@ -294,8 +294,7 @@ class Investigator:
         self._client = client
         self._fallback = fallback
         self._toolbox = toolbox
-        self._ntfy_token = ntfy_token
-        self._publish = publish
+        self._notifiers = tuple(notifiers)
         self._extras = extras
         self._after = after
         actions = rules.actions
@@ -636,8 +635,7 @@ class Investigator:
     # --- notification -------------------------------------------------------------------------
 
     def _notify(self, incident: Incident, findings: Findings) -> None:
-        ntfy = self._rules.investigation.ntfy
-        if ntfy is None:
+        if not self._notifiers:
             return
         extras = Extras()
         if self._extras is not None:
@@ -645,30 +643,18 @@ class Investigator:
                 extras = self._extras(incident)
             except Exception:  # no buttons is better than no analysis
                 log.exception("incident %d: the notification has no buttons", incident.id)
-        try:
-            self._publish(
-                ntfy,
-                self._ntfy_token,
-                title=f"Incident #{incident.id}: {incident.title}",
-                message=render(findings),
-                priority=3,
-                tags=("mag",),
-                click=extras.click,
-                actions=extras.actions,
-            )
-        except RuntimeError as exc:
-            # The page already went out by the usual path: a lost analysis is recorded, no more.
-            self._store.append(
-                "notification.failed",
-                {"channel": "ntfy", "about": "investigation", "error": str(exc)},
-                incident_id=incident.id,
-            )
-            return
-        self._store.append(
-            "notification.sent",
-            {"channel": "ntfy", "about": "investigation", "topic": ntfy.topic},
-            incident_id=incident.id,
+        message = Message(
+            title=f"Incident #{incident.id}: {incident.title}",
+            text=render(findings),
+            priority=3,
+            tags=("mag",),
+            click=extras.click,
+            buttons=extras.actions,
         )
+        # A lost analysis is recorded, no more: the page already went out by the usual path.
+        for delivery in deliver(self._notifiers, message):
+            kind, payload = delivery.record("investigation")
+            self._store.append(kind, payload, incident_id=incident.id)
 
 
 def _problems(exc: Exception) -> str:

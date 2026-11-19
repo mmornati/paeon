@@ -459,10 +459,7 @@ def test_vote_links_record_feedback_once(tmp_path: Path) -> None:
 def test_a_lost_notification_is_recorded(tmp_path: Path) -> None:
     bench = Bench(tmp_path)
 
-    def failing(*args: object, **kwargs: object) -> None:
-        raise RuntimeError("ntfy answered HTTP 500")
-
-    bench.executor._publish = failing
+    bench.fail("ntfy answered HTTP 500")
     bench.executor.propose(proposal(), T0)
     assert bench.last("notification.failed")["error"] == "ntfy answered HTTP 500"
     assert bench.executor.state(T0)["pending"][0]["steps"] == ["restart_container(worker)"]

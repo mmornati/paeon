@@ -17,6 +17,7 @@ from paeon.config import ExecutorSettings, Settings, load
 from paeon.correlation import Correlator
 from paeon.executor_app import create_executor_app
 from paeon.investigation import Findings
+from paeon.notify import Button
 from paeon.recorder import Recorder
 from paeon.remediation import (
     ExecutorClient,
@@ -28,7 +29,7 @@ from paeon.remediation import (
 from paeon.rules import Rules, parse_rules
 from paeon.schema import IncidentStatus, StageState, Status
 from paeon.store import Store
-from support import T0, alert
+from support import T0, Recording, alert
 
 TOKEN = "t" * 32
 LATER = T0 + timedelta(minutes=5)
@@ -276,9 +277,9 @@ def test_extras_carry_the_page_and_the_vote_buttons(store: Store) -> None:
     assert incident is not None
     extras = remediator.extras(incident)
     assert extras.click == "https://paeon.example.org/ui/incidents/1"
-    assert [(a["label"], a["method"]) for a in extras.actions] == [
-        ("Cause is right", "POST"),
-        ("Cause is wrong", "POST"),
+    assert [(a.label, a.one_tap) for a in extras.actions] == [
+        ("Cause is right", True),
+        ("Cause is wrong", True),
     ]
     fake.down = True
     assert remediator.extras(incident).actions == ()
@@ -339,12 +340,9 @@ def test_page_buttons_open_the_link_instead_of_posting_it(store: Store) -> None:
     recorder.observe(alert(Status.FIRING, 0, title="worker_down"))
     incident = store.incident(1)
     assert incident is not None
-    assert remediator.extras(incident).actions[0] == {
-        "action": "view",
-        "label": "Cause is right",
-        "url": "https://act.example.org/act/up1",
-        "clear": True,
-    }
+    assert remediator.extras(incident).actions[0] == Button(
+        "Cause is right", "https://act.example.org/act/up1", one_tap=False
+    )
     remediator.stop()
 
 
@@ -423,12 +421,10 @@ def test_actions_need_the_executor_token(tmp_path: Path) -> None:
 def test_the_digest_asks_about_each_verdict_with_two_buttons(
     store: Store, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from paeon import digest as digests
+    from paeon.notify.ntfy import NtfyNotifier
 
     sent: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        digests, "publish_ntfy", lambda ntfy, token, **message: sent.append(message)
-    )
+    monkeypatch.setattr(NtfyNotifier, "send", Recording(sent).send)
     base = load({"PAEON_INGEST_TOKEN": TOKEN})
     document = {
         "actions": ACTIONS,

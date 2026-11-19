@@ -3,7 +3,7 @@
 The core observes and advises. It records, groups alerts into incidents, and when the stages
 are enabled asks a model for a triage verdict (recorded, never acted on), investigates with
 tools that only read, and drafts a postmortem. What it can send: the analysis of an
-investigation and the daily digest, each only if an ntfy topic is configured for it.
+investigation and the daily digest, each only if a notification channel is configured for it.
 
 It cannot act. With `actions.enabled` it hands plans made of catalog actions to the executor
 (`paeon executor`, another process with other credentials), which decides and acts by itself.
@@ -24,7 +24,7 @@ import httpx2 as httpx
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from paeon import autonomy
+from paeon import autonomy, notify
 from paeon import digest as digests
 from paeon import postmortem as postmortems
 from paeon.config import Settings
@@ -169,7 +169,12 @@ def create_app(
             rules,
             model_client(rules.investigation.model),
             toolbox,
-            ntfy_token=settings.investigation_ntfy_token,
+            notifiers=notify.for_stage(
+                rules,
+                "investigation",
+                secrets=settings.notifier_secrets,
+                legacy_token=settings.investigation_ntfy_token,
+            ),
             fallback=None if fallback is None else model_client(fallback),
             extras=None if remediator is None else remediator.extras,
             after=None if remediator is None else remediator.on_findings,
@@ -240,9 +245,12 @@ def create_app(
             return
         await asyncio.to_thread(remediator.run_pending, _now())
 
+    digest_channels = notify.for_stage(
+        rules, "digest", secrets=settings.notifier_secrets, legacy_token=settings.ntfy_token
+    )
+
     def send_digest(now: datetime) -> bool:
-        ntfy = rules.digest.ntfy
-        if ntfy is None:  # pragma: no cover - not scheduled
+        if not digest_channels:  # pragma: no cover - not scheduled
             return False
         local = now.astimezone(ZoneInfo(rules.digest.timezone))
         today = local.date().isoformat()
@@ -252,16 +260,17 @@ def create_app(
         if report.lines:  # a quiet day sends nothing
             base = rules.ui.public_url
             text = digests.render(report, console=base is not None)
-            if base is None:
-                digests.publish_ntfy(ntfy, settings.ntfy_token, title="Paeon digest", message=text)
-            else:  # the notification opens the console: that is where feedback is given
-                digests.publish_ntfy(
-                    ntfy,
-                    settings.ntfy_token,
-                    title="Paeon digest",
-                    message=text,
-                    click=f"{base.rstrip('/')}/ui",
-                )
+            # With a console, the notification opens it: that is where feedback is given.
+            click = None if base is None else f"{base.rstrip('/')}/ui"
+            sent = notify.deliver(
+                digest_channels,
+                notify.Message(
+                    title="Paeon digest", text=text, priority=2, tags=("clipboard",), click=click
+                ),
+            )
+            if not any(delivery.ok for delivery in sent):
+                # Nothing left: the day is not marked, and the next tick tries again.
+                raise RuntimeError("; ".join(str(delivery.error) for delivery in sent))
             asked = 0
             if remediator is not None:
                 # One short, quiet message per verdict: a notification holds three buttons.
@@ -270,18 +279,15 @@ def create_app(
                     if not extras.actions:
                         break  # the executor is not there to sign them
                     title, text = digests.question(line)
-                    try:
-                        digests.publish_ntfy(
-                            ntfy,
-                            settings.ntfy_token,
-                            title=title,
-                            message=text,
-                            priority=1,
-                            tags=("question",),
-                            click=extras.click,
-                            actions=extras.actions,
-                        )
-                    except RuntimeError:
+                    question = notify.Message(
+                        title=title,
+                        text=text,
+                        priority=1,
+                        tags=("question",),
+                        click=extras.click,
+                        buttons=extras.actions,
+                    )
+                    if not any(d.ok for d in notify.deliver(digest_channels, question)):
                         break
                     asked += 1
             store.append(
@@ -317,7 +323,7 @@ def create_app(
             tasks.append(
                 asyncio.create_task(_every(POSTMORTEM_TICK_SECONDS, "postmortems", run_postmortems))
             )
-        if rules.digest.ntfy is not None:
+        if digest_channels:
             tasks.append(asyncio.create_task(_every(DIGEST_TICK_SECONDS, "digest", run_digest)))
         if remediator is not None:
             tasks.append(

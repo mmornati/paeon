@@ -21,6 +21,7 @@ import httpx2 as httpx
 
 from paeon.catalog import Proposal, Step
 from paeon.investigation import Extras, Findings
+from paeon.notify import Button
 from paeon.rules import Rules
 from paeon.schema import Incident, IncidentStatus, StageState
 from paeon.store import Store
@@ -202,7 +203,7 @@ class Remediator:
         except ExecutorError:
             links = {}
         actions = tuple(
-            self._rules.actions.button(label, links[vote])
+            Button(label, links[vote], one_tap=self._rules.actions.one_tap)
             for vote, label in (("up", right), ("down", wrong))
             if vote in links
         )

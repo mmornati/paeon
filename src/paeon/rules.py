@@ -12,7 +12,7 @@ import fnmatch
 import re
 from datetime import datetime, time, timedelta
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, ClassVar, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
@@ -188,10 +188,30 @@ class Ntfy(_Rule):
     token_env: str | None = None
 
 
+class NtfyChannel(Ntfy):
+    """A topic on an ntfy server. The only service whose buttons can act in one tap."""
+
+    type: Literal["ntfy"]
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        """The secrets this channel reads: key, environment variable, whether it is required."""
+        return {} if self.token_env is None else {"token": (self.token_env, False)}
+
+
+# One entry of `notifiers`, told apart by its `type`.
+Channel = NtfyChannel
+_CHANNEL_NAME = r"^[a-z0-9][a-z0-9_-]{0,31}$"
+_NOTIFY = Field(
+    default=(),
+    description="Names from `notifiers`: every channel listed gets the message.",
+)
+
+
 class Digest(_Rule):
     hour: int = Field(default=8, ge=0, le=23)
     timezone: Timezone = "UTC"
-    ntfy: Ntfy | None = None
+    ntfy: Ntfy | None = Field(default=None, description="Short for one ntfy channel.")
+    notify: tuple[str, ...] = _NOTIFY
     feedback: int = Field(
         default=5,
         ge=0,
@@ -321,7 +341,10 @@ class Investigation(_Rule):
         default=None, ge=0, description="Counts every model call of the day, all stages."
     )
     tools: InvestigationTools = Field(default_factory=InvestigationTools)
-    ntfy: Ntfy | None = Field(default=None, description="Where the analysis is sent.")
+    ntfy: Ntfy | None = Field(
+        default=None, description="Where the analysis is sent. Short for one ntfy channel."
+    )
+    notify: tuple[str, ...] = _NOTIFY
 
 
 class PostmortemGit(_Rule):
@@ -596,6 +619,11 @@ class Actions(_Rule):
     ntfy: Ntfy | None = Field(
         default=None, description="The topic for approvals. Give it a token of its own."
     )
+    notify: tuple[str, ...] = Field(
+        default=(),
+        description="Names from `notifiers`: where approvals and results are sent. Every"
+        " channel listed receives the Go link: list only what you alone read.",
+    )
     catalog: dict[str, CatalogEntry] = Field(default_factory=dict)
     policies: tuple[Policy, ...] = ()
     autonomy: Autonomy = Field(default_factory=Autonomy)
@@ -603,14 +631,10 @@ class Actions(_Rule):
     coolify: Coolify | None = None
     repository: Repository | None = None
 
-    def button(self, label: str, url: str) -> dict[str, Any]:
-        """A notification button for a signed link, of the kind `buttons` names."""
-        if self.buttons == "page":
-            # A `view` action: the phone opens the link. That GET changes nothing, it shows
-            # the page, and the page's Confirm sends the POST.
-            return {"action": "view", "label": label, "url": url, "clear": True}
-        # An `http` action: the phone POSTs the link itself, without showing anything.
-        return {"action": "http", "label": label, "url": url, "method": "POST", "clear": True}
+    @property
+    def one_tap(self) -> bool:
+        """Whether a button may send its link in the background, where the service can."""
+        return self.buttons == "one_tap"
 
     def refusal(self, action: str, target: str, params: dict[str, str]) -> str | None:
         """Why this catalog does not allow a step, or None. The one check both processes run:
@@ -656,6 +680,10 @@ class Actions(_Rule):
 class Rules(_Rule):
     correlation: Correlation = Field(default_factory=Correlation)
     maintenance: tuple[MaintenanceWindow, ...] = ()
+    notifiers: dict[str, Channel] = Field(
+        default_factory=dict,
+        description="Named notification channels. A stage sends to those its `notify` lists.",
+    )
     models: dict[str, ModelAlias] = Field(default_factory=dict)
     triage: Triage = Field(default_factory=Triage)
     digest: Digest = Field(default_factory=Digest)
@@ -742,6 +770,34 @@ class Rules(_Rule):
                         f"{name} has a budget, and models.{alias}.price is not set: the budget"
                         " will never be reached"
                     )
+        return found
+
+    LEGACY: ClassVar[str] = "ntfy"  # the name of a stage's own `ntfy:` block
+
+    @model_validator(mode="after")
+    def _notifiers_exist(self) -> Rules:
+        for name in self.notifiers:
+            if not re.fullmatch(_CHANNEL_NAME, name) or name == self.LEGACY:
+                raise ValueError(
+                    f"notifiers: {name!r} is not a channel name (lower-case letters, digits,"
+                    f" - and _, 32 at most, and not {self.LEGACY!r})"
+                )
+        for stage in ("digest", "investigation", "actions"):
+            listed = getattr(self, stage).notify
+            for name in listed:
+                if name not in self.notifiers:
+                    raise ValueError(f"{stage}.notify: {name!r} is not defined under `notifiers`")
+            if len(set(listed)) != len(listed):
+                raise ValueError(f"{stage}.notify names a channel twice")
+        return self
+
+    def channels(self, stage: str) -> list[tuple[str, Channel]]:
+        """The channels a stage sends to, by name: its own `ntfy:` block first, as `ntfy`."""
+        config = getattr(self, stage)
+        found: list[tuple[str, Channel]] = []
+        if config.ntfy is not None:
+            found.append((self.LEGACY, NtfyChannel(type="ntfy", **config.ntfy.model_dump())))
+        found += [(name, self.notifiers[name]) for name in config.notify]
         return found
 
     def maintenance_for(self, alert: Alert) -> str | None:

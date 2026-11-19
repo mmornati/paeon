@@ -48,6 +48,7 @@ class Settings:
     uptime_kuma_key: str | None = None
     telemetry_authorization: str | None = None
     ui_proxy_secret: str | None = None  # what the proxy adds to each console request
+    notifier_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # by channel
 
 
 @dataclass(frozen=True)
@@ -64,6 +65,7 @@ class ExecutorSettings:
     kill_switch: bool
     coolify_token: str | None = None
     github_token: str | None = None
+    notifier_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
 
 def _secret(env: Mapping[str, str], name: str) -> str:
@@ -74,6 +76,26 @@ def _secret(env: Mapping[str, str], name: str) -> str:
         except OSError as exc:
             raise ConfigError(f"{name}_FILE cannot be read: {exc}") from exc
     return env.get(name, "").strip()
+
+
+def _notifier_secrets(
+    env: Mapping[str, str], rules: Rules, stages: tuple[str, ...]
+) -> dict[str, dict[str, str]]:
+    """The secrets of the named channels these stages send to. A process reads only its own:
+    the core never needs the token of the channel that carries approvals."""
+    found: dict[str, dict[str, str]] = {}
+    for stage in stages:
+        for name in getattr(rules, stage).notify:
+            if name in found:
+                continue
+            found[name] = {}
+            for key, (variable, required) in rules.notifiers[name].secret_envs().items():
+                value = _secret(env, variable)
+                if value:
+                    found[name][key] = value
+                elif required:
+                    raise ConfigError(f"notifiers.{name}: {variable} (or _FILE) is not set")
+    return found
 
 
 def _number(env: Mapping[str, str], name: str, default: float, *, minimum: float) -> float:
@@ -177,6 +199,7 @@ def load(env: Mapping[str, str]) -> Settings:
         uptime_kuma_key=kuma_key or None,
         telemetry_authorization=telemetry_authorization or None,
         ui_proxy_secret=proxy_secret or None,
+        notifier_secrets=_notifier_secrets(env, rules, ("digest", "investigation")),
     )
 
 
@@ -211,6 +234,7 @@ def load_executor(env: Mapping[str, str]) -> ExecutorSettings:
     return ExecutorSettings(
         coolify_token=coolify_token or None,
         github_token=github_token or None,
+        notifier_secrets=_notifier_secrets(env, rules, ("actions",)),
         db_path=Path(env.get("PAEON_EXECUTOR_DB", "").strip() or "executor.sqlite"),
         host=env.get("PAEON_EXECUTOR_HOST", "").strip() or "127.0.0.1",
         port=int(_number(env, "PAEON_EXECUTOR_PORT", 8081, minimum=1)),
