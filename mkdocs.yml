@@ -98,6 +98,7 @@ nav:
   - Guides:
       - Configuration: configuration.md
       - The console: console.md
+      - Notifications: notifications.md
       - Acting: acting.md
   - Reference:
       - Command line, API and MCP: cli-and-api.md

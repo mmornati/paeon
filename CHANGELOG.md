@@ -25,6 +25,9 @@ Paeon is pre-1.0: anything may change between versions. Dates are the day of the
   webhook, with buttons that open the link) and `matrix`.
 - `apprise`, for every other service: an optional install (`pip install 'paeon[apprise]'`),
   imported only when a channel of that type is configured. The image does not include it.
+- A **Channels** page in the console: every channel a stage sends to, what it carries, and its
+  deliveries of the last 30 days. Never an address or a secret.
+- A Notifications guide (`docs/notifications.md`) with each service's keys and setup.
 - Text from an alert is never read as markup by a service: no parse mode on Telegram, markdown
   switched off on Discord, escaped on Slack, in HTML mail, on Pushover and on Matrix, and text
   runs on Teams.

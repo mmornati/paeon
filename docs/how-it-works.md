@@ -12,7 +12,7 @@ flowchart LR
     COR --> TRI[Triage<br/>cheap model, one call,<br/>no tools]
     TRI --> INV[Investigate<br/>strong model,<br/>read-only tools]
     COR -- known signature --> RB[Runbook<br/>no model]
-    INV --> YOU([You<br/>analysis on ntfy])
+    INV --> YOU([You<br/>analysis on your phone])
     INV --> PM[Postmortem<br/>draft]
     INV & RB -- plan --> EXE
     YOU -- Go / No-go --> EXE

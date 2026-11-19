@@ -15,7 +15,7 @@ copy of the rules file and a link you tapped.
 | A second process | `paeon executor`: the same image with another command. It has its own database, its own port (8081) and its own secrets. |
 | Two secrets | `PAEON_EXECUTOR_TOKEN`, shared by the core and the executor, and `PAEON_SIGNING_KEY`, for the executor alone. They must differ. |
 | A Docker proxy that can write | For the executor only: start, stop and restart of containers, and nothing else. With `tecnativa/docker-socket-proxy` that is `POST: 1`, `CONTAINERS: 0` and the `ALLOW_*` switches: `POST` with `CONTAINERS` on would also allow creating and deleting containers. The executor then lists and inspects through a read-only proxy (`docker_read_url`). |
-| An ntfy topic for approvals | With a token of its own and read access for you alone. A one-tap approval is exactly as strong as this channel. |
+| A channel for approvals | An ntfy topic, a Telegram chat, a mailbox: any [notification channel](notifications.md) that you alone read, with a secret of its own. An approval is exactly as strong as this channel. |
 | One public path | `https://<somewhere>/act/` routed to the executor, **without** single sign-on: the phone's button has no session, the signed link is the proof. Route nothing else there. |
 
 [examples/compose.yaml](../examples/compose.yaml) has all of it. Generate the secrets with:
@@ -39,7 +39,7 @@ actions:
   docker_url: http://dockerproxy-act:2375
   docker_read_url: http://dockerproxy:2375
   lock_dir: /locks
-  ntfy: { url: https://ntfy.example.org, topic: incidents, token_env: PAEON_ACTIONS_NTFY_TOKEN }
+  notify: [phone]            # a name from `notifiers`; see Notifications
   catalog:
     restart_container:
       targets: [worker, "media-*"]
@@ -105,7 +105,7 @@ A plan with several steps runs at the most careful level of its steps. Whatever 
 a plan is held at `approve` when the incident has more than one alert class, when the
 investigation's confidence is under `autonomy.min_confidence`, or when a plan already ran for
 that incident; and at `suggest` when more than `max_per_hour` plans ran in the last hour, or
-when the executor has no way to ask (no signing key, no `public_url`, no ntfy topic). The reason
+when the executor has no way to ask (no signing key, no `public_url`, no channel). The reason
 is recorded with the plan and shown on the incident's page.
 
 Start with `approve` on one alert and one container.
@@ -127,7 +127,8 @@ Start with `approve` on one alert and one container.
    That answer is a notification, so it is only as prompt as your phone's push. If yours is
    slow or unreliable (ntfy on iOS with a self-hosted server depends on a relay), set
    `actions.buttons: page`: a button then opens that page in the browser, Confirm applies it,
-   and the page says what happened. Two taps instead of one, and an answer on screen.
+   and the page says what happened. Two taps instead of one, and an answer on screen. On every
+   channel but ntfy a button always opens that page: see [Notifications](notifications.md).
 4. **It runs.** Per step: lock the container, check the world is still as assumed, apply,
    verify. A failed step is rolled back where there is an inverse, and the plan stops.
 5. **You are told** what was done and whether it verified. A failure is a high-priority

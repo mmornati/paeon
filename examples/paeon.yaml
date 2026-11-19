@@ -71,11 +71,33 @@ triage:
     - { severity: critical, source: uptime-kuma }
     - { title: "vpn_unhealthy" }
 
+# Where Paeon sends: each channel is defined once, by name, and a stage lists the names it
+# sends to in `notify`. See docs/notifications.md for every service and its keys.
+# notifiers:
+#   phone:
+#     type: ntfy
+#     url: https://ntfy.example.org
+#     topic: incidents
+#     token_env: PAEON_NTFY_TOKEN
+#   family:
+#     type: telegram
+#     chat_id: "-1001234567890"
+#     token_env: PAEON_TELEGRAM_TOKEN
+#   mail:
+#     type: email
+#     host: smtp.example.org
+#     username: paeon
+#     password_env: PAEON_SMTP_PASSWORD
+#     sender: paeon@example.org
+#     to: [me@example.org]
+
 digest:
   hour: 8
   timezone: Europe/Paris
-  # Without `ntfy` the digest is only available from `paeon digest` and `GET /digest`.
-  # With it, this is the one thing Paeon sends: once a day, and only if there was an incident.
+  # Without a channel the digest is only available from `paeon digest` and `GET /digest`.
+  # With one it is sent once a day, and only if there was an incident.
+  # notify: [mail]
+  # Or, short for one ntfy channel:
   # ntfy:
   #   url: https://ntfy.example.org
   #   topic: incidents
@@ -184,8 +206,10 @@ actions:
   buttons: one_tap
   max_per_hour: 6               # plans executed per hour; beyond it, suggestions only
   default_level: suggest        # what applies when no policy matches
-  # The topic approvals are sent to. Give it a token of its own, and read access to you only:
-  # a one-tap approval is as strong as this channel.
+  # Where approvals are sent. Every channel listed receives the Go link: list only what you
+  # alone read, with a secret of its own. An approval is as strong as this channel.
+  # notify: [phone]
+  # Or, short for one ntfy channel:
   # ntfy:
   #   url: https://ntfy.example.org
   #   topic: incidents

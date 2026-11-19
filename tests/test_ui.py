@@ -425,3 +425,37 @@ def test_proxy_secret_must_be_in_the_environment(tmp_path: Path) -> None:
     with pytest.raises(ConfigError):
         load({**env, "PAEON_UI_PROXY_SECRET": "short"})
     assert load({**env, "PAEON_UI_PROXY_SECRET": "s" * 24}).ui_proxy_secret == "s" * 24
+
+
+def test_channels_page_lists_each_channel_and_how_it_went(store: Store) -> None:
+    assert "/ui/channels" not in client(store).get("/ui").text  # nothing sends: no page to offer
+    topic = {"type": "ntfy", "url": "https://ntfy.example.org", "topic": "t"}
+    document: dict[str, Any] = {
+        "notifiers": {"chat": topic, "ops": topic},
+        "digest": {"ntfy": {"url": "https://ntfy.example.org", "topic": "incidents"}},
+        "investigation": {"notify": ["chat", "ops"]},
+        "actions": {"notify": ["chat"]},
+    }
+    http = client(store, **document)
+    sent = {"channel": "ntfy", "name": "chat", "to": "t", "about": "investigation"}
+    store.append("notification.sent", sent)
+    store.append("notification.failed", {**sent, "error": "ntfy answered HTTP 403"})
+    store.append("notification.sent", {"channel": "ntfy", "about": "digest", "topic": "incidents"})
+    store.append("notification.sent", {**sent, "name": "gone"})  # no longer in the rules
+    rules = parse_rules({"ui": {"enabled": True}, **document})
+    lines = {line.name: line for line in views.channels_view(store, rules, datetime.now(UTC))}
+    assert list(lines) == ["ntfy", "chat", "ops"]
+    chat = lines["chat"]
+    assert (chat.kind, chat.carries, chat.sent, chat.failed) == (
+        "ntfy",
+        ("analysis", "approvals"),
+        1,
+        1,
+    )
+    assert (chat.state, chat.last_error) == ("failed", "ntfy answered HTTP 403")
+    assert (lines["ntfy"].state, lines["ntfy"].sent) == ("sent", 1)  # an entry without a name
+    assert lines["ops"].state == "unused"
+    page = http.get("/ui/channels").text
+    assert "ntfy answered HTTP 403" in page
+    assert "nothing sent yet" in page
+    assert 'href="/ui/channels" aria-current="page"' in page
