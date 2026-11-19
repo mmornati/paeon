@@ -21,7 +21,7 @@ NOGO = "https://act.example.org/act/nogo-link"
 PAGE = "https://paeon.example.org/ui/incidents/7"
 MESSAGE = Message(
     title="Incident #7: run this fix?",
-    text="worker is down <@everyone> & co\nPlan:\n1. Restart a container (worker)",
+    text="worker is down <@everyone> & co [Go](https://evil.example.org)\nPlan:\n1. Restart *it*",
     priority=4,
     tags=("wrench",),
     click=PAGE,
@@ -87,8 +87,10 @@ def test_discord_posts_an_embed_with_link_buttons_and_pings_nobody() -> None:
     request, body = sent_by("discord", MESSAGE)
     assert request.url.params["with_components"] == "true"
     (embed,) = body["embeds"]
-    assert (embed["title"], embed["url"]) == ("Incident #7: run this fix?", PAGE)
-    assert "<@everyone>" in embed["description"]
+    assert (embed["title"], embed["url"]) == ("Incident \\#7: run this fix?", PAGE)
+    # Markdown is switched off: the text cannot draw a link of its own next to the buttons.
+    assert "\\[Go\\]\\(https://evil.example.org\\)" in embed["description"]
+    assert "Restart \\*it\\*" in embed["description"]
     assert body["allowed_mentions"] == {"parse": []}
     assert body["username"] == "Paeon"
     (row,) = body["components"]
@@ -107,6 +109,10 @@ def test_slack_posts_blocks_with_the_links_as_text_and_escapes_the_rest() -> Non
     assert "&lt;@everyone&gt; &amp; co" in text["text"]["text"]  # no mention, no link of its own
     assert links["text"]["text"] == f"<{GO}|Go>  ·  <{NOGO}|No-go>  ·  <{PAGE}|Details>"
     assert body["text"] == "Incident #7: run this fix?"
+    _, marked = sent_by(
+        "slack", Message(title="<!channel> & <https://evil.example.org|Go>", text="m")
+    )
+    assert marked["text"] == "&lt;!channel&gt; &amp; &lt;https://evil.example.org|Go&gt;"
     _, quiet = sent_by("slack", QUIET)
     assert len(quiet["blocks"]) == 2
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import httpx2 as httpx
@@ -13,7 +14,14 @@ _MAX_TITLE = 256
 _MAX_TEXT = 4096  # an embed's description
 _MAX_LABEL = 80
 _LINK_BUTTON = {"type": 2, "style": 5}  # a button that opens a URL: nothing is sent back
+_MARKUP = re.compile(r"([\\*_~`>|\[\]()#])")
 _COLOURS = {1: 0x8A8F98, 2: 0x8A8F98, 3: 0x3B82F6, 4: 0xF59E0B, 5: 0xDC2626}
+
+
+def _plain(text: str) -> str:
+    """The text with Discord's markdown switched off: an alert's words cannot draw a link
+    labelled Go next to the real one, or hide part of the message."""
+    return _MARKUP.sub(r"\\\1", text)
 
 
 class DiscordNotifier:
@@ -36,8 +44,8 @@ class DiscordNotifier:
 
     def send(self, message: Message) -> None:
         embed: dict[str, Any] = {
-            "title": cut(message.title, _MAX_TITLE),
-            "description": cut(message.text, _MAX_TEXT),
+            "title": cut(_plain(message.title), _MAX_TITLE),
+            "description": cut(_plain(message.text), _MAX_TEXT),
             "color": _COLOURS.get(message.priority, _COLOURS[3]),
         }
         if message.click:

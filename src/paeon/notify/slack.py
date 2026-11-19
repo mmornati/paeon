@@ -54,5 +54,6 @@ class SlackNotifier:
             line = "  ·  ".join(f"<{url}|{_escape(label)}>" for label, url in found)
             blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": line}})
         # `text` is what a notification and a client without blocks show.
-        body = {"text": cut(message.title, _MAX_HEADER), "blocks": blocks}
+        # It is read as markup, unlike the header above: escaped like the rest.
+        body = {"text": cut(_escape(message.title), _MAX_HEADER), "blocks": blocks}
         post("slack", self._url, body, transport=self._transport)
