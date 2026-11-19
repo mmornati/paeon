@@ -82,3 +82,20 @@ python3 -m http.server -d site 8000
 ```
 
 Every example on the site is fictional, and the console screenshots come from `tests/ui_data.py`.
+
+## Releasing
+
+A release is a tag on a commit of `main`; the `Release` workflow does the rest.
+
+1. In one pull request: set the version in `src/paeon/__init__.py`, and give `CHANGELOG.md` a
+   `## X.Y.Z` section for it. That section becomes the release notes.
+2. Once it is merged, tag that commit and push the tag:
+
+   ```bash
+   git tag v0.1.1 origin/main && git push origin v0.1.1
+   ```
+
+The workflow refuses a tag that does not match the version in the code, has no changelog section
+or is not on `main`. It then runs the checks, pushes the image as `ghcr.io/mmornati/paeon:X.Y.Z`
+and `:X.Y` (and `:latest` for the highest version), and creates the GitHub release. A tag with a
+suffix (`v0.2.0-rc.1`) is a pre-release: it moves neither `:X.Y` nor `:latest`.
