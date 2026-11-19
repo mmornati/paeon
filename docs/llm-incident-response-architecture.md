@@ -473,4 +473,4 @@ What the code does where this document left a choice open, or said something els
 | Traces | OTLP/HTTP JSON, one trace per incident, facts about each step and never its content. |
 | Docker proxies | The executor acts through one proxy and reads through another: in the usual socket proxies POST is global, and with the containers section on it would also allow create, delete and exec. |
 | Horae | `GET /brief` for a source plugin. The plugin itself belongs to Horae. |
-| Not built | A retention period for tool results, a cost report by alert class, Telegram / Slack / email channels, runbook extraction from past investigations, actions on other hosts. |
+| Not built | A retention period for tool results, a cost report by alert class, runbook extraction from past investigations, actions on other hosts. |

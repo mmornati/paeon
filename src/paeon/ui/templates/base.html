@@ -27,6 +27,7 @@
     <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>{{ icon("ledger") }}Ledger</a>
     {% if acting %}<a href="/ui/actions"{% if here == "actions" %} aria-current="page"{% endif %}>{{ icon("actions") }}Actions</a>
     <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>{{ icon("autonomy") }}Autonomy</a>{% endif %}
+    {% if notifies %}<a href="/ui/channels"{% if here == "channels" %} aria-current="page"{% endif %}>{{ icon("channels") }}Channels</a>{% endif %}
     {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>{{ icon("postmortems") }}Postmortems</a>{% endif %}
   </nav>
   <section class="sys" aria-labelledby="h-stages">

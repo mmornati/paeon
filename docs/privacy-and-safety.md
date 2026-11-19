@@ -20,9 +20,13 @@ can only read as well (an OpenObserve account limited to search, a Docker socket
 `GET`), so that the allow-lists are the second net and not the only one.
 
 Paeon itself has no telemetry and calls nothing but what you configure: your alert source, your
-model endpoint, your ntfy topics, your heartbeat URL and, if you set them, a git remote for the
+model endpoint, your notification channels, your heartbeat URL and, if you set them, a git remote for the
 postmortems, the hosts you listed for SSH, an OTLP endpoint, Coolify, and your deployment
 repository with its forge's API.
+
+A [notification channel](notifications.md) on someone else's servers receives what Paeon sends
+it: alert titles, the analysis, and, if you list it for approvals, the links that approve a
+plan. Choose per stage what goes where.
 
 ## Safety model
 

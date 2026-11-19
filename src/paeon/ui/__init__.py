@@ -117,6 +117,7 @@ def mount_ui(
         "filters": views.FILTERS,
         "acting": acting,
         "keeps_postmortems": rules.postmortems.enabled,
+        "notifies": any(rules.channels(stage) for stage in ("digest", "investigation", "actions")),
     }
 
     def proxied(request: Request) -> None:
@@ -199,6 +200,11 @@ def mount_ui(
     def ledger(request: Request) -> Response:
         view = views.ledger_view(store, rules, clock())
         return page(request, "ledger.html", ledger=view, here="ledger")
+
+    @router.get("/channels", response_class=HTMLResponse)
+    def channels(request: Request) -> Response:
+        lines = views.channels_view(store, rules, clock())
+        return page(request, "channels.html", lines=lines, days=30, here="channels")
 
     @router.get("/actions", response_class=HTMLResponse)
     def actions(request: Request, stopped: Annotated[str | None, Query()] = None) -> Response:

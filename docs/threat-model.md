@@ -34,7 +34,7 @@ allowed container, at the level a person chose for it.
 | **Something on the internal network** | The ingest endpoints, with the bearer token; the console, if it bypasses your proxy. |
 | **The model provider, or a gateway** | Everything in the prompts, and the model's answers. |
 | **A subverted core** | Whatever the core process holds: read credentials, model keys, the executor token. This is the case the executor is built for. |
-| **Whoever holds your phone or your ntfy topic** | The approval buttons. |
+| **Whoever holds your phone, or reads a channel that carries approvals** | The approval buttons. That includes the service behind the channel, when it is not yours. |
 
 ## Trust boundaries
 
@@ -123,7 +123,8 @@ stores webhook payloads as they came: treat the database and its backups as sens
 
 - The core cannot mint an approval: the key is the executor's (`PAEON_SIGNING_KEY`), and the
   executor refuses to start with a key equal to the token it shares with the core.
-- The Go link goes from the executor to ntfy to the phone. The core never sees it.
+- The Go link goes from the executor to the approval channels to the phone. The core never
+  sees it, and does not read those channels' secrets.
 - The level is computed by the executor from its own rules. Nothing in a proposal can raise it.
 - The core can engage the kill switch and cannot release it.
 
@@ -160,8 +161,15 @@ colleague you do not know yet. Allow keys such as limits; think twice about `ima
   and once per link: a forged link cannot be used to make the phone ring.
 - The link is the path of the request, so the executor cuts it out of its access log.
 
-**Residual risk:** whoever can read the ntfy topic can press Go. Give the topic a token of its
-own and read access for you alone. A one-tap approval is exactly as strong as that channel.
+- Text from an alert is never read as markup by a notification service: it cannot draw a
+  link labelled Go beside the real one, or mention a person.
+
+**Residual risk:** whoever can read a channel listed in `actions.notify` can press Go, and each
+channel added there is one more place a Go link is stored. Give the channel a secret of its own
+and read access for you alone; keep team chats for the digest and the analysis. On a service
+that is not yours (Telegram, Discord, Slack, Teams, Pushover, a mail provider) the provider
+holds the link too: it works once, for `approval_minutes`, and only for a plan your own catalog
+allows. An approval is exactly as strong as its channel.
 
 ### Making things worse while fixing them
 

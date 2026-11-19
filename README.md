@@ -72,7 +72,7 @@ flowchart LR
     COR --> TRI[Triage<br/>cheap model, one call,<br/>no tools]
     TRI --> INV[Investigate<br/>strong model,<br/>read-only tools]
     COR -- known signature --> RB[Runbook<br/>no model]
-    INV --> YOU([You<br/>analysis on ntfy])
+    INV --> YOU([You<br/>analysis on your phone])
     INV --> PM[Postmortem<br/>draft]
     INV & RB -- plan --> EXE
     YOU -- Go / No-go --> EXE
@@ -174,6 +174,24 @@ The investigator's tools:
 - **Other hosts**, over SSH: commands you wrote, chosen by name. The model never writes a
   command or an argument.
 
+### Notifications
+
+The digest, the analysis and the approvals go to the channels you name, and a stage can send to
+several: **ntfy, Telegram, Discord, Slack, e-mail, Gotify, Pushover, Microsoft Teams, Matrix**, a
+webhook of your own, or anything [Apprise](https://github.com/caronc/apprise) knows (an optional
+install). None of the built-in ones adds a dependency.
+
+```yaml
+notifiers:
+  phone:  { type: ntfy, url: https://ntfy.example.org, topic: paeon, token_env: PAEON_NTFY_TOKEN }
+  family: { type: telegram, chat_id: "-1001234567890", token_env: PAEON_TELEGRAM_TOKEN }
+investigation: { notify: [phone, family] }
+actions:       { notify: [phone] }
+```
+
+Go and No-go work on every one of them, because an approval is a signed link and not a feature
+of a service: [docs/notifications.md](docs/notifications.md).
+
 ### Command line
 
 | Command | |
@@ -255,6 +273,7 @@ Then open `http://paeon:8080/ui`.
 | **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
 | **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
 | **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
+| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. Shown once a channel is configured. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
 | **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
@@ -324,7 +343,7 @@ can only read as well (an OpenObserve account limited to search, a Docker socket
 `GET`), so that the allow-lists are the second net and not the only one.
 
 Paeon itself has no telemetry and calls nothing but what you configure: your alert source, your
-model endpoint, your ntfy topics, your heartbeat URL and, if you set them, a git remote for the
+model endpoint, your notification channels, your heartbeat URL and, if you set them, a git remote for the
 postmortems, the hosts you listed for SSH, an OTLP endpoint, Coolify, and your deployment
 repository with its forge's API.
 
@@ -379,7 +398,10 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 - The quick start was run end to end without a model key: the investigation step of it was not.
 - Replay judges a triage verdict by itself; for an investigation it shows the old and new root
   cause and leaves the judgment to you.
-- There is no retention period for tool results in the event log, and no channel but ntfy.
+- There is no retention period for tool results in the event log.
+- The notification adapters other than ntfy were tested against each service's documented
+  request, not against the live service. A tap cannot be answered from inside a chat: a button
+  opens the executor's page.
 - The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.
 
 </details>

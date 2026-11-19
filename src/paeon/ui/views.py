@@ -889,6 +889,72 @@ def stages(rules: Rules) -> tuple[tuple[str, str], ...]:
     )
 
 
+# --- channels ----------------------------------------------------------------------------------
+
+_STAGE_SENDS = (("digest", "digest"), ("investigation", "analysis"), ("actions", "approvals"))
+
+
+@dataclass(frozen=True)
+class ChannelLine:
+    name: str
+    kind: str
+    carries: tuple[str, ...]  # what it is sent: digest, analysis, approvals
+    sent: int
+    failed: int
+    last_at: datetime | None
+    last_ok: bool
+    last_error: str | None
+
+    @property
+    def state(self) -> str:
+        if self.last_at is None:
+            return "unused"
+        return "sent" if self.last_ok else "failed"
+
+
+def channels_view(
+    store: Store, rules: Rules, now: datetime, *, days: int = 30
+) -> tuple[ChannelLine, ...]:
+    """Every channel a stage sends to, and how its deliveries went. Never where to: a webhook's
+    address is its secret, and the rules file is where the rest is read."""
+    carries: dict[str, list[str]] = {}
+    kinds: dict[str, str] = {}
+    for stage, what in _STAGE_SENDS:
+        for name, config in rules.channels(stage):
+            carries.setdefault(name, []).append(what)
+            kinds[name] = config.type
+    counts = {name: [0, 0] for name in carries}
+    last: dict[str, Event] = {}
+    for event in store.events(
+        kinds=("notification.sent", "notification.failed"),
+        recorded_since=now - timedelta(days=days),
+    ):
+        # Entries written before channels had names came from a stage's own ntfy block.
+        name = str(event.payload.get("name") or Rules.LEGACY)
+        if name not in counts:
+            continue
+        counts[name][event.kind == "notification.failed"] += 1
+        last[name] = event
+    return tuple(
+        ChannelLine(
+            name=name,
+            kind=kinds[name],
+            carries=tuple(carries[name]),
+            sent=counts[name][0],
+            failed=counts[name][1],
+            last_at=last[name].recorded_at if name in last else None,
+            last_ok=name in last and last[name].kind == "notification.sent",
+            last_error=_error(last.get(name)),
+        )
+        for name in carries
+    )
+
+
+def _error(event: Event | None) -> str | None:
+    error = None if event is None else event.payload.get("error")
+    return None if error is None else str(error)
+
+
 # --- actions and autonomy -------------------------------------------------------------------
 
 

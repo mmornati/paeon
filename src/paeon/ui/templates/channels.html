@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Channels{% endblock %}
+{% block main %}
+<div class="head">
+  <div>
+    <h1>Channels</h1>
+    <p class="sub">Where Paeon sends, and how the last {{ days }} days went. A channel is defined under <code>notifiers</code> in the rules file; its address and its secret are not shown here.</p>
+  </div>
+</div>
+
+<section class="block" aria-labelledby="h-channels">
+  <div class="block-head"><h2 id="h-channels">Notification channels</h2></div>
+  {% if lines %}
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Channel</th><th>Service</th><th class="wide">Carries</th><th class="num">Sent</th><th class="num">Failed</th><th>Last</th></tr></thead>
+    <tbody>
+      {% for line in lines -%}
+      <tr>
+        <td><span class="typed">{{ line.name }}</span></td>
+        <td>{{ line.kind }}</td>
+        <td class="wide">{{ line.carries|join(", ") }}</td>
+        <td class="num">{{ line.sent }}</td>
+        <td class="num">{{ line.failed }}</td>
+        <td>{% if line.last_at %}<span class="outcome outcome-{{ "verified" if line.last_ok else "failed" }}">{{ line.state }}</span> {{ line.last_at|stamp }}{% if line.last_error %}<br><span class="dim">{{ line.last_error }}</span>{% endif %}{% else %}<span class="dim">nothing sent yet</span>{% endif %}</td>
+      </tr>
+      {% endfor -%}
+    </tbody>
+  </table>
+  </div>
+  <div class="block-body"><p class="note">Approvals go to every channel that carries them, with the same single-use links: the first tap decides. A channel that fails does not keep the others from sending.</p></div>
+  {% else %}
+  <div class="block-body"><p class="note">No stage sends anywhere. Define a channel under <code>notifiers</code> and list it in a stage's <code>notify</code>.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

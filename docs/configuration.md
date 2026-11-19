@@ -19,6 +19,13 @@ Secrets never go in that file. It names the environment variable that holds them
 
 The budgets (`daily_budget`, `budget_per_incident`), the storm guard (`max_per_hour`) and the limits on tool calls and time are set per stage in the same file. A spent budget never hides an alert: Paeon fails open and treats the incident as real.
 
+## Notifications
+
+The digest, the analysis and the approvals go to the channels you name: ntfy, Telegram, Discord,
+Slack, e-mail, Gotify, Pushover, Teams, Matrix, a webhook of your own, or anything Apprise
+knows. Channels are defined once under `notifiers` and listed per stage in `notify`. See
+[Notifications](notifications.md).
+
 ## Environment
 
 The service itself is configured by `PAEON_*` variables: the ingest token, the database path, the address it listens on, the OpenObserve account, the heartbeat URL and the path of the rules file. [.env.example](https://github.com/mmornati/paeon/blob/main/.env.example) lists them all with a comment each.
