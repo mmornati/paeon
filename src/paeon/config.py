@@ -78,6 +78,19 @@ def _secret(env: Mapping[str, str], name: str) -> str:
     return env.get(name, "").strip()
 
 
+def channel_secrets(env: Mapping[str, str], rules: Rules, name: str) -> dict[str, str]:
+    """The secrets of one named channel, from the environment. Raises ConfigError for one
+    that is required and missing."""
+    found: dict[str, str] = {}
+    for key, (variable, required) in rules.notifiers[name].secret_envs().items():
+        value = _secret(env, variable)
+        if value:
+            found[key] = value
+        elif required:
+            raise ConfigError(f"notifiers.{name}: {variable} (or _FILE) is not set")
+    return found
+
+
 def _notifier_secrets(
     env: Mapping[str, str], rules: Rules, stages: tuple[str, ...]
 ) -> dict[str, dict[str, str]]:
@@ -88,13 +101,7 @@ def _notifier_secrets(
         for name in getattr(rules, stage).notify:
             if name in found:
                 continue
-            found[name] = {}
-            for key, (variable, required) in rules.notifiers[name].secret_envs().items():
-                value = _secret(env, variable)
-                if value:
-                    found[name][key] = value
-                elif required:
-                    raise ConfigError(f"notifiers.{name}: {variable} (or _FILE) is not set")
+            found[name] = channel_secrets(env, rules, name)
     return found
 
 

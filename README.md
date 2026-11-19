@@ -192,6 +192,9 @@ actions:       { notify: [phone] }
 Go and No-go work on every one of them, because an approval is a signed link and not a feature
 of a service: [docs/notifications.md](docs/notifications.md).
 
+Every key of the rules file is in the
+[configuration reference](docs/configuration-reference.md).
+
 ### Command line
 
 | Command | |
@@ -205,6 +208,7 @@ of a service: [docs/notifications.md](docs/notifications.md).
 | `paeon autonomy` | Each action's level, its track record, and the promotions it has earned |
 | `paeon stop` / `paeon resume` | The kill switch, next to the executor |
 | `paeon reinstate <alert> <action> <container>` | Lift a demotion, next to the executor |
+| `paeon notify <channel>` | Send a test message through one notification channel |
 | `paeon mcp` | Serve the record read-only to an assistant, over MCP on stdio |
 | `paeon replay triage\|investigation` | Re-run recorded incidents against the model and prompts of today |
 

@@ -101,5 +101,6 @@ nav:
       - Notifications: notifications.md
       - Acting: acting.md
   - Reference:
+      - Configuration reference: configuration-reference.md
       - Command line, API and MCP: cli-and-api.md
       - Roadmap and limits: roadmap.md

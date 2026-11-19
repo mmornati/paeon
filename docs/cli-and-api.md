@@ -13,6 +13,7 @@
 | `paeon autonomy` | Each action's level, its track record, and the promotions it has earned |
 | `paeon stop` / `paeon resume` | The kill switch, next to the executor |
 | `paeon reinstate <alert> <action> <container>` | Lift a demotion, next to the executor |
+| `paeon notify <channel>` | Send a test message through one notification channel |
 | `paeon mcp` | Serve the record read-only to an assistant, over MCP on stdio |
 | `paeon replay triage\|investigation` | Re-run recorded incidents against the model and prompts of today |
 
