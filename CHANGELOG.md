@@ -2,6 +2,18 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+### Notifications
+
+- Notification channels are named once under `notifiers` and listed by each stage in `notify`
+  (`digest`, `investigation`, `actions`). A stage can send to several; one that fails does not
+  keep the others from sending, and each delivery is journaled with its channel. The `ntfy:`
+  block of each stage still works: it is short for one ntfy channel.
+- A button is a label and a link, rendered by each channel as well as its service allows. The
+  approval stays in the signed link, so every channel that can show a link can carry a Go.
+- `notification.sent` and `notification.failed` entries carry `channel`, `name` and `to`.
+
 ## 0.1.1
 
 Security fixes, and the release workflow.

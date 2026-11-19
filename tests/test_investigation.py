@@ -17,7 +17,7 @@ from paeon.rules import Rules, parse_rules
 from paeon.schema import StageState, Status
 from paeon.store import Store
 from paeon.tools import Tool, Toolbox
-from support import T0, alert
+from support import T0, alert, recording
 
 LATER = T0 + timedelta(minutes=5)
 FINDINGS: dict[str, Any] = {
@@ -111,12 +111,8 @@ class Setup:
             self.config,
             model,
             toolbox(self.tool_log),
-            ntfy_token="not-a-real-token",
-            publish=self.publish,
+            notifiers=recording(self.config, "investigation", self.published),
         )
-
-    def publish(self, ntfy: Any, token: str | None, **message: Any) -> None:
-        self.published.append({"topic": ntfy.topic, "token": token, **message})
 
 
 def kinds(store: Store) -> list[str]:
@@ -199,11 +195,7 @@ def test_investigation_runs_tools_and_records_findings(store: Store) -> None:
     assert incident.postmortem is StageState.OFF
 
     [message] = setup.published
-    assert (message["topic"], message["token"], message["priority"]) == (
-        "incidents",
-        "not-a-real-token",
-        3,
-    )
+    assert (message["topic"], message["priority"]) == ("incidents", 3)
     assert message["title"] == "Incident #1: API down"
     assert "Root cause (85% confident): Version 2.1 exceeds" in message["message"]
     assert "1. Roll back the API to 2.0 [low risk]" in message["message"]
@@ -349,10 +341,8 @@ def test_a_lost_notification_is_recorded_not_raised(store: Store) -> None:
         rules(ntfy={"url": "https://ntfy.example.org", "topic": "incidents"}),
     )
 
-    def failing(*args: Any, **kwargs: Any) -> None:
-        raise RuntimeError("ntfy answered HTTP 503")
-
-    setup.investigator._publish = failing
+    for notifier in setup.investigator._notifiers:
+        notifier.fail = "ntfy answered HTTP 503"  # type: ignore[attr-defined]
     setup.recorder.observe(alert(Status.FIRING, 0))
     setup.investigator.run_pending(LATER)
     [failed] = list(store.events(kind="notification.failed"))

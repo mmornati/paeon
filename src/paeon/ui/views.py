@@ -249,7 +249,8 @@ def describe(event: Event) -> str:
         case "tool.call":
             return f"{_text(p.get('call'))} {_text(p.get('name'))} {_compact(p.get('input'))}"
         case "notification.sent":
-            return f"Sent to ntfy topic {_text(p.get('topic'))}: the {_text(p.get('about'))}"
+            sent_to = _text(p.get("to") or p.get("topic"))  # `topic`: older entries
+            return f"Sent by {_text(p.get('channel'))} to {sent_to}: the {_text(p.get('about'))}"
         case "notification.failed":
             return f"Notification not sent ({_text(p.get('error'))})"
         case "digest.sent":

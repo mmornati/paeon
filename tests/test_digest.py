@@ -9,8 +9,10 @@ import pytest
 
 from paeon import digest as digests
 from paeon.correlation import Correlator
+from paeon.notify import Button, Message, NotifyError
+from paeon.notify.ntfy import NtfyNotifier
 from paeon.recorder import Recorder
-from paeon.rules import Ntfy, Rules
+from paeon.rules import NtfyChannel, Rules
 from paeon.schema import Status
 from paeon.store import Store
 from support import T0, alert
@@ -79,6 +81,11 @@ def test_digest_outside_the_period_is_empty(store: Store) -> None:
     assert digests.render(later) == "No incident in the period."
 
 
+def ntfy(handler: Any, token: str | None = None) -> NtfyNotifier:
+    config = NtfyChannel(type="ntfy", url="https://ntfy.example.org", topic="incidents")
+    return NtfyNotifier("phone", config, token, transport=httpx.MockTransport(handler))
+
+
 def test_publish_to_ntfy() -> None:
     seen: list[httpx.Request] = []
 
@@ -86,31 +93,28 @@ def test_publish_to_ntfy() -> None:
         seen.append(request)
         return httpx.Response(200, json={"id": "x"})
 
-    ntfy = Ntfy(url="https://ntfy.example.org", topic="incidents")
-    digests.publish_ntfy(
-        ntfy, "not-a-real-token", title="t", message="m", transport=httpx.MockTransport(handler)
-    )
+    buttons = (Button("Go", "https://x/act/1", one_tap=True), Button("No-go", "https://x/act/2"))
+    ntfy(handler, "not-a-real-token").send(Message(title="t", text="m", buttons=buttons))
     [request] = seen
     assert request.headers["authorization"] == "Bearer not-a-real-token"
     body: dict[str, Any] = json.loads(request.content)
     assert (body["topic"], body["title"], body["message"]) == ("incidents", "t", "m")
+    assert [(a["action"], a["label"], a.get("method")) for a in body["actions"]] == [
+        ("http", "Go", "POST"),  # one tap: the phone sends the link itself
+        ("view", "No-go", None),  # the phone opens the page
+    ]
 
 
 def test_ntfy_failures_do_not_carry_the_token_or_the_url() -> None:
-    ntfy = Ntfy(url="https://ntfy.example.org", topic="incidents")
-
     def refused(request: httpx.Request) -> httpx.Response:
         return httpx.Response(403)
 
     def down(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("no route", request=request)
 
-    with pytest.raises(RuntimeError, match="HTTP 403"):
-        digests.publish_ntfy(
-            ntfy, None, title="t", message="m", transport=httpx.MockTransport(refused)
-        )
-    with pytest.raises(RuntimeError, match="ConnectError") as caught:
-        digests.publish_ntfy(
-            ntfy, "tok", title="t", message="m", transport=httpx.MockTransport(down)
-        )
+    message = Message(title="t", text="m")
+    with pytest.raises(NotifyError, match="HTTP 403"):
+        ntfy(refused).send(message)
+    with pytest.raises(NotifyError, match="ConnectError") as caught:
+        ntfy(down, "tok").send(message)
     assert "ntfy.example.org" not in str(caught.value)

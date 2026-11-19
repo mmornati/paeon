@@ -22,6 +22,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from paeon import notify
 from paeon.actuators import CoolifyActuator, RepositoryActuator
 from paeon.catalog import Proposal
 from paeon.config import ExecutorSettings
@@ -139,7 +140,12 @@ def build_executor(settings: ExecutorSettings, store: ExecutorStore) -> Executor
         docker=docker,
         coolify=coolify,
         repository=repository,
-        ntfy_token=settings.ntfy_token,
+        notifiers=notify.for_stage(
+            settings.rules,
+            "actions",
+            secrets=settings.notifier_secrets,
+            legacy_token=settings.ntfy_token,
+        ),
         kill_env=settings.kill_switch,
     )
 

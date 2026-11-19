@@ -12,6 +12,7 @@ from paeon.catalog import Proposal, Step
 from paeon.executor import DockerActuator, Executor, ExecutorStore
 from paeon.links import Signer
 from paeon.rules import Rules, parse_rules
+from support import recording
 
 KEY = "s" * 40
 OPEN: list[Bench] = []  # closed after each test by the fixture in conftest
@@ -191,16 +192,17 @@ class Bench:
             docker=self.docker.actuator() if with_docker else None,
             coolify=coolify_actuator,
             repository=repository_actuator,
-            ntfy_token="ntfy-token",
+            notifiers=recording(self.rules, "actions", self.sent),
             kill_env=kill_env,
-            publish=self.publish,
             sleep=self.slept.append,
             http_ok=lambda url: self.healthy_url,
             spawn=lambda job: job(),
         )
 
-    def publish(self, ntfy: Any, token: str | None, **message: Any) -> None:
-        self.sent.append({"topic": ntfy.topic, **message})
+    def fail(self, error: str) -> None:
+        """Make every notification fail from now on."""
+        for notifier in self.executor._notifiers:
+            notifier.fail = error  # type: ignore[attr-defined]
 
     def close(self) -> None:
         self.store.close()

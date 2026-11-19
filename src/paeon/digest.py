@@ -7,14 +7,10 @@ events, and they are the labelled data that tells whether triage can be trusted.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-import httpx2 as httpx
-
-from paeon.rules import Ntfy
 from paeon.schema import Incident
 from paeon.store import Store
 
@@ -166,41 +162,3 @@ def render(digest: Digest, *, console: bool = False) -> str:
         else "Was triage right? paeon feedback <id> up|down",
     ]
     return "\n".join(parts)
-
-
-def publish_ntfy(
-    ntfy: Ntfy,
-    token: str | None,
-    *,
-    title: str,
-    message: str,
-    priority: int = 2,
-    tags: tuple[str, ...] = ("clipboard",),
-    click: str | None = None,
-    actions: Sequence[dict[str, Any]] = (),
-    transport: httpx.BaseTransport | None = None,
-) -> None:
-    """Publish to an ntfy topic. Raises RuntimeError without the URL or the token in it.
-
-    `click` is the page a tap on the notification opens; `actions` are its buttons (three at
-    most, ntfy's limit), each a `view` or an `http` action in ntfy's own format.
-    """
-    headers = {"Authorization": f"Bearer {token}"} if token else {}
-    body: dict[str, Any] = {
-        "topic": ntfy.topic,
-        "title": title[:200],
-        "message": message[:3000],  # ntfy refuses bodies over 4096 bytes, buttons included
-        "priority": priority,
-        "tags": list(tags),
-    }
-    if click:
-        body["click"] = click
-    if actions:
-        body["actions"] = list(actions)[:3]
-    try:
-        with httpx.Client(timeout=15, transport=transport) as http:
-            status = http.post(ntfy.url, json=body, headers=headers).status_code
-    except httpx.HTTPError as exc:
-        raise RuntimeError(f"ntfy request failed: {type(exc).__name__}") from None
-    if status >= 400:
-        raise RuntimeError(f"ntfy answered HTTP {status}")

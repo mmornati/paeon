@@ -18,13 +18,14 @@ from paeon.cli import main
 from paeon.correlation import Correlator
 from paeon.investigation import SUBMIT, Extras, Findings, Investigator, catalog_prompt
 from paeon.models import ModelError
+from paeon.notify import Button
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.rules import Rules, parse_rules
 from paeon.schema import StageState, Status
 from paeon.store import Store
 from paeon.triage import Triager
-from support import T0, alert
+from support import T0, alert, recording
 from test_investigation import FINDINGS, Scripted, Setup, calls, toolbox
 from test_investigation import rules as investigation_rules
 from test_postmortem import NARRATIVE, Writer, investigated_incident
@@ -152,7 +153,7 @@ def test_with_actions_off_a_typed_step_is_only_its_sentence(store: Store) -> Non
 def test_the_analysis_carries_buttons_and_survives_their_failure(store: Store) -> None:
     ntfy = {"url": "https://ntfy.example.org", "topic": "incidents"}
     config = investigation_rules(ntfy=ntfy)
-    button = {"action": "http", "label": "Cause is right", "url": "https://x", "method": "POST"}
+    button = Button("Cause is right", "https://x", one_tap=True)
 
     def boom(*args: Any) -> Any:
         raise RuntimeError("the executor is down")
@@ -173,7 +174,7 @@ def test_the_analysis_carries_buttons_and_survives_their_failure(store: Store) -
             config,
             model,
             toolbox([]),
-            publish=setup.publish,
+            notifiers=recording(config, "investigation", setup.published),
             extras=extras,
             after=after,
         )

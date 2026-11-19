@@ -11,12 +11,13 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from paeon import digest as digests
 from paeon.app import create_app
 from paeon.cli import main
 from paeon.config import Settings, load
 from paeon.correlation import Correlator
 from paeon.models import ModelReply
+from paeon.notify import Message, NotifyError
+from paeon.notify.ntfy import NtfyNotifier
 from paeon.recorder import Recorder
 from paeon.rules import parse_rules
 from paeon.schema import Status
@@ -151,10 +152,10 @@ def test_digest_is_sent_once_a_day_after_the_hour(
 ) -> None:
     sent: list[tuple[str | None, str]] = []
 
-    def fake_publish(ntfy: Any, token: str | None, *, title: str, message: str) -> None:
-        sent.append((token, message))
+    def fake_send(self: NtfyNotifier, message: Message) -> None:
+        sent.append((self._token, message.text))
 
-    monkeypatch.setattr(digests, "publish_ntfy", fake_publish)
+    monkeypatch.setattr(NtfyNotifier, "send", fake_send)
     config = settings(
         digest={"hour": 8, "ntfy": {"url": "https://ntfy.example.org", "topic": "incidents"}}
     )
@@ -178,9 +179,9 @@ def test_digest_is_sent_once_a_day_after_the_hour(
 
 def test_a_failed_digest_is_retried(store: Store, monkeypatch: pytest.MonkeyPatch) -> None:
     def failing(*args: Any, **kwargs: Any) -> None:
-        raise RuntimeError("ntfy answered HTTP 503")
+        raise NotifyError("ntfy answered HTTP 503")
 
-    monkeypatch.setattr(digests, "publish_ntfy", failing)
+    monkeypatch.setattr(NtfyNotifier, "send", failing)
     config = settings(digest={"ntfy": {"url": "https://ntfy.example.org", "topic": "incidents"}})
     Recorder(store, Correlator(store, config.rules)).observe(alert(Status.FIRING, 0))
     with pytest.raises(RuntimeError):
