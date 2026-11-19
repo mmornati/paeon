@@ -13,6 +13,13 @@ Paeon is pre-1.0: anything may change between versions. Dates are the day of the
 - A button is a label and a link, rendered by each channel as well as its service allows. The
   approval stays in the signed link, so every channel that can show a link can carry a Go.
 - `notification.sent` and `notification.failed` entries carry `channel`, `name` and `to`.
+- Five more services, each a `type` under `notifiers`, none with a new dependency:
+  `telegram` (a bot; the buttons are a keyboard of links), `discord` (a webhook; link buttons),
+  `slack` (an incoming webhook; links in the text), `email` (SMTP; links in the body) and
+  `webhook` (the message as JSON, for a receiver of your own).
+- A channel's secret (a bot token, a webhook URL, a password) is named by its `*_env` key and
+  read only by the process that sends to it. A listed channel without its secret stops the
+  start; an error of a channel names the service and the status, never the URL.
 
 ## 0.1.1
 

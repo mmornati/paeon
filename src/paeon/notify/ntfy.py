@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx2 as httpx
 
-from paeon.notify import Button, Message, NotifyError
+from paeon.notify import Button, Message, post
 from paeon.rules import NtfyChannel
 
 _MAX_TEXT = 3000  # ntfy refuses bodies over 4096 bytes, buttons included
@@ -58,10 +58,4 @@ class NtfyNotifier:
             body["click"] = message.click
         if message.buttons:
             body["actions"] = [_action(button) for button in message.buttons[:_MAX_BUTTONS]]
-        try:
-            with httpx.Client(timeout=15, transport=self._transport) as http:
-                status = http.post(self._url, json=body, headers=headers).status_code
-        except httpx.HTTPError as exc:
-            raise NotifyError(f"ntfy request failed: {type(exc).__name__}") from None
-        if status >= 400:
-            raise NotifyError(f"ntfy answered HTTP {status}")
+        post("ntfy", self._url, body, headers=headers, transport=self._transport)
