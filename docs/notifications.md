@@ -240,8 +240,10 @@ the [threat model](threat-model.md).
 
 ## Limits
 
-- The adapters were tested against the request each service documents, not against the live
-  services. Tell us what does not arrive as described.
+- ntfy, Gotify, e-mail and the webhook were run against real servers, alone and in a full
+  approval (alert, Go from one channel, restart, result on all). Telegram, Discord, Slack,
+  Teams, Pushover, Matrix and Apprise were tested against the request each service documents,
+  not against the live service. Tell us what does not arrive as described.
 - There is no answer from inside a chat: a button always goes through the executor's page (or,
   on ntfy, straight to it). Receiving a tap from Telegram or Slack directly is not built.
 - One message per event: no editing of an earlier message when a plan is answered.
