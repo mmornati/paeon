@@ -35,4 +35,11 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
   servers; the others were tested against each service's documented request, not the live
   service. A tap cannot be answered from inside a chat: a button
   opens the executor's page.
+- Of the sources, the OpenObserve adapter was written against a real instance. Prometheus,
+  Alertmanager's API, Grafana, Loki, VictoriaLogs, Gatus, Healthchecks, Netdata, Zabbix and
+  Beszel are written from each service's documentation and tested against the payloads and
+  answers it documents, not the live service. `paeon source <name>` is the first thing to run.
+- A Prometheus without Alertmanager has no way in yet: its alerts are not polled. Netdata
+  Cloud's notifications are not read. For logs in Loki and VictoriaLogs the model gives words
+  to look for, not a query.
 - The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.

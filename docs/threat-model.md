@@ -100,6 +100,11 @@ its claims is tied to the tool call behind it, or marked as having none.
   model's string (Docker would accept an id prefix where a name is expected).
 - An OpenObserve alert's own query, written by the owner, is re-run only if every stream and
   metric it names is on the same allow-lists (`alert_query`).
+- A [source](sources.md) is read through one client (`paeon.sources.http.Reader`) that asks
+  only the paths its adapter lists, follows no redirect and reports no URL. The model never
+  writes a path or a method. For logs it gives words, sent as quoted strings after the
+  selector the owner wrote; for Zabbix, whose reads are POSTs, the adapter can send `get`
+  methods only.
 - git runs with the repository's own configuration disarmed (no hooks, no fsmonitor, no pager),
   and returns subjects and file names, not authors or diffs.
 - SSH runs the owner's command line by name. Host keys are checked strictly against a file.

@@ -955,6 +955,57 @@ def _error(event: Event | None) -> str | None:
     return None if error is None else str(error)
 
 
+# --- sources ------------------------------------------------------------------------------------
+
+# A source as the app built it: name, service, how its alerts arrive, the tools it offers.
+SourceShown = tuple[str, str, str, tuple[str, ...]]
+
+
+@dataclass(frozen=True)
+class SourceLine:
+    name: str
+    kind: str
+    alerts: str  # webhook, polled or none
+    tools: tuple[str, ...]
+    fired: int
+    last_at: datetime | None
+    stale: bool
+
+    @property
+    def address(self) -> str | None:
+        """Where the service posts, when it pushes."""
+        return f"/ingest/{self.name}" if self.alerts == "webhook" else None
+
+
+def sources_view(
+    store: Store, shown: Sequence[SourceShown], now: datetime, *, days: int = 30
+) -> tuple[SourceLine, ...]:
+    """Every source, what it gives, and what came from it. Never its address or its secret."""
+    since = now - timedelta(days=days)
+    lines = []
+    for name, kind, alerts, tools in shown:
+        fired = 0
+        last: datetime | None = None
+        for event in store.events(
+            kinds=("alert.firing", "alert.resolved"), source=name, recorded_since=since
+        ):
+            fired += event.kind == "alert.firing"
+            last = event.recorded_at
+        state = store.alert_state("paeon", f"source_stale:{name}")
+        lines.append(
+            SourceLine(
+                name=name,
+                kind=kind,
+                alerts=alerts,
+                tools=tools,
+                fired=fired,
+                last_at=last,
+                stale=state is not None and state.status == Status.FIRING.value,
+            )
+        )
+    return tuple(lines)
+
+
 # --- actions and autonomy -------------------------------------------------------------------
 
 

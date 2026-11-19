@@ -82,6 +82,171 @@ Matches an alert when every field given matches. An empty matcher matches everyt
 | `severity` | `unknown` \| `info` \| `warning` \| `critical` |  | The alert's severity, exactly: `info`, `warning`, `critical` or `unknown`. |
 | `labels` | map of name to text |  | Exact label values. |
 
+## `sources`
+
+Named monitoring services: where alerts come from, and what the investigator may read in each. See [Sources](sources.md).
+
+A map of a name of yours to a monitoring service. The `type` key says which one it is, and the other keys depend on it. A source that pushes its alerts posts them to `/ingest/<name>`.
+
+### `type: prometheus`
+
+A Prometheus HTTP API, read with PromQL: Prometheus itself, VictoriaMetrics, Mimir or Thanos. Its alerts arrive through Alertmanager.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text | **required** | The server, with its path prefix if it has one: `http://prometheus:9090`, `http://mimir:8080/prometheus`. |
+| `headers` | map of name to text |  | Headers added to every request, for a tenant: `X-Scope-OrgID` on Mimir and Loki, `THANOS-TENANT`, `AccountID` on VictoriaLogs. Not for secrets. |
+| `metrics` | list of text |  | Metric name patterns (fnmatch) that PromQL queries may read. Empty: none. |
+| `rules` | boolean | `true` | Offer the alerting rules, with their query and their state. |
+| `targets` | boolean | `true` | Offer the health of the scrape targets, without their URLs. |
+
+### `type: alertmanager`
+
+An Alertmanager: its webhook brings alerts in, and its API says what is silenced.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. |
+
+### `type: grafana`
+
+Grafana's alerting: a webhook contact point brings alerts in, and a service account reads the annotations and the alert rules.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. |
+| `annotations` | boolean | `true` | Offer the annotations: alert state changes and deploy marks. |
+| `rules` | boolean | `true` | Offer the alert rules. The service account needs the right to read them. |
+
+### `type: loki`
+
+Logs in Grafana Loki. The model chooses a stream by its name and gives words to look for; it never writes a selector.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text | **required** | The server, for example `http://loki:3100`. |
+| `headers` | map of name to text |  | Headers added to every request, for a tenant: `X-Scope-OrgID` on Mimir and Loki, `THANOS-TENANT`, `AccountID` on VictoriaLogs. Not for secrets. |
+| `streams` | map of name to text |  | Name the model uses, to the LogQL stream selector you wrote, for example `{container="api"}`. Nothing else is readable. |
+| `max_lines` | integer | `100` | Most lines one search returns. From 1 to 1000. |
+
+### `type: victorialogs`
+
+Logs in VictoriaLogs. The model chooses a stream by its name and gives words to look for; it never writes a filter.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text | **required** | The server, for example `http://vlogs:9428`. |
+| `headers` | map of name to text |  | Headers added to every request, for a tenant: `X-Scope-OrgID` on Mimir and Loki, `THANOS-TENANT`, `AccountID` on VictoriaLogs. Not for secrets. |
+| `streams` | map of name to text |  | Name the model uses, to the LogsQL filter you wrote, for example `{app="api"}`. Nothing else is readable. |
+| `max_lines` | integer | `100` | Most lines one search returns. From 1 to 1000. |
+
+### `type: openobserve`
+
+An OpenObserve organization, in the rules file instead of the `PAEON_OPENOBSERVE_*` variables: its alerts are polled, and its logs and metrics are read.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text | **required** | The server, for example `http://openobserve:5080`. |
+| `org` | text | `default` | The organization. |
+| `alerts` | boolean | `true` | Poll the `triggers` stream for alert evaluations. |
+| `poll_seconds` | number | `60` | How often the alerts are polled. |
+| `stale_seconds` | number | `900` | Without data for this long, the source is reported stale. |
+| `streams` | list of text |  | Log streams that may be searched. Nothing else is readable. |
+| `metrics` | list of text |  | Metric name patterns (fnmatch) that PromQL queries may read. Empty: none. |
+| `max_rows` | integer | `100` | Most rows one search returns. From 1 to 1000. |
+
+### `type: uptime_kuma`
+
+uptime-kuma: its Webhook notification brings alerts in, and `/metrics` says the state of every monitor.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. |
+| `api_key_env` | text |  | Variable with an API key, for `/metrics`. |
+
+### `type: gatus`
+
+Gatus: a custom alert brings state changes in, and its API says how each endpoint is.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. |
+
+### `type: healthchecks`
+
+Healthchecks (healthchecks.io or your own): a webhook integration brings the checks that go down and up, and a read-only API key reads their state and history.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. `https://healthchecks.io` if hosted. |
+| `api_key_env` | text |  | Variable with the project's read-only API key. |
+
+### `type: netdata`
+
+A Netdata agent: its custom notification brings alert transitions in, and its API reads the active alerts and the charts you list.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. |
+| `charts` | list of text |  | Chart id patterns (fnmatch) whose data may be read, for example `system.*`, `disk_space.*`. Empty: none. |
+
+### `type: zabbix`
+
+Zabbix: a webhook media type brings problems and recoveries in, and an API token of a read-only user reads problems, items and their history.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text |  | The server, as Paeon reaches it. Without it, the source only receives alerts. The frontend's address, without `api_jsonrpc.php`. |
+| `hosts` | list of text |  | Host name patterns (fnmatch) whose items and history may be read. Empty: none. Problems are listed for every host the token can see. |
+| `max_values` | integer | `200` | Most history values one request returns. From 1 to 2000. |
+
+### `type: beszel`
+
+A Beszel hub, polled: the alerts that are triggered and the systems that are down. Its notifications carry a sentence only, so nothing is pushed.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `user` | text |  | User for basic authentication, with `password_env`. |
+| `password_env` | text |  | Variable with the password of `user`. |
+| `token_env` | text |  | Variable with a token, sent as `Authorization: Bearer`. |
+| `url` | text | **required** | The hub, for example `http://beszel:8090`. |
+| `alerts` | boolean | `true` | Poll the triggered alerts and the status of the systems. |
+| `poll_seconds` | number | `60` | How often the hub is polled. |
+| `stale_seconds` | number | `900` | Without an answer for this long, the source is stale. |
+
 ## `models`
 
 Model aliases: a stage names an alias, never a model. See [Configuration](configuration.md).

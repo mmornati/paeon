@@ -71,6 +71,30 @@ triage:
     - { severity: critical, source: uptime-kuma }
     - { title: "vpn_unhealthy" }
 
+# Monitoring services, each under a name of yours: where alerts come from, and what an
+# investigation may read. A source that pushes posts to /ingest/<name>. See docs/sources.md
+# for every service and its keys. /ingest/alertmanager and /ingest/uptime-kuma need no entry.
+# sources:
+#   prom:
+#     type: prometheus                      # also VictoriaMetrics, Mimir, Thanos
+#     url: http://prometheus:9090
+#     metrics: ["node_*", "container_*", "up"]   # metric names PromQL may read
+#   alertmanager:
+#     type: alertmanager
+#     url: http://alertmanager:9093         # with a url: what is active, what is silenced
+#   logs:
+#     type: loki
+#     url: http://loki:3100
+#     streams:                              # the model picks a name; you wrote the selector
+#       api: '{container="api"}'
+#   grafana:
+#     type: grafana                         # its webhook contact point posts to /ingest/grafana
+#     url: http://grafana:3000
+#     token_env: PAEON_GRAFANA_TOKEN        # a service account with the Viewer role
+#   gatus:
+#     type: gatus
+#     url: http://gatus:8080
+
 # Where Paeon sends: each channel is defined once, by name, and a stage lists the names it
 # sends to in `notify`. See docs/notifications.md for every service and its keys.
 # notifiers:
@@ -136,6 +160,7 @@ investigation:
       mount_sources: [/srv]                 # other mount sources are not shown
     knowledge:
       paths: [/knowledge/runbooks]          # markdown; the postmortems directory is added
+    # More to read comes from `sources`, below: each source brings its own tools.
     # The state of every monitor right now, from uptime-kuma's /metrics (Settings, API keys).
     # Their history comes from Paeon's own record of the webhook and needs nothing.
     # uptime_kuma:

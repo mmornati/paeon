@@ -30,6 +30,7 @@ from paeon.models import ToolSpec
 from paeon.redact import redact
 from paeon.rules import DockerTools, GitTools, OpenObserveTools, SshTools
 from paeon.schema import IncidentStatus, to_micros
+from paeon.sources.http import ReadError
 from paeon.sources.openobserve import AlertDefinition
 from paeon.store import Store
 
@@ -83,7 +84,7 @@ class Toolbox:
             return {"error": f"unknown tool {name!r}"}, True
         try:
             result = redact(tool.run(args), max_length=4000)
-        except ToolError as exc:
+        except (ToolError, ReadError) as exc:
             return {"error": str(exc)}, True
         except Exception as exc:
             # The message of an unexpected error may quote a URL or a payload: keep its kind.
@@ -443,7 +444,11 @@ def openobserve_tools(
     client: Telemetry,
     config: OpenObserveTools,
     definitions: Callable[[str], AlertDefinition | None] | None = None,
+    *,
+    suffix: str = "",
 ) -> list[Tool]:
+    """`suffix` names the tools of a source of the rules file: `search_logs_<name>`."""
+
     def readable_metrics(promql: str) -> bool:
         names = metric_names(promql)
         return bool(names) and all(
@@ -550,7 +555,7 @@ def openobserve_tools(
         tools.append(
             Tool(
                 ToolSpec(
-                    "search_logs",
+                    "search_logs" + suffix,
                     "Search one log stream, newest rows first. `where` is a SQL filter on the"
                     " stream's columns, for example: level = 'error' AND str_match(log, 'timeout')."
                     f" Readable streams: {', '.join(config.streams)}.",
@@ -572,7 +577,7 @@ def openobserve_tools(
         tools.append(
             Tool(
                 ToolSpec(
-                    "query_metrics",
+                    "query_metrics" + suffix,
                     "Run a PromQL range query on the metrics, for example"
                     ' rate(container_cpu_usage_seconds_total{name="api"}[5m]).',
                     _schema(
@@ -591,7 +596,7 @@ def openobserve_tools(
         tools.append(
             Tool(
                 ToolSpec(
-                    "alert_query",
+                    "alert_query" + suffix,
                     "What an OpenObserve alert watches (its query, threshold and period) and,"
                     " when the data it reads is on the allow-list, the result of that query"
                     " over a wider window. `alert` is the alert's name or its id.",
@@ -820,7 +825,9 @@ def parse_monitors(text: str) -> list[dict[str, Any]]:
     return sorted(monitors.values(), key=lambda entry: str(entry["name"]))
 
 
-def uptime_kuma_tools(http: httpx.Client, api_key: str | None) -> list[Tool]:
+def uptime_kuma_tools(
+    http: httpx.Client, api_key: str | None, *, name: str = "monitor_status"
+) -> list[Tool]:
     def monitor_status(args: dict[str, Any]) -> Any:
         text = _string(args, "text", required=False).lower()
         try:
@@ -835,7 +842,7 @@ def uptime_kuma_tools(http: httpx.Client, api_key: str | None) -> list[Tool]:
     return [
         Tool(
             ToolSpec(
-                "monitor_status",
+                name,
                 "The state of the uptime-kuma monitors right now: up, down, pending or in"
                 " maintenance, with the last response time. Use alert_history for the past.",
                 _schema({"text": {"type": "string", "description": "Part of a monitor name."}}),

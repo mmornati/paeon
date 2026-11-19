@@ -19,16 +19,20 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Any, Protocol
+from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx2 as httpx
 
 from paeon.recorder import Recorder
 from paeon.schema import Alert, Severity, Status, from_micros, to_micros
+from paeon.sources.http import ReadError
 from paeon.store import Store
+
+if TYPE_CHECKING:
+    from paeon.sources import Connected
 
 log = logging.getLogger(__name__)
 
@@ -357,3 +361,53 @@ class OpenObserveSource:
                 "labels": labels,
             }
         )
+
+
+def connect(
+    name: str,
+    config: Any,  # paeon.rules.OpenObserveSource; this module's class of that name is the poller
+    secrets: Mapping[str, str],
+    transport: httpx.BaseTransport | None = None,
+    store: Store | None = None,
+    recorder: Recorder | None = None,
+) -> Connected:
+    """An OpenObserve organization named in the rules file: the same poller and the same tools
+    as the `PAEON_OPENOBSERVE_*` variables give, under a name of the owner's."""
+    from paeon.rules import OpenObserveTools
+    from paeon.sources import Connected, Polling
+    from paeon.tools import openobserve_tools
+
+    client = HttpSearchClient(
+        config.url, config.org, config.user, secrets.get("password", ""), transport=transport
+    )
+    polling = None
+    if config.alerts and store is not None and recorder is not None:
+        source = OpenObserveSource(
+            client,
+            store,
+            recorder,
+            name=name,
+            base_url=config.url,
+            definitions=client.alert_definition,
+        )
+        polling = Polling(source, config.poll_seconds, config.stale_seconds)
+
+    def probe() -> str:
+        now = datetime.now(UTC)
+        try:
+            rows = client.search(_SQL, to_micros(now - timedelta(hours=1)), to_micros(now), 1)
+        except httpx.HTTPStatusError as exc:
+            raise ReadError(f"openobserve answered HTTP {exc.response.status_code}") from None
+        except httpx.HTTPError as exc:
+            raise ReadError(f"openobserve is unreachable: {type(exc).__name__}") from None
+        return "read the triggers stream" + ("" if rows else " (no evaluation in the last hour)")
+
+    tools = openobserve_tools(
+        client,
+        OpenObserveTools(streams=config.streams, metrics=config.metrics, max_rows=config.max_rows),
+        client.alert_definition,
+        suffix="_" + name.replace("-", "_"),
+    )
+    return Connected(
+        name, "openobserve", polling=polling, tools=tools, probe=probe, close=client.close
+    )
