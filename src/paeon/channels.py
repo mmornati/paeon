@@ -41,6 +41,11 @@ STAGES: dict[str, str] = {"digest": "digest", "investigation": "analysis"}
 # environment.
 STORED = "(kept by the console)"
 
+# The settings that decide where a channel's secret is sent, and how. When one changes, the
+# stored secrets are not reused: whoever moves a channel must know its secrets, or the edit
+# would be a way to have a secret one never saw delivered to an address of one's choice.
+DESTINATION = frozenset({"url", "api_url", "homeserver", "host", "port", "security"})
+
 Kind = Literal["text", "url", "number", "select", "list", "lines"]
 
 
@@ -405,6 +410,20 @@ class Channels:
                 spec = service.field(key)
                 if spec is not None and spec.secret and not spec.required:
                     sealed.pop(key, None)
+            moved = (
+                before is not None
+                and not creating
+                and any(before.config.get(key) != config.get(key) for key in DESTINATION)
+            )
+            for key in sealed if moved else ():
+                spec = service.field(key)
+                if key not in secrets and spec is not None:
+                    # No label before a colon here: the page's redaction reads "token: x"
+                    # as a secret and masks what follows.
+                    problems[key] = (
+                        "Type it again. Where it is sent changed, and a stored secret is"
+                        " never sent to a new address."
+                    )
             for key, value in secrets.items():
                 sealed[key] = self._vault.seal(value)
             for spec in service.fields:

@@ -499,3 +499,36 @@ def test_each_service_form_renders(store: Store, kind: str) -> None:
     for spec in SERVICES[kind].fields:
         assert f'name="{spec.key}"' in text
     assert "Approvals are not on this list." in text
+
+
+def test_a_kept_secret_does_not_follow_a_channel_to_a_new_address(store: Store) -> None:
+    outbox = Outbox()
+    client = app_for(store, PROXIED_UI, outbox)
+    client.post("/ui/channels/add/ntfy", data=NTFY, headers=ADMIN)
+    moved = {"url": "https://collector.example.net", "topic": "paeon", "then": "test"}
+    refused = client.post("/ui/channels/phone/edit", data=moved, headers=ADMIN)
+    assert refused.status_code == 422
+    assert "Type it again. Where it is sent changed" in refused.text
+    assert outbox.requests == []
+    assert store.console_channels()[0].config["url"] == "https://ntfy.example.org"
+
+    # Typed again, or given up, the channel moves.
+    typed = client.post(
+        "/ui/channels/phone/edit", data={**moved, "token": "tk_another_value"}, headers=ADMIN
+    )
+    assert typed.status_code == 303
+    assert outbox.requests[-1].url.host == "collector.example.net"
+    assert outbox.requests[-1].headers["authorization"] == "Bearer tk_another_value"
+    back = {**moved, "url": "https://ntfy.example.org", "forget_token": "on"}
+    assert client.post("/ui/channels/phone/edit", data=back, headers=ADMIN).status_code == 303
+    assert "authorization" not in outbox.requests[-1].headers
+
+
+def test_wrong_passwords_from_one_address_do_not_keep_another_out() -> None:
+    sessions = Sessions(KEY, PASSWORD)
+    for _ in range(5):
+        assert sessions.sign_in("nope", "203.0.113.9") is None
+    assert sessions.locked("203.0.113.9") > 0
+    assert sessions.sign_in(PASSWORD, "203.0.113.9") is None
+    assert sessions.locked("192.0.2.4") == 0
+    assert sessions.sign_in(PASSWORD, "192.0.2.4") is not None

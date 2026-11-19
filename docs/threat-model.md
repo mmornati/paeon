@@ -220,7 +220,7 @@ allows. An approval is exactly as strong as its channel.
   cross-site requests. Pages load nothing from another host (a strict Content-Security-Policy),
   so text from a log cannot load or run anything.
 - With `ui.auth: local` the console asks for one password itself. It is compared in constant
-  time, five wrong ones in a row pause sign-in for a minute, and the session is a signed,
+  time, five wrong ones in a row from one address pause sign-in from that address for a minute, and the session is a signed,
   HttpOnly, SameSite=Strict cookie. There is no TLS in Paeon: put one in front before the
   console leaves your network.
 - With `ui.roles`, what a request may do comes from the groups header of the proxy, and only
@@ -228,7 +228,9 @@ allows. An approval is exactly as strong as its channel.
   changes channels.
 - With `ui.settings`, an admin adds notification channels. Their secrets are encrypted with
   `PAEON_SECRET_KEY` before they reach the database and are never sent back to a page; the
-  log records who changed which channel, without an address or a secret. A console channel
+  log records who changed which channel, without an address or a secret. An edit that
+  changes where a channel sends must give its secrets again, so an admin cannot have a
+  secret they never saw delivered to an address of their choice. A console channel
   carries the digest and the analysis and can never carry an approval: the executor sends
   those from its own rules file. **Residual risk:** an admin of the console can make Paeon
   post its digest and analyses to an address of their choice, including one on your internal

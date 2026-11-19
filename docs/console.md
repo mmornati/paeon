@@ -63,7 +63,7 @@ ui:
 Set `PAEON_UI_ADMIN_PASSWORD` (12 characters or more) and `PAEON_SECRET_KEY` (32 or more, any
 long random value). Whoever signs in is the admin. The session is a signed cookie that lasts 14
 days; changing the password or the key signs everyone out. After five wrong passwords in a row
-no password is looked at for a minute. There is one account and no user list: for several
+from one address, no password from that address is looked at for a minute. There is one account and no user list: for several
 people, use a proxy and roles. Serve it over TLS as soon as it leaves your own network.
 
 ### Roles
@@ -110,7 +110,8 @@ A channel added there takes effect at once, without a restart. This also needs
   console used, the console's channel is set aside and the page says so.
 - **Console channels live in the database**, next to the event log. A secret typed in the
   browser is encrypted with `PAEON_SECRET_KEY` before it is stored, is never shown again, and
-  is deleted with its channel. Lose the key and those channels are set aside until you save
+  is deleted with its channel. Changing where a channel sends (its server, host or port)
+  asks for its secrets again: a stored secret is never sent to a new address. Lose the key and those channels are set aside until you save
   them again with their secrets. Back up the database and keep the key somewhere else.
 - **They carry the digest and the analysis, never an approval.** Approvals are sent by the
   executor, from its own copy of the rules file, next to the key that signs them.

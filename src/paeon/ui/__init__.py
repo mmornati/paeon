@@ -81,6 +81,11 @@ async def _fields(request: Request) -> dict[str, str]:
     return {key: value for key, value in form.items() if isinstance(value, str)}
 
 
+def _client(request: Request) -> str:
+    """The address the connection comes from. Not a forwarded header: anyone can write one."""
+    return request.client.host if request.client is not None else ""
+
+
 def _next(value: str | None) -> str:
     """Where to go after signing in: a page of the console, or its first one."""
     if value and re.fullmatch(r"/ui(/[A-Za-z0-9/_.?=&%-]*)?", value) and "//" not in value:
@@ -221,7 +226,8 @@ def mount_ui(
         def signin(request: Request, next: Annotated[str | None, Query()] = None) -> Response:
             if gate.valid(request.cookies.get(COOKIE)):
                 return back(_next(next))
-            return page(request, "signin.html", next=_next(next), wait=gate.locked(), wrong=False)
+            wait = gate.locked(_client(request))
+            return page(request, "signin.html", next=_next(next), wait=wait, wrong=False)
 
         @door.post("/signin", dependencies=[Depends(_same_origin)])
         def signin_post(
@@ -229,10 +235,11 @@ def mount_ui(
             password: Annotated[str, Form(max_length=1024)] = "",
             next: Annotated[str, Form(max_length=2048)] = "/ui",
         ) -> Response:
-            was_locked = gate.locked()
-            cookie = gate.sign_in(password)
+            client = _client(request)
+            was_locked = gate.locked(client)
+            cookie = gate.sign_in(password, client)
             if cookie is None:
-                wait = gate.locked()
+                wait = gate.locked(client)
                 if wait and not was_locked:
                     store.append("console.signin_locked", {"seconds": wait})
                 return page(

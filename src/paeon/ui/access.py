@@ -30,6 +30,7 @@ Role = Literal["viewer", "operator", "admin"]
 RANK: dict[str, int] = {"viewer": 0, "operator": 1, "admin": 2}
 COOKIE = "paeon_session"
 SESSION_SECONDS = 14 * 24 * 3600
+MAX_GATES = 4096
 
 
 def allows(role: str, needed: Role) -> bool:
@@ -55,25 +56,40 @@ class Sessions:
         self._key = derive(secret_key, "session:" + hashlib.sha256(password.encode()).hexdigest())
         self._password = hashlib.sha256(password.encode()).digest()
         self._clock = clock
-        self._gate = Gate(clock=clock)
+        self._gates: dict[str, Gate] = {}
+        self._lock = threading.Lock()
 
-    def sign_in(self, password: str) -> str | None:
+    def _gate(self, client: str) -> Gate:
+        """The gate of one client address. Counted by the address of the connection itself,
+        never by a header, which anyone can write. Behind a proxy that is the proxy's address,
+        so everyone shares one gate, as a single account would."""
+        with self._lock:
+            gate = self._gates.get(client)
+            if gate is None:
+                if len(self._gates) >= MAX_GATES:  # forget the oldest: memory stays bounded
+                    self._gates.pop(next(iter(self._gates)))
+                gate = self._gates[client] = Gate(clock=self._clock)
+            return gate
+
+    def sign_in(self, password: str, client: str = "") -> str | None:
         """A cookie value for the right password. None for a wrong one, or while too many
-        wrong ones were just tried (see `locked`)."""
-        if self._gate.locked():
+        wrong ones were just tried from this client (see `locked`)."""
+        gate = self._gate(client)
+        if gate.locked():
             return None
         given = hashlib.sha256(password.encode()).digest()
         if not hmac.compare_digest(given, self._password):
-            self._gate.failed()
+            gate.failed()
             return None
-        self._gate.passed()
+        gate.passed()
         body = json.dumps({"exp": int(self._clock()) + SESSION_SECONDS}).encode()
         payload = base64.urlsafe_b64encode(body).decode().rstrip("=")
         return f"{payload}.{self._sign(payload)}"
 
-    def locked(self) -> int:
-        """Seconds until a password is looked at again; 0 when one can be tried now."""
-        return self._gate.locked()
+    def locked(self, client: str = "") -> int:
+        """Seconds until a password from this client is looked at again; 0 when one can be
+        tried now."""
+        return self._gate(client).locked()
 
     def valid(self, cookie: str | None) -> bool:
         payload, _, signature = (cookie or "").partition(".")
@@ -91,8 +107,8 @@ class Sessions:
 
 class Gate:
     """Slows guessing: after `tries` wrong passwords in a row, none is looked at for `wait`
-    seconds. One gate for the one account, so it needs no address to count by (behind a proxy
-    every request has the same one)."""
+    seconds. There is one gate per client address (see `Sessions`), so that someone guessing
+    from elsewhere does not keep the admin out."""
 
     def __init__(
         self, *, tries: int = 5, wait: int = 60, clock: Callable[[], float] = time.time
