@@ -2,10 +2,9 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## 0.1.0 (unreleased)
+## 0.1.1
 
-The first version that covers the whole design: record, observe, investigate, approve and act,
-earn autonomy.
+Security fixes, and the release workflow.
 
 ### Security
 
@@ -26,6 +25,16 @@ From a review of the code and of a deployment behind Traefik and Authentik.
 - A warning at start for a budget on a model alias without a price: it would never be reached.
 - The documentation said nothing acts on a triage verdict. It decides whether the incident is
   investigated; the threat model now says so.
+
+### Releases
+
+- A release is a tag `vX.Y.Z` on `main`: the workflow checks that the tag, the code and this
+  file agree, then publishes the image under its version and the GitHub release.
+
+## 0.1.0
+
+The first version that covers the whole design: record, observe, investigate, approve and act,
+earn autonomy.
 
 ### Acting (new, off by default)
 
