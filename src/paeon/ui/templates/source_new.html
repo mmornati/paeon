@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Add a source{% endblock %}
+{% block main %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/ui/sources">Sources</a><span>Add</span></nav>
+<div class="head">
+  <div>
+    <h1>Add a source</h1>
+    <p class="sub">Choose the monitoring service. A source can push its alerts to Paeon, be polled for them, and let an investigation read what you allow in it.</p>
+  </div>
+</div>
+
+<section class="block" aria-labelledby="h-services">
+  <div class="block-head"><h2 id="h-services">Monitoring services</h2></div>
+  <ul class="pick">
+    {% for service in services -%}
+    <li>
+      <a href="/ui/sources/add/{{ service.type }}">
+        <span class="pick-name">{{ service.label }}</span>
+        <span class="pick-what">{{ service.summary }}</span>
+        {{ icon("next") }}
+      </a>
+    </li>
+    {% endfor -%}
+  </ul>
+</section>
+{% endblock %}

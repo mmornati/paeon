@@ -46,8 +46,8 @@ log cannot account for.
 - As built (phase 2): record, correlate, triage in shadow mode, investigate read-only, draft
   postmortems, daily digest, feedback on triage. Paeon takes no action on the server.
 - The UI reads, apart from triage feedback (up / down), the kill switch, and, with
-  `ui.settings` on, notification channels: an admin adds, tests and removes the channels that
-  carry the digest and the analysis. The rules file stays the source for what it defines and
+  `ui.settings` on, notification channels and sources: an admin adds, tests and removes the channels that
+  carry the digest and the analysis, and the monitoring services alerts come from. The rules file stays the source for what it defines and
   is shown locked; nothing set in the UI can carry an approval or change what acts.
 - Three roles: viewer (reads), operator (feedback, kill switch), admin (channels).
 - Off by default (`ui.enabled`). When on, Paeon relies on the reverse proxy (Traefik with

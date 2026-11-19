@@ -15,6 +15,10 @@ A rules file and an environment of 0.3.0 work unchanged: everything below is off
   encrypted (`PAEON_SECRET_KEY`), and carry the digest and the analysis, never an approval.
   The rules file is never written, wins on a name both define, and its channels are shown
   locked. With `ui.settings` off, the file is all there is.
+- With `ui.settings`, an admin also adds sources on the Sources page. A source is connected
+  without a restart: it receives at `/ingest/<name>`, is polled if its service is, and offers
+  its tools to the next investigation. The same rules hold as for channels: the file wins on
+  a name, secrets are encrypted, and a change of server asks for them again.
 - `ui.roles`: viewer, operator and admin, from the groups header of the proxy. Without it,
   everyone the proxy lets in is an operator, as before.
 - `ui.auth: local`: the console asks for one password itself (`PAEON_UI_ADMIN_PASSWORD`), for

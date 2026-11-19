@@ -238,6 +238,11 @@ allows. An approval is exactly as strong as its channel.
   post its digest and analyses to an address of their choice, including one on your internal
   network, and whoever holds both the database and the key reads the stored secrets. Give
   the admin role to people you would give the rules file to.
+- With `ui.settings`, an admin also adds sources. A console source is read through the same
+  client as one of the rules file (listed paths only, no redirect, no URL in an error), its
+  allow-lists are the admin's, and a change of server asks for its secrets again.
+  **Residual risk:** what an admin allows in a source is what an investigation may send to
+  the model provider, and a source's server may be any address Paeon can reach.
 - The console can stop automation. It cannot approve and cannot resume.
 - The MCP server speaks on stdio, reads the database file, and has no tool that writes.
 

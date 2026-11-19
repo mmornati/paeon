@@ -26,6 +26,9 @@ from paeon.schema import (
 )
 
 Stage = Literal["triage", "investigation", "postmortem"]
+# The two tables of what the console adds. A table name cannot be a parameter of a statement:
+# it is one of these two literals, never anything read from a request.
+_ConsoleTable = Literal["console_channels", "console_sources"]
 _ADD_STAGE = {
     "investigation": "ALTER TABLE incidents ADD COLUMN investigation TEXT NOT NULL DEFAULT 'off'",
     "postmortem": "ALTER TABLE incidents ADD COLUMN postmortem TEXT NOT NULL DEFAULT 'off'",
@@ -67,6 +70,15 @@ CREATE TABLE IF NOT EXISTS cursors (
 );
 
 CREATE TABLE IF NOT EXISTS console_channels (
+    name       TEXT PRIMARY KEY,
+    type       TEXT NOT NULL,
+    config     TEXT NOT NULL,
+    stages     TEXT NOT NULL,
+    secrets    TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS console_sources (
     name       TEXT PRIMARY KEY,
     type       TEXT NOT NULL,
     config     TEXT NOT NULL,
@@ -438,9 +450,29 @@ class Store:
     # neither an address nor a secret, since it can never forget one.
 
     def console_channels(self) -> list[ConsoleChannel]:
+        return self._console_rows("console_channels")
+
+    def save_console_channel(self, channel: ConsoleChannel) -> None:
+        self._save_console_row("console_channels", channel)
+
+    def delete_console_channel(self, name: str) -> bool:
+        return self._delete_console_row("console_channels", name)
+
+    # Sources added in the console are kept the same way; `stages` is empty for them.
+
+    def console_sources(self) -> list[ConsoleChannel]:
+        return self._console_rows("console_sources")
+
+    def save_console_source(self, source: ConsoleChannel) -> None:
+        self._save_console_row("console_sources", source)
+
+    def delete_console_source(self, name: str) -> bool:
+        return self._delete_console_row("console_sources", name)
+
+    def _console_rows(self, table: _ConsoleTable) -> list[ConsoleChannel]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT name, type, config, stages, secrets, updated_at FROM console_channels"
+                f"SELECT name, type, config, stages, secrets, updated_at FROM {table}"  # noqa: S608
                 " ORDER BY name"
             ).fetchall()
         return [
@@ -455,25 +487,25 @@ class Store:
             for row in rows
         ]
 
-    def save_console_channel(self, channel: ConsoleChannel) -> None:
+    def _save_console_row(self, table: _ConsoleTable, row: ConsoleChannel) -> None:
         with self._lock:
             self._db.execute(
-                "INSERT INTO console_channels (name, type, config, stages, secrets, updated_at)"
+                f"INSERT INTO {table} (name, type, config, stages, secrets, updated_at)"  # noqa: S608
                 " VALUES (?, ?, ?, ?, ?, ?)"
                 " ON CONFLICT (name) DO UPDATE SET type = excluded.type, config = excluded.config,"
                 " stages = excluded.stages, secrets = excluded.secrets,"
                 " updated_at = excluded.updated_at",
                 (
-                    channel.name,
-                    channel.type,
-                    json.dumps(channel.config, sort_keys=True),
-                    json.dumps(list(channel.stages)),
-                    json.dumps(channel.secrets, sort_keys=True),
-                    _iso(channel.updated_at),
+                    row.name,
+                    row.type,
+                    json.dumps(row.config, sort_keys=True),
+                    json.dumps(list(row.stages)),
+                    json.dumps(row.secrets, sort_keys=True),
+                    _iso(row.updated_at),
                 ),
             )
 
-    def delete_console_channel(self, name: str) -> bool:
+    def _delete_console_row(self, table: _ConsoleTable, name: str) -> bool:
         with self._lock:
-            cursor = self._db.execute("DELETE FROM console_channels WHERE name = ?", (name,))
+            cursor = self._db.execute(f"DELETE FROM {table} WHERE name = ?", (name,))  # noqa: S608
         return cursor.rowcount > 0

@@ -4,29 +4,52 @@
 <div class="head">
   <div>
     <h1>Sources</h1>
-    <p class="sub">Where alerts come from and what an investigation may read, with the last {{ days }} days. A source is defined under <code>sources</code> in the rules file; its address and its secret are not shown here.</p>
+    <p class="sub">Where alerts come from and what an investigation may read, with the last {{ days }} days. {% if settings %}A source comes from the rules file or was added here; an address or a secret is never shown.{% else %}A source is defined under <code>sources</code> in the rules file; its address and its secret are not shown here.{% endif %}</p>
   </div>
+  {% if settings and can_admin %}<a class="btn btn-primary" href="/ui/sources/add">{{ icon("plus") }}Add a source</a>{% endif %}
 </div>
+
+{% if saved %}<p class="banner banner-ok" role="status">Source <span class="typed">{{ saved }}</span> is saved and connected. If its service pushes alerts, point it at <span class="typed">/ingest/{{ saved }}</span> with the ingest token as a bearer.</p>
+{% elif removed %}<p class="banner banner-ok" role="status">Source <span class="typed">{{ removed }}</span> is removed, with its stored secrets.</p>
+{% elif tested and answered %}<p class="banner banner-ok" role="status"><span class="typed">{{ tested }}</span> answered. What it said is on its line below.</p>
+{% elif tested %}<p class="banner" role="alert"><span class="typed">{{ tested }}</span> did not answer as expected. The reason is on its line below.</p>
+{% endif %}
 
 <section class="block" aria-labelledby="h-sources">
   <div class="block-head"><h2 id="h-sources">Monitoring services</h2></div>
   <div class="table-wrap">
   <table class="table">
-    <thead><tr><th>Source</th><th>Service</th><th>Alerts arrive</th><th class="wide">An investigation may use</th><th class="num">Fired</th><th>Last</th></tr></thead>
+    <thead><tr><th>Source</th><th>Service</th><th>Alerts arrive</th><th class="wide">An investigation may use</th><th class="num">Fired</th><th>Last</th>{% if settings and can_admin %}<th aria-label="Change"></th>{% endif %}</tr></thead>
     <tbody>
       {% for line in lines -%}
       <tr>
-        <td><span class="typed">{{ line.name }}</span></td>
+        <td>
+          {% if settings and can_admin and line.origin == "console" %}<a class="typed" href="/ui/sources/{{ line.name }}/edit">{{ line.name }}</a>{% else %}<span class="typed">{{ line.name }}</span>{% endif %}
+          {% if settings and line.origin != "console" %}<span class="tag origin">{{ icon("lock") }}{{ "rules file" if line.origin == "file" else "built in" }}</span>{% endif %}
+          {% if line.broken %}<br><span class="outcome outcome-failed">set aside</span> <span class="dim">{{ line.broken }}</span>{% endif %}
+          {% if line.probe %}<br><span class="outcome outcome-{{ "verified" if line.probe[0] else "failed" }}">{{ "answered" if line.probe[0] else "no answer" }}</span> <span class="dim">{{ line.probe[1] }}</span>{% endif %}
+        </td>
         <td>{{ line.kind }}</td>
-        <td>{% if line.address %}by webhook<br><span class="dim typed">{{ line.address }}</span>{% elif line.alerts == "polled" %}polled{% else %}<span class="dim">through another source</span>{% endif %}</td>
+        <td>{% if line.broken %}<span class="dim">not connected</span>{% elif line.address %}by webhook<br><span class="dim typed">{{ line.address }}</span>{% elif line.alerts == "polled" %}polled{% else %}<span class="dim">through another source</span>{% endif %}</td>
         <td class="wide">{% if line.tools %}{% for tool in line.tools %}<span class="typed">{{ tool }}</span>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}<span class="dim">nothing</span>{% endif %}</td>
         <td class="num">{{ line.fired }}</td>
         <td>{% if line.stale %}<span class="outcome outcome-failed">stale</span> {% endif %}{% if line.last_at %}{{ line.last_at|stamp }}{% else %}<span class="dim">no alert yet</span>{% endif %}</td>
+        {% if settings and can_admin %}
+        <td class="keep">
+          <div class="row-actions">
+            {% if line.can_test %}<form method="post" action="/ui/sources/{{ line.name }}/test"><button class="btn" aria-label="Test {{ line.name }}">Test</button></form>{% endif %}
+            {% if line.origin == "console" %}<a class="btn" href="/ui/sources/{{ line.name }}/edit" aria-label="Edit {{ line.name }}">Edit</a>{% endif %}
+          </div>
+        </td>
+        {% endif %}
       </tr>
       {% endfor -%}
     </tbody>
   </table>
   </div>
-  <div class="block-body"><p class="note">A webhook address takes the ingest token as a bearer. The tools are offered to an investigation only; what each may read is the allow-list of its source. <code>paeon source &lt;name&gt;</code> asks a service one question and says what it answered.</p></div>
+  <div class="block-body">
+    <p class="note">A webhook address takes the ingest token as a bearer. The tools are offered to an investigation only; what each may read is the allow-list of its source. <code>paeon source &lt;name&gt;</code> asks a service one question and says what it answered.</p>
+    {% if settings %}<p class="note">A source marked <strong>rules file</strong> is changed in that file, and takes effect when Paeon restarts; one marked <strong>built in</strong> is a webhook Paeon always answers. A source added here is connected at once: it receives at its address, is polled if its service is, and offers its tools to the next investigation.{% if not can_admin %} Adding and changing sources takes the admin role.{% endif %}</p>{% endif %}
+  </div>
 </section>
 {% endblock %}

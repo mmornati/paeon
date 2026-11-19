@@ -34,6 +34,7 @@ from markupsafe import Markup
 from paeon import __version__
 from paeon import postmortem as postmortems
 from paeon.channels import SERVICES, STAGES, ChannelError, Channels, Service, read_form
+from paeon.console_sources import SOURCE_SERVICES, Sources
 from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
@@ -101,8 +102,9 @@ def mount_ui(
     now: Callable[[], datetime] | None = None,
     stop: Callable[[], None] | None = None,
     proxy_secret: str | None = None,
-    sources: Sequence[views.SourceShown] = (),
+    sources: Sequence[views.SourceShown] | Callable[[], Sequence[views.SourceShown]] = (),
     channels: Channels | None = None,
+    source_book: Sources | None = None,
     sessions: Sessions | None = None,
 ) -> None:
     local = rules.ui.auth == "local"
@@ -153,7 +155,7 @@ def mount_ui(
         "notifies": channels is not None
         or any(rules.channels(stage) for stage in ("digest", "investigation", "actions")),
         "local": local,
-        "settings": channels is not None,
+        "settings": channels is not None or source_book is not None,
     }
 
     def proxied(request: Request) -> None:
@@ -538,9 +540,190 @@ def mount_ui(
             return after_save(request, name, fields)
 
     @router.get("/sources", response_class=HTMLResponse)
-    def sources_page(request: Request) -> Response:
-        lines = views.sources_view(store, sources, clock())
-        return page(request, "sources.html", lines=lines, days=30, here="sources")
+    def sources_page(
+        request: Request,
+        saved: Annotated[str | None, Query(max_length=40)] = None,
+        removed: Annotated[str | None, Query(max_length=40)] = None,
+        tested: Annotated[str | None, Query(max_length=40)] = None,
+        ok: Annotated[str | None, Query(max_length=1)] = None,
+    ) -> Response:
+        current = sources() if callable(sources) else sources
+        lines = views.sources_view(store, current, clock(), console=source_book)
+        return page(
+            request,
+            "sources.html",
+            lines=lines,
+            days=30,
+            here="sources",
+            saved=saved,
+            removed=removed,
+            tested=tested,
+            answered=ok == "1",
+        )
+
+    if source_book is not None:
+        connections = source_book
+        source_admin = [Depends(need("admin"))]
+        source_change = [Depends(_same_origin), Depends(need("admin"))]
+
+        def source_form(
+            request: Request,
+            service: Service,
+            *,
+            name: str,
+            values: dict[str, Any],
+            kept: frozenset[str] = frozenset(),
+            problems: dict[str, str] | None = None,
+            editing: bool,
+            broken: str | None = None,
+        ) -> Response:
+            plain = {spec.key for spec in service.fields if not spec.secret}
+            shown_values: dict[str, Any] = {}
+            for key, value in values.items():
+                if key not in plain:
+                    continue  # only what is not a secret goes back to the page
+                if isinstance(value, dict):
+                    shown_values[key] = "\n".join(f"{k}: {v}" for k, v in value.items())
+                elif isinstance(value, list | tuple):
+                    shown_values[key] = ", ".join(map(str, value))
+                elif isinstance(value, bool):
+                    shown_values[key] = value
+                else:
+                    shown_values[key] = str(value)
+            return page(
+                request,
+                "source_form.html",
+                status_code=422 if problems else 200,
+                service=service,
+                name=name,
+                values=shown_values,
+                kept=kept,
+                problems=problems or {},
+                editing=editing,
+                broken=broken,
+                here="sources",
+            )
+
+        def source_saved(name: str, fields: dict[str, str]) -> Response:
+            if fields.get("then") == "test" and connections.can_test(name):
+                return source_tested(name)
+            return back(f"/ui/sources?saved={quote(name)}")
+
+        def source_tested(name: str) -> Response:
+            answer = connections.test(name)
+            if answer is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            return back(f"/ui/sources?tested={quote(name)}&ok={int(answer[0])}")
+
+        @router.get("/sources/add", response_class=HTMLResponse, dependencies=source_admin)
+        def source_pick(request: Request) -> Response:
+            return page(
+                request, "source_new.html", services=SOURCE_SERVICES.values(), here="sources"
+            )
+
+        @router.get("/sources/{name}/edit", response_class=HTMLResponse, dependencies=source_admin)
+        def source_edit(request: Request, name: str) -> Response:
+            found = connections.find(name)
+            if found is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            defaults = {
+                spec.key: spec.default == "on" if spec.kind == "bool" else spec.default
+                for spec in found.service.fields
+                if spec.default and not spec.secret
+            }
+            return source_form(
+                request,
+                found.service,
+                name=name,
+                values={**defaults, **found.config},
+                kept=found.kept,
+                editing=True,
+                broken=found.broken,
+            )
+
+        @router.post("/sources/{name}/edit", dependencies=source_change)
+        def source_update(
+            request: Request, name: str, fields: Annotated[dict[str, str], Depends(_fields)]
+        ) -> Response:
+            found = connections.find(name)
+            if found is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            config, secrets, problems = read_form(found.service, fields)
+            forget = [s.key for s in found.service.fields if fields.get(f"forget_{s.key}")]
+            if not problems:
+                try:
+                    connections.save(
+                        name,
+                        found.service,
+                        config,
+                        secrets,
+                        forget=forget,
+                        creating=False,
+                        by=who(request),
+                        now=clock(),
+                    )
+                except ChannelError as exc:
+                    problems = exc.problems
+            if problems:
+                return source_form(
+                    request,
+                    found.service,
+                    name=name,
+                    values={**fields, **{k: v for k, v in config.items() if isinstance(v, bool)}},
+                    kept=found.kept,
+                    problems=problems,
+                    editing=True,
+                )
+            return source_saved(name, fields)
+
+        @router.post("/sources/{name}/test", dependencies=source_change)
+        def source_test(name: str) -> Response:
+            return source_tested(name)
+
+        @router.post("/sources/{name}/remove", dependencies=source_change)
+        def source_remove(request: Request, name: str) -> Response:
+            if not connections.remove(name, by=who(request), now=clock()):
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            return back(f"/ui/sources?removed={quote(name)}")
+
+        @router.get("/sources/add/{kind}", response_class=HTMLResponse, dependencies=source_admin)
+        def source_new(request: Request, kind: str) -> Response:
+            service = SOURCE_SERVICES.get(kind)
+            if service is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            defaults = {
+                spec.key: spec.default == "on" if spec.kind == "bool" else spec.default
+                for spec in service.fields
+                if spec.default
+            }
+            return source_form(request, service, name="", values=defaults, editing=False)
+
+        @router.post("/sources/add/{kind}", dependencies=source_change)
+        def source_create(
+            request: Request, kind: str, fields: Annotated[dict[str, str], Depends(_fields)]
+        ) -> Response:
+            service = SOURCE_SERVICES.get(kind)
+            if service is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND)
+            name = fields.get("name", "").strip()
+            config, secrets, problems = read_form(service, fields)
+            if not problems:
+                try:
+                    connections.save(
+                        name, service, config, secrets, creating=True, by=who(request), now=clock()
+                    )
+                except ChannelError as exc:
+                    problems = exc.problems
+            if problems:
+                return source_form(
+                    request,
+                    service,
+                    name=name,
+                    values={**fields, **{k: v for k, v in config.items() if isinstance(v, bool)}},
+                    problems=problems,
+                    editing=False,
+                )
+            return source_saved(name, fields)
 
     @router.get("/actions", response_class=HTMLResponse)
     def actions(request: Request, stopped: Annotated[str | None, Query()] = None) -> Response:

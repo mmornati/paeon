@@ -70,8 +70,15 @@ def _string(args: dict[str, Any], name: str, *, required: bool = True) -> str:
 
 class Toolbox:
     def __init__(self, tools: Sequence[Tool], *, max_result_chars: int = 12000) -> None:
-        self._tools = {tool.spec.name: tool for tool in tools}
+        self._base = {tool.spec.name: tool for tool in tools}
+        self._tools = dict(self._base)
         self._max = max_result_chars
+
+    def extend(self, tools: Sequence[Tool]) -> None:
+        """Replace the tools that were added after the start (those of the sources an admin
+        connects in the console). A tool the toolbox started with is never replaced."""
+        added = {tool.spec.name: tool for tool in tools if tool.spec.name not in self._base}
+        self._tools = {**self._base, **added}  # swapped at once: a run under way keeps its own
 
     @property
     def specs(self) -> list[ToolSpec]:
