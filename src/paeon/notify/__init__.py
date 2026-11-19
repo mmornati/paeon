@@ -19,12 +19,17 @@ from typing import Literal, Protocol
 import httpx2 as httpx
 
 from paeon.rules import (
+    AppriseChannel,
     Channel,
     DiscordChannel,
     EmailChannel,
+    GotifyChannel,
+    MatrixChannel,
     NtfyChannel,
+    PushoverChannel,
     Rules,
     SlackChannel,
+    TeamsChannel,
     TelegramChannel,
 )
 
@@ -94,11 +99,13 @@ def post(
     *,
     headers: Mapping[str, str] | None = None,
     transport: httpx.BaseTransport | None = None,
+    method: str = "POST",
 ) -> None:
-    """POST a JSON body. The error says the service and the status: the URL is often a secret."""
+    """Send a JSON body. The error says the service and the status: the URL is often a secret."""
     try:
         with httpx.Client(timeout=15, transport=transport) as http:
-            status = http.post(url, json=body, headers=dict(headers or {})).status_code
+            answer = http.request(method, url, json=body, headers=dict(headers or {}))
+            status = answer.status_code
     except httpx.HTTPError as exc:
         raise NotifyError(f"{kind} request failed: {type(exc).__name__}") from None
     if status >= 400:
@@ -108,6 +115,14 @@ def post(
 def cut(text: str, limit: int) -> str:
     """The text within a service's limit, with a mark where it was cut."""
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def with_links(message: Message) -> str:
+    """The text, then one line per link: for a service where a link is only text."""
+    found = links(message)
+    if not found:
+        return message.text
+    return message.text + "\n\n" + "\n".join(f"{label}: {url}" for label, url in found)
 
 
 def links(message: Message) -> list[tuple[str, str]]:
@@ -162,6 +177,28 @@ def build(
         from paeon.notify.email import EmailNotifier
 
         return EmailNotifier(name, config, secrets.get("password"))
+    if isinstance(config, GotifyChannel):
+        from paeon.notify.gotify import GotifyNotifier
+
+        return GotifyNotifier(name, config, secrets["token"], transport=transport)
+    if isinstance(config, PushoverChannel):
+        from paeon.notify.pushover import PushoverNotifier
+
+        return PushoverNotifier(
+            name, config, token=secrets["token"], user=secrets["user"], transport=transport
+        )
+    if isinstance(config, TeamsChannel):
+        from paeon.notify.teams import TeamsNotifier
+
+        return TeamsNotifier(name, config, secrets["webhook"], transport=transport)
+    if isinstance(config, MatrixChannel):
+        from paeon.notify.matrix import MatrixNotifier
+
+        return MatrixNotifier(name, config, secrets["token"], transport=transport)
+    if isinstance(config, AppriseChannel):
+        from paeon.notify.apprise import AppriseNotifier
+
+        return AppriseNotifier(name, config, secrets["urls"])
     from paeon.notify.webhook import WebhookNotifier
 
     return WebhookNotifier(

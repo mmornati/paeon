@@ -32,6 +32,10 @@ dependencies = [
     "uvicorn>=0.30",
 ]
 
+[project.optional-dependencies]
+# One adapter for the services Paeon has no adapter of its own for. Large: not installed by default.
+apprise = ["apprise>=1.9"]
+
 [project.urls]
 Homepage = "https://github.com/mmornati/paeon"
 Documentation = "https://github.com/mmornati/paeon/blob/main/docs/llm-incident-response-architecture.md"

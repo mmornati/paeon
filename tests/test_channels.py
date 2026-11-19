@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import smtplib
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx2 as httpx
 import pytest
@@ -295,3 +295,157 @@ def test_email_connects_the_way_security_says(monkeypatch: pytest.MonkeyPatch) -
         ("tls", "smtp.example.org", 465),
         ("plain", "smtp.example.org", 25),
     ]
+
+
+# --- the services without buttons of their own, and Apprise -------------------------------------
+
+CHANNELS |= {
+    "gotify": {"type": "gotify", "url": "https://gotify.example.org/", "token_env": "T"},
+    "pushover": {"type": "pushover", "token_env": "T", "user_env": "U", "device": "phone"},
+    "teams": {"type": "teams", "webhook_env": "T"},
+    "matrix": {
+        "type": "matrix",
+        "homeserver": "https://matrix.example.org",
+        "room_id": "!room:example.org",
+        "token_env": "T",
+    },
+}
+SECRETS |= {
+    "gotify": {"token": "not-a-real-token"},
+    "pushover": {"token": "not-a-real-token", "user": "not-a-real-user"},
+    "teams": {"webhook": "https://teams.example.org/workflows/not-a-real-secret"},
+    "matrix": {"token": "not-a-real-token"},
+}
+
+
+def test_gotify_posts_plain_text_with_the_links_as_lines() -> None:
+    request, body = sent_by("gotify", MESSAGE)
+    assert str(request.url) == "https://gotify.example.org/message"
+    assert request.headers["x-gotify-key"] == "not-a-real-token"
+    assert body["title"] == "Incident #7: run this fix?"
+    assert body["message"].endswith(f"\n\nGo: {GO}\nNo-go: {NOGO}")
+    assert body["priority"] == 8
+    assert body["extras"] == {"client::notification": {"click": {"url": PAGE}}}
+    _, quiet = sent_by("gotify", QUIET)
+    assert (quiet["message"], "extras" in quiet) == ("2 incidents", False)
+
+
+def test_pushover_keeps_the_links_whole_and_never_sends_an_emergency() -> None:
+    request, body = sent_by("pushover", MESSAGE)
+    assert str(request.url) == "https://api.pushover.net/1/messages.json"
+    assert (body["token"], body["user"], body["device"]) == (
+        "not-a-real-token",
+        "not-a-real-user",
+        "phone",
+    )
+    assert (body["html"], body["priority"]) == (1, 1)
+    assert "&lt;@everyone&gt; &amp; co" in body["message"]  # escaped: only the links are markup
+    assert body["message"].endswith(f'<a href="{GO}">Go</a>\n<a href="{NOGO}">No-go</a>')
+    assert (body["url"], body["url_title"]) == (PAGE, "Details")
+
+    long = Message(title="t", text="<&>" * 2000, priority=5, buttons=MESSAGE.buttons)
+    _, cut = sent_by("pushover", long)
+    assert len(cut["message"]) <= 1024
+    assert cut["message"].endswith(f'<a href="{NOGO}">No-go</a>')
+    assert "&l…" not in cut["message"]  # no half entity
+    assert "&am…" not in cut["message"]
+    assert cut["priority"] == 1  # urgent is high, not the emergency that repeats
+    _, quiet = sent_by("pushover", QUIET)
+    assert (quiet["priority"], quiet["message"], "url" in quiet) == (-1, "2 incidents", False)
+
+
+def test_teams_posts_a_card_whose_text_is_not_markdown() -> None:
+    _, body = sent_by("teams", MESSAGE)
+    (attachment,) = body["attachments"]
+    assert attachment["contentType"] == "application/vnd.microsoft.card.adaptive"
+    card = attachment["content"]
+    assert [block["type"] for block in card["body"]] == ["RichTextBlock", "RichTextBlock"]
+    assert card["body"][1]["inlines"][0]["text"] == MESSAGE.text
+    assert [(a["type"], a["title"], a["url"]) for a in card["actions"]] == [
+        ("Action.OpenUrl", "Go", GO),
+        ("Action.OpenUrl", "No-go", NOGO),
+        ("Action.OpenUrl", "Details", PAGE),
+    ]
+
+
+def test_matrix_puts_a_message_in_the_room_with_escaped_html() -> None:
+    request, body = sent_by("matrix", MESSAGE)
+    assert request.method == "PUT"
+    path = request.url.raw_path.decode()
+    assert path.startswith("/_matrix/client/v3/rooms/%21room%3Aexample.org/send/m.room.message/")
+    assert request.headers["authorization"] == "Bearer not-a-real-token"
+    assert body["msgtype"] == "m.text"
+    assert body["body"].endswith(f"Go: {GO}\nNo-go: {NOGO}\nDetails: {PAGE}")
+    assert "&lt;@everyone&gt; &amp; co" in body["formatted_body"]
+    assert f'<a href="{GO}">Go</a>' in body["formatted_body"]
+    again, _ = sent_by("matrix", MESSAGE)
+    assert again.url != request.url  # a transaction id of its own each time
+
+
+class FakeApprise:
+    """What Paeon uses of the `apprise` module."""
+
+    class NotifyType:
+        INFO = "info"
+        WARNING = "warning"
+
+    class NotifyFormat:
+        TEXT = "text"
+
+    answers: ClassVar[bool | None] = True
+    sent: ClassVar[list[dict[str, Any]]] = []
+    added: ClassVar[list[str]] = []
+
+    @classmethod
+    def Apprise(cls) -> type[FakeApprise]:
+        cls.sent, cls.added = [], []
+        return cls
+
+    @classmethod
+    def add(cls, url: str) -> bool:
+        cls.added.append(url)
+        return not url.startswith("nothing://")
+
+    @classmethod
+    def notify(cls, **message: Any) -> bool:
+        if cls.answers is None:
+            raise OSError("https://secret.example.org refused")
+        cls.sent.append(message)
+        return bool(cls.answers)
+
+
+def apprise(urls: str) -> notify.Notifier:
+    rules = parse_rules({"notifiers": {"more": {"type": "apprise", "urls_env": "T"}}})
+    return notify.build("more", rules.notifiers["more"], {"urls": urls})
+
+
+def test_apprise_is_optional_and_says_how_to_get_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+
+    monkeypatch.setitem(sys.modules, "apprise", None)  # as if it were not installed
+    with pytest.raises(NotifyError, match=r"pip install 'paeon\[apprise\]'"):
+        apprise("signal://not-a-real-secret")
+
+    monkeypatch.setitem(sys.modules, "apprise", FakeApprise)
+    with pytest.raises(NotifyError, match="was not understood") as caught:
+        apprise("signal://not-a-real-secret nothing://x")
+    assert "not-a-real-secret" not in str(caught.value)
+
+    built = apprise("signal://not-a-real-secret\nsns://not-a-real-secret")
+    assert FakeApprise.added == ["signal://not-a-real-secret", "sns://not-a-real-secret"]
+    assert (built.kind, built.where) == ("apprise", "apprise")
+    built.send(MESSAGE)
+    (sent,) = FakeApprise.sent
+    assert (sent["title"], sent["notify_type"]) == (MESSAGE.title, "warning")
+    assert sent["body_format"] == "text"  # never read as markup by the service behind
+    assert sent["body"].endswith(f"Go: {GO}\nNo-go: {NOGO}\nDetails: {PAGE}")
+    built.send(QUIET)
+    assert FakeApprise.sent[1]["notify_type"] == "info"
+
+    monkeypatch.setattr(FakeApprise, "answers", False)
+    with pytest.raises(NotifyError, match="apprise could not deliver"):
+        built.send(MESSAGE)
+    monkeypatch.setattr(FakeApprise, "answers", None)
+    with pytest.raises(NotifyError) as failed:
+        built.send(MESSAGE)
+    assert str(failed.value) == "apprise failed: OSError"

@@ -20,6 +20,14 @@ Paeon is pre-1.0: anything may change between versions. Dates are the day of the
 - A channel's secret (a bot token, a webhook URL, a password) is named by its `*_env` key and
   read only by the process that sends to it. A listed channel without its secret stops the
   start; an error of a channel names the service and the status, never the URL.
+- Four services without buttons of their own, where the links are part of the message:
+  `gotify`, `pushover` (never its repeating emergency priority), `teams` (a card on a Workflows
+  webhook, with buttons that open the link) and `matrix`.
+- `apprise`, for every other service: an optional install (`pip install 'paeon[apprise]'`),
+  imported only when a channel of that type is configured. The image does not include it.
+- Text from an alert is never read as markup by a service: no parse mode on Telegram, markdown
+  switched off on Discord, escaped on Slack, in HTML mail, on Pushover and on Matrix, and text
+  runs on Teams.
 
 ## 0.1.1
 
