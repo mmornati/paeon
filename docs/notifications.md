@@ -93,8 +93,9 @@ family: { type: telegram, chat_id: "-1001234567890", token_env: PAEON_TELEGRAM_T
 2. Start a chat with the bot, or add it to a group.
 3. `chat_id` is that chat's id: your user id for a private chat, a negative number for a group.
 
-Messages are sent as plain text. At digest priority they arrive without a sound. Telegram
-refuses a button whose link is not a public `http(s)` address, so `public_url` must be one.
+Messages are sent as plain text. At digest priority they arrive without a sound. A button's
+link must be an address Telegram accepts: use a public `https` name for `public_url`, not an
+internal host name.
 
 ### Discord
 
@@ -113,8 +114,9 @@ team: { type: slack, webhook_env: PAEON_SLACK_WEBHOOK }
 ```
 
 Create an app with an [incoming webhook](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)
-for the channel; the URL is the secret. Links are in the text, not buttons: a Slack button
-expects an app that answers the click, and a webhook has none.
+for the channel; the URL is the secret. Links are in the text, not buttons: Slack sends every
+button click, even of a button that only opens a link, to the app's interactivity endpoint, and
+an app that only has a webhook has none to answer it.
 
 ### E-mail
 
