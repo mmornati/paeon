@@ -20,7 +20,7 @@ from paeon.notify import Message, deliver
 from paeon.rules import Channel, RulesError, Source, parse_rules
 from paeon.store import Store
 from paeon.tools import Toolbox
-from paeon.ui.access import Gate, Sessions, role_from_groups
+from paeon.ui.access import Gate, Passwords, Sessions, role_from_groups
 from paeon.vault import Vault, VaultError
 
 TOKEN = "t" * 32
@@ -894,3 +894,149 @@ def test_each_source_form_renders(store: Store, kind: str) -> None:
         assert f'name="{spec.key}"' in text
     assert "is sent to the model that investigates" in text
     assert "[REDACTED]" not in text  # a help line must not read like a secret
+
+
+# --- a start with no rules file, finished in the browser ----------------------------------------
+
+
+def test_paeon_console_local_turns_the_console_on_without_a_file(tmp_path: Path) -> None:
+    env = {"PAEON_INGEST_TOKEN": TOKEN, "PAEON_CONSOLE": "local"}
+    with pytest.raises(ConfigError, match="PAEON_SECRET_KEY"):
+        load(env)
+    loaded = load({**env, "PAEON_SECRET_KEY": KEY})
+    assert (loaded.rules.ui.enabled, loaded.rules.ui.auth, loaded.rules.ui.settings) == (
+        True,
+        "local",
+        True,
+    )
+    assert loaded.ui_admin_password is None  # it will be chosen in the browser
+    with pytest.raises(ConfigError, match="the one value is `local`"):
+        load({**env, "PAEON_SECRET_KEY": KEY, "PAEON_CONSOLE": "yes"})
+    rules = tmp_path / "paeon.yaml"
+    rules.write_text("ui: {enabled: true}\n")
+    with pytest.raises(ConfigError, match="no rules file"):
+        load({**env, "PAEON_SECRET_KEY": KEY, "PAEON_CONFIG": str(rules)})
+
+
+def first_run(store: Store, caplog: pytest.LogCaptureFixture) -> tuple[TestClient, str]:
+    base = load({"PAEON_INGEST_TOKEN": TOKEN, "PAEON_CONSOLE": "local", "PAEON_SECRET_KEY": KEY})
+    with caplog.at_level("WARNING", logger="paeon.ui"):
+        client = TestClient(create_app(base, store), follow_redirects=False)
+    line = next(r.getMessage() for r in caplog.records if "/ui/setup" in r.getMessage())
+    return client, line.rsplit(" ", 1)[-1]
+
+
+def test_the_first_visit_chooses_the_password_with_the_code_from_the_log(
+    store: Store, caplog: pytest.LogCaptureFixture
+) -> None:
+    client, code = first_run(store, caplog)
+    assert client.get("/ui").headers["location"] == "/ui/setup"
+    assert client.get("/ui/signin").headers["location"] == "/ui/setup"
+    assert "Choose the admin password" in client.get("/ui/setup").text
+
+    chosen = {"code": code, "password": PASSWORD, "again": PASSWORD}
+    assert client.post("/ui/setup", data=chosen).status_code == 403  # cross-site
+    short = client.post(
+        "/ui/setup", data={**chosen, "password": "short", "again": "short"}, headers=SAME
+    )
+    assert short.status_code == 422
+    assert "12 characters or more" in short.text
+    differ = client.post("/ui/setup", data={**chosen, "again": PASSWORD + "x"}, headers=SAME)
+    assert differ.status_code == 422
+    assert "not the same" in differ.text
+    wrong = client.post("/ui/setup", data={**chosen, "code": "guess"}, headers=SAME)
+    assert wrong.status_code == 401
+    assert "not the code" in wrong.text
+    assert client.get("/ui").headers["location"] == "/ui/setup"
+
+    done = client.post("/ui/setup", data=chosen, headers=SAME)
+    assert done.status_code == 303
+    assert done.headers["location"] == "/ui"
+    assert "HttpOnly" in done.headers["set-cookie"]
+    board = client.get("/ui")
+    assert board.status_code == 200
+    assert "Finish setting up" in board.text
+    assert [e.kind for e in store.events()] == ["console.setup"]
+
+    # The code is spent, the password is not kept in clear, and it signs in from then on.
+    again = client.post("/ui/setup", data=chosen, headers=SAME)
+    assert again.headers["location"] == "/ui/signin"
+    kept = store.console_state("admin_password")
+    assert kept is not None
+    assert kept.startswith("scrypt$")
+    assert PASSWORD not in kept
+    client.post("/ui/signout", headers=SAME)
+    assert client.get("/ui").headers["location"].startswith("/ui/signin")
+    signed = client.post("/ui/signin", data={"password": PASSWORD}, headers=SAME)
+    assert signed.status_code == 303
+
+
+def test_the_setup_code_cannot_be_guessed_at_leisure(
+    store: Store, caplog: pytest.LogCaptureFixture
+) -> None:
+    client, code = first_run(store, caplog)
+    guess = {"code": "guess", "password": PASSWORD, "again": PASSWORD}
+    for _ in range(5):
+        client.post("/ui/setup", data=guess, headers=SAME)
+    locked = client.post("/ui/setup", data={**guess, "code": code}, headers=SAME)
+    assert locked.status_code == 429
+    assert "Too many wrong codes" in locked.text
+    assert store.console_state("admin_password") is None
+
+
+def test_a_restart_keeps_the_chosen_password_and_prints_no_code(
+    store: Store, caplog: pytest.LogCaptureFixture
+) -> None:
+    client, code = first_run(store, caplog)
+    client.post(
+        "/ui/setup", data={"code": code, "password": PASSWORD, "again": PASSWORD}, headers=SAME
+    )
+    caplog.clear()
+    base = load({"PAEON_INGEST_TOKEN": TOKEN, "PAEON_CONSOLE": "local", "PAEON_SECRET_KEY": KEY})
+    with caplog.at_level("WARNING", logger="paeon.ui"):
+        restarted = TestClient(create_app(base, store), follow_redirects=False)
+    assert not [r for r in caplog.records if "/ui/setup" in r.getMessage()]
+    assert restarted.get("/ui").headers["location"].startswith("/ui/signin")
+    assert restarted.get("/ui/setup").headers["location"] == "/ui/signin"
+    assert restarted.cookies.get("paeon_session") is None
+    # The session of before the restart still stands: nothing about it was in memory.
+    assert client.get("/ui").status_code == 200
+
+
+def test_the_environment_password_takes_over_a_chosen_one(store: Store) -> None:
+    passwords = Passwords(store)
+    assert not passwords.ready()
+    passwords.choose(PASSWORD)
+    assert passwords.check(PASSWORD)
+    assert not passwords.check("another password!")
+    before = Sessions(KEY, passwords).issue()
+    fixed = Passwords(store, "the way back in 123")
+    assert fixed.check("the way back in 123")
+    assert not fixed.check(PASSWORD)
+    assert not Sessions(KEY, fixed).valid(before)  # and everyone is signed out
+
+
+def test_the_getting_started_list_goes_away_once_done(store: Store) -> None:
+    outbox = Outbox()
+    client = app_for(store, LOCAL_UI, outbox)
+    client.post("/ui/signin", data={"password": PASSWORD}, headers=SAME)
+    board = client.get("/ui").text
+    assert "Finish setting up" in board
+    assert "0 of 3 done" in board
+    assert 'class="btn btn-primary" href="/ui/sources/add"' in board
+
+    client.post("/ui/channels/add/ntfy", data=NTFY, headers=SAME)
+    board = client.get("/ui").text
+    assert "1 of 3 done" in board
+
+    alert = {"alerts": [{"status": "firing", "labels": {"alertname": "Down"}, "fingerprint": "f1"}]}
+    client.post("/ingest/alertmanager", json=alert, headers=BEARER)
+    assert "Finish setting up" not in client.get("/ui").text
+
+
+def test_the_getting_started_list_is_for_the_admin_of_a_console_that_can_change(
+    store: Store,
+) -> None:
+    assert "Finish setting up" not in app_for(store, PROXIED_UI).get("/ui", headers=VIEWER).text
+    assert "Finish setting up" in app_for(store, PROXIED_UI).get("/ui", headers=ADMIN).text
+    assert "Finish setting up" not in app_for(store, {"enabled": True}).get("/ui").text

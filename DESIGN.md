@@ -712,8 +712,11 @@ that fades from one colour to another is not used anywhere.
   removed. Always a sentence, placed under the page head.
 - **Origin tag**: an outlined tag with a lock, `rules file`, beside a channel the console
   shows and cannot change.
-- **Sign-in** (`.door`): the one page with no shell: a single card in the middle of the
-  screen, with the mark, one field and the filled button.
+- **Sign-in and setup** (`.door`): the two pages with no shell: a single card in the middle
+  of the screen, with the mark, its fields and the filled button.
+- **Getting started** (on the board, for an admin, until done): one card of numbered steps,
+  the plan-step list reused. A done step turns its number green and carries a `done` badge;
+  the first step left has the filled button, the others the neutral one.
 - **Stat tile, meter, chart**: a label, a figure, a line under it. Meters and the bars of the
   spend chart are SVG whose sizes are attributes, in the accent; a spent budget turns red and
   says "reached".

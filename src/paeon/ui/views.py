@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -349,6 +349,8 @@ def describe(event: Event) -> str:
             return f"Source {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
         case "console.channel.removed":
             return f"Channel {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
+        case "console.setup":
+            return "The console's admin password was chosen"
         case "console.signin":
             return "Signed in to the console"
         case "console.signin_locked":
@@ -912,6 +914,58 @@ def stages(rules: Rules) -> tuple[tuple[str, str], ...]:
         ("Postmortems", "drafts" if rules.postmortems.enabled else "off"),
         ("Actions", "by the executor" if rules.actions.enabled else "none"),
     )
+
+
+# --- getting started ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SetupStep:
+    title: str
+    text: str
+    done: bool
+    link: str
+    action: str
+    next: bool = False  # the first one that is not done: its button is the filled one
+
+
+def setup_steps(
+    store: Store, rules: Rules, channels: Channels | None, sources: Sources | None
+) -> tuple[SetupStep, ...] | None:
+    """What is left before Paeon is of use, for an admin who configures it in the browser.
+    None once it is all done: the board is then the board and nothing else."""
+    connected = bool(rules.sources) or (sources is not None and bool(sources.shown()))
+    received = bool(list(store.events(kinds=("alert.firing", "webhook.received"), limit=1)))
+    told = any(rules.channels(stage) for stage in ("digest", "investigation", "actions"))
+    steps = (
+        SetupStep(
+            "Connect what watches your server",
+            "Prometheus, Grafana, uptime-kuma, Loki and others: where alerts come from, and"
+            " what an investigation may read.",
+            connected or received,
+            "/ui/sources/add",
+            "Add a source",
+        ),
+        SetupStep(
+            "Send a first alert",
+            "Point your monitoring at the address its source shows, with the ingest token as"
+            " a bearer. The alert appears below as an incident.",
+            received,
+            "/ui/sources",
+            "See the addresses",
+        ),
+        SetupStep(
+            "Choose where Paeon tells you",
+            "ntfy, Telegram, e-mail and others: where the daily digest and each analysis go.",
+            told,
+            "/ui/channels/add",
+            "Add a channel",
+        ),
+    )
+    if all(step.done for step in steps):
+        return None
+    first = next(index for index, step in enumerate(steps) if not step.done)
+    return tuple(replace(step, next=index == first) for index, step in enumerate(steps))
 
 
 # --- channels ----------------------------------------------------------------------------------

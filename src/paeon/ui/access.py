@@ -8,8 +8,10 @@ Where the role comes from depends on `ui.auth`:
 - `proxy` (the default): a reverse proxy authenticates. With `ui.roles`, the groups it names
   for the request decide; without, everyone it lets in is an operator, as before roles existed,
   and nobody is an admin.
-- `local`: the console asks for one password, and whoever has it is the admin. The session is
-  a signed cookie; nothing about it is stored, and changing the password or the key ends it.
+- `local`: the console asks for one password, and whoever has it is the admin. The password
+  is the environment's, or is chosen in the browser the first time, with a code Paeon prints
+  when it starts. The session is a signed cookie; nothing about it is stored, and changing
+  the password or the key ends it.
 """
 
 from __future__ import annotations
@@ -19,13 +21,17 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import os
 import threading
 import time
 from collections.abc import Callable
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from paeon.rules import Roles
 from paeon.vault import derive
+
+if TYPE_CHECKING:
+    from paeon.store import Store
 
 Role = Literal["viewer", "operator", "admin"]
 RANK: dict[str, int] = {"viewer": 0, "operator": 1, "admin": 2}
@@ -65,15 +71,72 @@ def role_from_groups(roles: Roles, header: str | None) -> Role:
     return "viewer"
 
 
+class Passwords:
+    """The admin's password. The environment's, when it gives one (PAEON_UI_ADMIN_PASSWORD):
+    that is also the way back in when the other is forgotten. Otherwise the one chosen in the
+    browser at setup, of which only a salted scrypt hash is kept."""
+
+    KEY = "admin_password"
+
+    def __init__(self, store: Store | None, fixed: str | None = None) -> None:
+        self._store = store
+        self._fixed = fixed or None
+
+    def ready(self) -> bool:
+        return self._fixed is not None or self._stored() is not None
+
+    def check(self, password: str) -> bool:
+        if self._fixed is not None:
+            given = hashlib.sha256(password.encode()).digest()
+            return hmac.compare_digest(given, hashlib.sha256(self._fixed.encode()).digest())
+        stored = self._stored()
+        if stored is None:
+            return False
+        try:
+            _, n, r, p, salt, wanted = stored.split("$")
+            found = hashlib.scrypt(
+                password.encode(),
+                salt=base64.b64decode(salt),
+                n=int(n),
+                r=int(r),
+                p=int(p),
+                dklen=32,
+            )
+            return hmac.compare_digest(found, base64.b64decode(wanted))
+        except ValueError:
+            return False
+
+    def choose(self, password: str) -> None:
+        if self._store is None:
+            raise RuntimeError("no store to keep a password in")
+        salt = os.urandom(16)
+        n, r, p = 2**14, 8, 1
+        found = hashlib.scrypt(password.encode(), salt=salt, n=n, r=r, p=p, dklen=32)
+        encoded = (base64.b64encode(part).decode() for part in (salt, found))
+        self._store.set_console_state(
+            self.KEY, "$".join(["scrypt", str(n), str(r), str(p), *encoded])
+        )
+
+    def stamp(self) -> str:
+        """Changes when the password does: it is part of what signs a session."""
+        return hashlib.sha256((self._fixed or self._stored() or "").encode()).hexdigest()
+
+    def _stored(self) -> str | None:
+        return None if self._store is None else self._store.console_state(self.KEY)
+
+
 class Sessions:
     """Signed, expiring cookies for the one local admin."""
 
     def __init__(
-        self, secret_key: str, password: str, *, clock: Callable[[], float] = time.time
+        self,
+        secret_key: str,
+        password: str | Passwords,
+        *,
+        clock: Callable[[], float] = time.time,
     ) -> None:
-        # The password is part of the key: changing it signs everyone out.
-        self._key = derive(secret_key, "session:" + hashlib.sha256(password.encode()).hexdigest())
-        self._password = hashlib.sha256(password.encode()).digest()
+        self._secret = secret_key
+        self.passwords = password if isinstance(password, Passwords) else Passwords(None, password)
         self._clock = clock
         self._gates: dict[str, Gate] = {}
         # Whatever the address: many addresses are cheap (a /64 of IPv6 is one network), so
@@ -96,19 +159,28 @@ class Sessions:
                 gate = self._gates[key] = Gate(clock=self._clock)
             return gate
 
-    def sign_in(self, password: str, client: str = "") -> str | None:
-        """A cookie value for the right password. None for a wrong one, or while too many
-        wrong ones were just tried, from this client or from all of them (see `locked`)."""
+    def attempt(self, client: str, right: Callable[[], bool]) -> bool:
+        """One guess at a secret, counted. False without looking while too many wrong ones
+        were just made, from this client or from all of them (see `locked`)."""
         gate = self._gate(client)
         if gate.locked() or self._everyone.locked():
-            return None
-        given = hashlib.sha256(password.encode()).digest()
-        if not hmac.compare_digest(given, self._password):
+            return False
+        if not right():
             gate.failed()
             self._everyone.failed()
-            return None
+            return False
         gate.passed()
         self._everyone.passed()
+        return True
+
+    def sign_in(self, password: str, client: str = "") -> str | None:
+        """A cookie value for the right password, or None."""
+        if not self.attempt(client, lambda: self.passwords.check(password)):
+            return None
+        return self.issue()
+
+    def issue(self) -> str:
+        """A cookie value, for someone who has just proved who they are."""
         body = json.dumps({"exp": int(self._clock()) + SESSION_SECONDS}).encode()
         payload = base64.urlsafe_b64encode(body).decode().rstrip("=")
         return f"{payload}.{self._sign(payload)}"
@@ -120,6 +192,8 @@ class Sessions:
 
     def valid(self, cookie: str | None) -> bool:
         payload, _, signature = (cookie or "").partition(".")
+        if not self.passwords.ready():
+            return False  # no password yet: nobody can have signed in
         if not payload or not hmac.compare_digest(signature, self._sign(payload)):
             return False
         try:
@@ -129,7 +203,9 @@ class Sessions:
             return False
 
     def _sign(self, payload: str) -> str:
-        return hmac.new(self._key, payload.encode(), hashlib.sha256).hexdigest()
+        # The password is part of the key: changing it signs everyone out.
+        key = derive(self._secret, "session:" + self.passwords.stamp())
+        return hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()
 
 
 class Gate:

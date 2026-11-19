@@ -17,7 +17,9 @@ forbids it, so that nothing a log line contains can load or run.
 from __future__ import annotations
 
 import hmac
+import logging
 import re
+import secrets
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -42,6 +44,7 @@ from paeon.ui import markdown, views
 from paeon.ui.access import COOKIE, SESSION_SECONDS, Role, Sessions, allows, role_from_groups
 
 _HERE = Path(__file__).parent
+_log = logging.getLogger(__name__)
 PAGE = 100
 HEADERS = {
     "Content-Security-Policy": (
@@ -177,6 +180,10 @@ def mount_ui(
             if not sessions.valid(request.cookies.get(COOKIE)):
                 if request.method != "GET" or request.url.path == "/ui/board":
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "signed out")
+                if not sessions.passwords.ready():
+                    raise HTTPException(
+                        status.HTTP_303_SEE_OTHER, headers={**HEADERS, "Location": "/ui/setup"}
+                    )
                 here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
                 raise HTTPException(
                     status.HTTP_303_SEE_OTHER,
@@ -224,8 +231,71 @@ def mount_ui(
     if sessions is not None:
         gate = sessions
 
+        def signed_in(request: Request, cookie: str, where: str) -> Response:
+            response = back(where)
+            secure = "https" in (request.url.scheme, request.headers.get("x-forwarded-proto"))
+            response.set_cookie(
+                COOKIE,
+                cookie,
+                max_age=SESSION_SECONDS,
+                path="/ui",
+                httponly=True,
+                samesite="strict",
+                secure=secure,
+            )
+            return response
+
+        # No password yet: it is chosen in the browser, by whoever can read Paeon's log. The
+        # code is new at each start and stops working once a password exists.
+        setup_code = "" if gate.passwords.ready() else secrets.token_urlsafe(9)
+        if setup_code:
+            _log.warning(
+                "The console has no admin password yet. Open /ui/setup and enter this"
+                " code to choose one: %s",
+                setup_code,
+            )
+
+        def setup_page(request: Request, problem: str = "", status_code: int = 200) -> Response:
+            wait = gate.locked(_client(request))
+            return page(request, "setup.html", status_code, wait=wait, problem=problem)
+
+        @door.get("/setup", response_class=HTMLResponse)
+        def setup(request: Request) -> Response:
+            if gate.passwords.ready():
+                return back("/ui/signin")
+            return setup_page(request)
+
+        @door.post("/setup", dependencies=[Depends(_same_origin)])
+        def setup_post(
+            request: Request,
+            code: Annotated[str, Form(max_length=200)] = "",
+            password: Annotated[str, Form(max_length=1024)] = "",
+            again: Annotated[str, Form(max_length=1024)] = "",
+        ) -> Response:
+            if gate.passwords.ready() or not setup_code:
+                return back("/ui/signin")
+            if len(password) < 12:
+                return setup_page(request, "Choose a password of 12 characters or more.", 422)
+            if password != again:
+                return setup_page(request, "The two passwords are not the same.", 422)
+            given = code.strip().encode()
+            if not gate.attempt(
+                _client(request), lambda: hmac.compare_digest(given, setup_code.encode())
+            ):
+                wait = gate.locked(_client(request))
+                return setup_page(
+                    request,
+                    "" if wait else "That is not the code Paeon printed when it started.",
+                    status.HTTP_429_TOO_MANY_REQUESTS if wait else status.HTTP_401_UNAUTHORIZED,
+                )
+            gate.passwords.choose(password)
+            store.append("console.setup", {"role": "admin"})
+            return signed_in(request, gate.issue(), "/ui")
+
         @door.get("/signin", response_class=HTMLResponse)
         def signin(request: Request, next: Annotated[str | None, Query()] = None) -> Response:
+            if not gate.passwords.ready():
+                return back("/ui/setup")
             if gate.valid(request.cookies.get(COOKIE)):
                 return back(_next(next))
             wait = gate.locked(_client(request))
@@ -255,18 +325,7 @@ def mount_ui(
                     wrong=not was_locked,
                 )
             store.append("console.signin", {"role": "admin"})
-            response = back(_next(next))
-            secure = "https" in (request.url.scheme, request.headers.get("x-forwarded-proto"))
-            response.set_cookie(
-                COOKIE,
-                cookie,
-                max_age=SESSION_SECONDS,
-                path="/ui",
-                httponly=True,
-                samesite="strict",
-                secure=secure,
-            )
-            return response
+            return signed_in(request, cookie, _next(next))
 
         @door.post("/signout", dependencies=[Depends(_same_origin)])
         def signout() -> Response:
@@ -277,7 +336,13 @@ def mount_ui(
     @router.get("", response_class=HTMLResponse)
     def board(request: Request) -> Response:
         bays = views.board(store, clock(), acting=acting)
-        return page(request, "board.html", bays=bays, here="board")
+        steps = None
+        if (channels is not None or source_book is not None) and allows(
+            request.state.role, "admin"
+        ):
+            current = rules if channels is None else channels.rules
+            steps = views.setup_steps(store, current, channels, source_book)
+        return page(request, "board.html", bays=bays, here="board", steps=steps)
 
     @router.get("/board", response_class=HTMLResponse)
     def board_fragment(request: Request) -> Response:

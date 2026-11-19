@@ -19,6 +19,11 @@ A rules file and an environment of 0.3.0 work unchanged: everything below is off
   without a restart: it receives at `/ingest/<name>`, is polled if its service is, and offers
   its tools to the next investigation. The same rules hold as for channels: the file wins on
   a name, secrets are encrypted, and a change of server asks for them again.
+- `PAEON_CONSOLE=local`: a start with no rules file. The console is on, asks for a password
+  and lets its admin add sources and channels; the incidents page lists what is left to do.
+- With `ui.auth: local` and no `PAEON_UI_ADMIN_PASSWORD`, the password is chosen in the
+  browser the first time, with a code printed in the log. The quickstart now ends in the
+  console instead of a rules file.
 - `ui.roles`: viewer, operator and admin, from the groups header of the proxy. Without it,
   everyone the proxy lets in is an operator, as before.
 - `ui.auth: local`: the console asks for one password itself (`PAEON_UI_ADMIN_PASSWORD`), for

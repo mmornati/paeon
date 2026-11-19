@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from paeon.rules import Rules, RulesError, load_rules
+from paeon.rules import Rules, RulesError, Ui, load_rules
 
 log = logging.getLogger(__name__)
 
@@ -166,6 +166,18 @@ def load(env: Mapping[str, str]) -> Settings:
             rules = load_rules(Path(rules_path))
         except RulesError as exc:
             raise ConfigError(f"PAEON_CONFIG: {exc}") from exc
+    console = env.get("PAEON_CONSOLE", "").strip().lower()
+    if console:
+        # A start with no rules file, finished in the browser: the console is on, asks for a
+        # password itself, and lets its admin add sources and channels.
+        if console != "local":
+            raise ConfigError("PAEON_CONSOLE: the one value is `local`")
+        if rules_path:
+            raise ConfigError(
+                "PAEON_CONSOLE is for a start with no rules file: with PAEON_CONFIG, the"
+                " file's `ui` section says what the console does"
+            )
+        rules = Rules(ui=Ui(enabled=True, auth="local", settings=True))
     for warning in rules.unpriced_budgets():
         log.warning("%s", warning)
     if openobserve is not None and "openobserve" in rules.sources:
@@ -199,12 +211,10 @@ def load(env: Mapping[str, str]) -> Settings:
             " 32 characters or more"
         )
     admin_password = _secret(env, "PAEON_UI_ADMIN_PASSWORD")
-    if rules.ui.enabled and rules.ui.auth == "local" and len(admin_password) < 12:
-        # Fail closed: with no proxy in front, this password is all that guards the console.
-        raise ConfigError(
-            "ui.auth: local is set: PAEON_UI_ADMIN_PASSWORD (or _FILE) is required,"
-            " 12 characters or more"
-        )
+    if admin_password and len(admin_password) < 12:
+        # With no proxy in front, this password is all that guards the console. Without the
+        # variable, the password is chosen in the browser, with a code printed at start.
+        raise ConfigError("PAEON_UI_ADMIN_PASSWORD (or _FILE) is 12 characters or more")
     kuma = rules.investigation.tools.uptime_kuma
     kuma_key = _secret(env, kuma.api_key_env) if kuma is not None and kuma.api_key_env else ""
 

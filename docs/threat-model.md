@@ -219,6 +219,11 @@ allows. An approval is exactly as strong as its channel.
   the same Docker network does not know. State-changing forms refuse
   cross-site requests. Pages load nothing from another host (a strict Content-Security-Policy),
   so text from a log cannot load or run anything.
+- With `ui.auth: local` and no password in the environment, the first visitor chooses it,
+  after entering a code Paeon prints in its log at each start: whoever reads the log of the
+  server owns the console, as whoever reads its environment does. The code is counted like a
+  password (five wrong ones pause that address), stops working once a password exists, and
+  only a salted scrypt hash of the password is stored.
 - With `ui.auth: local` the console asks for one password itself. It is compared in constant
   time, five wrong ones in a row from one address (one /64 for IPv6) pause sign-in from that address
   for a minute, fifty in a row from anywhere pause it for everyone, so someone guessing hard
