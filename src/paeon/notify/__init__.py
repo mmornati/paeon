@@ -18,7 +18,15 @@ from typing import Literal, Protocol
 
 import httpx2 as httpx
 
-from paeon.rules import Channel, NtfyChannel, Rules
+from paeon.rules import (
+    Channel,
+    DiscordChannel,
+    EmailChannel,
+    NtfyChannel,
+    Rules,
+    SlackChannel,
+    TelegramChannel,
+)
 
 log = logging.getLogger(__name__)
 
@@ -79,6 +87,37 @@ class Delivery:
         return "notification.failed", {**payload, "error": self.error}
 
 
+def post(
+    kind: str,
+    url: str,
+    body: object,
+    *,
+    headers: Mapping[str, str] | None = None,
+    transport: httpx.BaseTransport | None = None,
+) -> None:
+    """POST a JSON body. The error says the service and the status: the URL is often a secret."""
+    try:
+        with httpx.Client(timeout=15, transport=transport) as http:
+            status = http.post(url, json=body, headers=dict(headers or {})).status_code
+    except httpx.HTTPError as exc:
+        raise NotifyError(f"{kind} request failed: {type(exc).__name__}") from None
+    if status >= 400:
+        raise NotifyError(f"{kind} answered HTTP {status}")
+
+
+def cut(text: str, limit: int) -> str:
+    """The text within a service's limit, with a mark where it was cut."""
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def links(message: Message) -> list[tuple[str, str]]:
+    """Every link of a message, for a service that only has text: the buttons, then the page."""
+    found = [(button.label, button.url) for button in message.buttons]
+    if message.click:
+        found.append(("Details", message.click))
+    return found
+
+
 def deliver(notifiers: Sequence[Notifier], message: Message) -> list[Delivery]:
     """Send to every channel. One that fails does not keep the others from trying."""
     done: list[Delivery] = []
@@ -107,7 +146,31 @@ def build(
         from paeon.notify.ntfy import NtfyNotifier
 
         return NtfyNotifier(name, config, secrets.get("token"), transport=transport)
-    raise ValueError(f"unknown channel type for {name}")  # pragma: no cover - the schema is closed
+    if isinstance(config, TelegramChannel):
+        from paeon.notify.telegram import TelegramNotifier
+
+        return TelegramNotifier(name, config, secrets["token"], transport=transport)
+    if isinstance(config, DiscordChannel):
+        from paeon.notify.discord import DiscordNotifier
+
+        return DiscordNotifier(name, config, secrets["webhook"], transport=transport)
+    if isinstance(config, SlackChannel):
+        from paeon.notify.slack import SlackNotifier
+
+        return SlackNotifier(name, config, secrets["webhook"], transport=transport)
+    if isinstance(config, EmailChannel):
+        from paeon.notify.email import EmailNotifier
+
+        return EmailNotifier(name, config, secrets.get("password"))
+    from paeon.notify.webhook import WebhookNotifier
+
+    return WebhookNotifier(
+        name,
+        config,
+        url=config.url or secrets["url"],
+        authorization=secrets.get("authorization"),
+        transport=transport,
+    )
 
 
 def for_stage(

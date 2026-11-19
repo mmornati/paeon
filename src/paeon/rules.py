@@ -198,8 +198,116 @@ class NtfyChannel(Ntfy):
         return {} if self.token_env is None else {"token": (self.token_env, False)}
 
 
+class _Channel(_Rule):
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        """The secrets this channel reads: key, environment variable, whether it is required."""
+        return {}
+
+
+class TelegramChannel(_Channel):
+    """A chat with a Telegram bot. Buttons are links under the message."""
+
+    type: Literal["telegram"]
+    chat_id: str = Field(min_length=1, description="The chat, group or channel the bot posts to.")
+    token_env: str = Field(min_length=1, description="The bot's token, from BotFather.")
+    api_url: str = Field(
+        default="https://api.telegram.org",
+        pattern=r"^https?://[^\s]+$",
+        description="Change it only for a Bot API server of your own.",
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"token": (self.token_env, True)}
+
+
+class DiscordChannel(_Channel):
+    """A channel's webhook. Buttons are link buttons under the message."""
+
+    type: Literal["discord"]
+    webhook_env: str = Field(
+        min_length=1, description="The webhook URL. It is a secret: whoever has it can post."
+    )
+    username: str | None = Field(default=None, min_length=1, max_length=80)
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"webhook": (self.webhook_env, True)}
+
+
+class SlackChannel(_Channel):
+    """An incoming webhook. Buttons are links in the text: a Slack button, even one that only
+    opens a link, expects an app that answers the click."""
+
+    type: Literal["slack"]
+    webhook_env: str = Field(
+        min_length=1, description="The webhook URL. It is a secret: whoever has it can post."
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {"webhook": (self.webhook_env, True)}
+
+
+class EmailChannel(_Channel):
+    """Mail through an SMTP server. Buttons are links in the body."""
+
+    type: Literal["email"]
+    host: str = Field(min_length=1)
+    port: int = Field(default=587, ge=1, le=65535)
+    security: Literal["starttls", "tls", "none"] = Field(
+        default="starttls",
+        description="`starttls` (port 587), `tls` from the first byte (port 465), or `none`"
+        " for a relay on your own network.",
+    )
+    username: str | None = Field(default=None, min_length=1)
+    password_env: str | None = Field(default=None, min_length=1)
+    sender: str = Field(min_length=3, pattern=r"^[^\s@<>]+@[^\s@<>]+$")
+    to: tuple[str, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _addresses(self) -> EmailChannel:
+        for address in self.to:
+            if not re.fullmatch(r"[^\s@<>,]+@[^\s@<>,]+", address):
+                raise ValueError(f"to: {address!r} is not an address")
+        if (self.username is None) != (self.password_env is None):
+            raise ValueError("username and password_env go together")
+        return self
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        return {} if self.password_env is None else {"password": (self.password_env, True)}
+
+
+class WebhookChannel(_Channel):
+    """A POST of the message as JSON, for what Paeon has no adapter for (n8n, Node-RED, a
+    script of yours). Buttons are a list of labels and links in the body."""
+
+    type: Literal["webhook"]
+    url: str | None = Field(default=None, pattern=r"^https?://[^\s]+$")
+    url_env: str | None = Field(
+        default=None, min_length=1, description="Instead of `url`, when the URL holds a secret."
+    )
+    authorization_env: str | None = Field(
+        default=None, min_length=1, description="The value of the Authorization header."
+    )
+
+    @model_validator(mode="after")
+    def _one_url(self) -> WebhookChannel:
+        if (self.url is None) == (self.url_env is None):
+            raise ValueError("give `url` or `url_env`, one of the two")
+        return self
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        found: dict[str, tuple[str, bool]] = {}
+        if self.url_env is not None:
+            found["url"] = (self.url_env, True)
+        if self.authorization_env is not None:
+            found["authorization"] = (self.authorization_env, True)
+        return found
+
+
 # One entry of `notifiers`, told apart by its `type`.
-Channel = NtfyChannel
+Channel = Annotated[
+    NtfyChannel | TelegramChannel | DiscordChannel | SlackChannel | EmailChannel | WebhookChannel,
+    Field(discriminator="type"),
+]
 _CHANNEL_NAME = r"^[a-z0-9][a-z0-9_-]{0,31}$"
 _NOTIFY = Field(
     default=(),
