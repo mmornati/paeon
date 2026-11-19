@@ -699,7 +699,21 @@ that fades from one colour to another is not used anywhere.
   is drawn by the bundled library in a bordered figure, in its neutral or dark theme to match
   the scheme; that page alone allows inline styles, because the library needs them.
 - **Buttons and fields**: 2.5rem tall. One neutral button; pressed is solid accent; the kill
-  switch is solid red. There is no other primary action.
+  switch, and removing a channel, are solid red. A form has one filled button (`.btn-primary`,
+  solid accent): the one that saves it, or signs in. Nothing else is filled.
+- **Form** (`.form`, channel settings and sign-in): one column of fields capped at 30rem. A
+  field is a label, its control, then one line of help; a secret carries a small outlined tag
+  with a lock (`secret`, or `kept` once stored) and is never printed back. What is wrong is
+  said in red under its field and counted in a banner above the form. A choice with a
+  consequence is a bordered row with its checkbox, tinted with the accent when ticked.
+- **Pick list** (`.pick`): rows on one card, each a whole-row link: a name, one line on what
+  it is, a chevron. Used to choose the service of a new channel.
+- **Banner**: red for what failed, green (`.banner-ok`) for what was just saved, sent or
+  removed. Always a sentence, placed under the page head.
+- **Origin tag**: an outlined tag with a lock, `rules file`, beside a channel the console
+  shows and cannot change.
+- **Sign-in** (`.door`): the one page with no shell: a single card in the middle of the
+  screen, with the mark, one field and the filled button.
 - **Stat tile, meter, chart**: a label, a figure, a line under it. Meters and the bars of the
   spend chart are SVG whose sizes are attributes, in the accent; a spent budget turns red and
   says "reached".
@@ -820,7 +834,9 @@ complete.
 - **Don't** load a font, script, image or style from another host, or write a `style` attribute.
 - **Don't** use a state colour for decoration, or violet for something code recorded.
 - **Don't** let an incident card on the board grow: reasons belong to the incident page.
-- **Don't** add a control that approves or runs anything: the console shows, and can only stop.
+- **Don't** add a control that approves or runs anything: the console shows, can stop, and
+  with `ui.settings` on configures where it sends. It never configures what acts.
+- **Don't** print a stored secret back into a page, or put a second filled button in a form.
 
 **Site**
 

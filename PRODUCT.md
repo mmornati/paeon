@@ -15,7 +15,7 @@ and Docker image as the service.
 ## Users
 
 One operator of a self-hosted server (a home server or a small VPS), who is also the person who
-wrote the alert rules. Phone first: they tap an ntfy notification to see why Paeon said what it
+wrote the alert rules; sometimes a few people behind the same proxy, one of whom is the admin. Phone first: they tap an ntfy notification to see why Paeon said what it
 said about an incident. Later, at a desk, they review the day: what came in, what the models
 decided, what it cost.
 
@@ -45,9 +45,14 @@ log cannot account for.
 
 - As built (phase 2): record, correlate, triage in shadow mode, investigate read-only, draft
   postmortems, daily digest, feedback on triage. Paeon takes no action on the server.
-- The UI is read-only apart from triage feedback (up / down), which the API already accepts.
+- The UI reads, apart from triage feedback (up / down), the kill switch, and, with
+  `ui.settings` on, notification channels: an admin adds, tests and removes the channels that
+  carry the digest and the analysis. The rules file stays the source for what it defines and
+  is shown locked; nothing set in the UI can carry an approval or change what acts.
+- Three roles: viewer (reads), operator (feedback, kill switch), admin (channels).
 - Off by default (`ui.enabled`). When on, Paeon relies on the reverse proxy (Traefik with
-  Authentik forward-auth) to protect the UI paths; it has no login of its own.
+  Authentik forward-auth) to protect the UI paths and to name each person's groups, or, with
+  `ui.auth: local`, asks for one admin password itself.
 - Planned, not built: approvals (Go / No-go), the action catalog and executor, the autonomy
   matrix. The UI must not show them as if they existed.
 - Terms: alert (one source's observation), incident (correlated alerts), stage (triage,

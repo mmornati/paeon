@@ -71,3 +71,13 @@ hold; `DESIGN.md` describes the current one. Kept from before: the model's words
 from what code recorded (violet, with a Model badge or tag), severity is always also a word, no
 request to another host, no inline style. `.impeccable/design.json` was generated from the old
 DESIGN.md and has not been regenerated.
+
+## Channel settings (2026-11-19)
+
+Added as a refinement of the current console, code-led, no comp: the Channels page gained
+add, edit, test and remove for an admin (`ui.settings`), a service pick list, one form per
+service, and a sign-in page for `ui.auth: local`. The job line above no longer holds as
+"read-only": the console also configures where the digest and the analysis are sent. It still
+cannot approve, and a channel added here never carries an approval. New vocabulary is in
+`DESIGN.md`: the filled form button, form fields with secret tags, the pick list, the green
+banner, the `rules file` origin tag, the sign-in card.

@@ -34,6 +34,9 @@ Paeon records alerts and groups them into incidents.
   `NAME_FILE=/path`, for Docker secrets.
 - The executor reads the same format from **its own copy**, and trusts only that copy. See
   [Acting](acting.md).
+- The file is never written by Paeon. With `ui.settings` on, an admin can add notification
+  channels in the console; they are kept in the database and laid over the file, which wins
+  on a name both define. See [The console](console.md#channels-in-the-console).
 
 ## The sections of the file
 
@@ -101,6 +104,8 @@ Every secret below also accepts `NAME_FILE=/path`.
 | `PAEON_HEARTBEAT_SECONDS` | `60` | How often it is called. 10 at least. |
 | `PAEON_EXECUTOR_TOKEN` | | How the core proves itself to the executor. Required with `actions.enabled`, 24 characters or more, the same as the executor's. |
 | `PAEON_UI_PROXY_SECRET` | | The value your proxy adds to each console request. Required with `ui.proxy_secret`, 24 characters or more. The name can be changed there. |
+| `PAEON_UI_ADMIN_PASSWORD` | | The console's own password. Required with `ui.auth: local`, 12 characters or more. |
+| `PAEON_SECRET_KEY` | | Encrypts the secrets of channels added in the console and signs its sessions. Required with `ui.settings` or `ui.auth: local`, 32 characters or more. Changing it signs everyone out and sets those channels aside until they are saved again. |
 
 ### The executor (`paeon executor`)
 

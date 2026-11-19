@@ -73,8 +73,9 @@ the record of what happened so far.
 
 !!! warning "Keep it local"
 
-    The console has no login. On your own machine, bound to `127.0.0.1`, that is fine. On a
-    server it belongs behind a reverse proxy that authenticates: see [the console](console.md).
+    The console has no login here. On your own machine, bound to `127.0.0.1`, that is fine. On
+    a server it belongs behind a reverse proxy that authenticates, or it can ask for a password
+    itself (`ui.auth: local`): see [the console](console.md).
 
 ## 6. Resolve it
 

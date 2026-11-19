@@ -12,7 +12,7 @@ executor sends approvals itself, next to its signing key, and runs no code it di
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -92,6 +92,25 @@ class Delivery:
         return "notification.failed", {**payload, "error": self.error}
 
 
+class Roster:
+    """The channels a stage sends to, when they can change while Paeon runs.
+
+    A stage keeps the roster and reads it each time it sends. `put` swaps the whole list at
+    once, so a send that is under way finishes with the channels it started with."""
+
+    def __init__(self, notifiers: Sequence[Notifier] = ()) -> None:
+        self._notifiers: tuple[Notifier, ...] = tuple(notifiers)
+
+    def put(self, notifiers: Sequence[Notifier]) -> None:
+        self._notifiers = tuple(notifiers)
+
+    def __iter__(self) -> Iterator[Notifier]:
+        return iter(self._notifiers)
+
+    def __len__(self) -> int:
+        return len(self._notifiers)
+
+
 def post(
     kind: str,
     url: str,
@@ -133,7 +152,7 @@ def links(message: Message) -> list[tuple[str, str]]:
     return found
 
 
-def deliver(notifiers: Sequence[Notifier], message: Message) -> list[Delivery]:
+def deliver(notifiers: Iterable[Notifier], message: Message) -> list[Delivery]:
     """Send to every channel. One that fails does not keep the others from trying."""
     done: list[Delivery] = []
     for notifier in notifiers:

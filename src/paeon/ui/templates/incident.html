@@ -52,6 +52,7 @@
     <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
     {% if v.matched_postmortem %}<p class="facts">The model matched it to <span class="pen">{{ v.matched_postmortem }}</span>.</p>{% endif %}
     <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
+    {% if can_operate %}
     <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/feedback">
       <p class="vote-ask">{% if view.feedback == "up" %}You said triage was right.{% elif view.feedback == "down" %}You said triage was wrong.{% else %}Was triage right? Your answer is what decides whether it can be trusted later.{% endif %}</p>
       <label class="field"><span>Note, optional</span><input type="text" name="note" maxlength="1000" autocomplete="off"></label>
@@ -60,6 +61,9 @@
         <button class="btn" name="vote" value="down"{% if view.feedback == "down" %} aria-pressed="true"{% endif %}>Triage was wrong</button>
       </div>
     </form>
+    {% else %}
+    <p class="facts">{% if view.feedback == "up" %}An operator said triage was right.{% elif view.feedback == "down" %}An operator said triage was wrong.{% else %}Nobody has said yet whether triage was right. An operator can; your role reads.{% endif %}</p>
+    {% endif %}
   {% elif view.triage_skip == "runbook" %}
     <p class="lead">Not sent to a model: a runbook matched this alert.</p>
   {% elif view.triage_skip %}

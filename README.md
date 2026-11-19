@@ -286,10 +286,12 @@ Then open `http://paeon:8080/ui`.
 | **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
 
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
-a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set. The console is read-only, apart from two things: saying whether triage was right, and
-stopping automation. **It cannot approve a plan**, and it cannot resume what it stopped.
+a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set. The console reads, apart from three things: saying whether triage was right, stopping
+automation, and, with `ui.settings` on, adding the channels the digest and the analysis go to.
+**It cannot approve a plan**, and it cannot resume what it stopped.
 
-The console has **no login**. It is off until you enable it, and it must sit behind a reverse
+By default the console has **no login**. It is off until you enable it, and unless you set
+`ui.auth: local` (one password, for a server with no such proxy) it must sit behind a reverse
 proxy that authenticates (Traefik with Authentik forward-auth, for example): route `/ui` through
 it and do not publish Paeon's port. `require_header` names a header your proxy sets once the
 user is authenticated; a request without it is refused. That is a second net against a route

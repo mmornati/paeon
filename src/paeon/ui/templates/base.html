@@ -20,6 +20,7 @@
   <div class="side-top">
     <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="28" height="28"><span>Paeon</span></a>
     <button class="icon-btn theme-btn" type="button" data-theme-toggle hidden aria-label="Switch between light and dark">{{ icon("moon", "icon-moon") }}{{ icon("sun", "icon-sun") }}</button>
+    {% if local %}<form method="post" action="/ui/signout"><button class="icon-btn" aria-label="Sign out" title="Sign out">{{ icon("out") }}</button></form>{% endif %}
   </div>
   <nav class="nav" aria-label="Console">
     <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>{{ icon("incidents") }}Incidents</a>
@@ -48,6 +49,7 @@
 <footer class="foot">
   <p>Paeon {{ version }} records and advises. {% if acting %}Only the executor acts: catalog actions, at the level your policies give.{% else %}It takes no action on this server.{% endif %}</p>
   <p>Times are in {{ zone }}. Budget days are UTC.</p>
+  {% if role %}<p>{% if local %}You are signed in as the admin.{% else %}Your role is {{ role }}{% if role == "viewer" %}: you can read{% elif role == "operator" %}: you can read, rate triage and stop automation{% endif %}.{% endif %}</p>{% endif %}
 </footer>
 </div>
 </div>

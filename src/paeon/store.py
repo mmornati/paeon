@@ -66,6 +66,15 @@ CREATE TABLE IF NOT EXISTS cursors (
     value  TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS console_channels (
+    name       TEXT PRIMARY KEY,
+    type       TEXT NOT NULL,
+    config     TEXT NOT NULL,
+    stages     TEXT NOT NULL,
+    secrets    TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS incidents (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     status           TEXT NOT NULL,
@@ -112,6 +121,18 @@ class Event:
     fingerprint: str | None
     payload: dict[str, Any]
     incident_id: int | None = None
+
+
+@dataclass(frozen=True)
+class ConsoleChannel:
+    """A channel added in the console. `secrets` are sealed (see `paeon.vault`), by key."""
+
+    name: str
+    type: str
+    config: dict[str, Any]
+    stages: tuple[str, ...]
+    secrets: dict[str, str]
+    updated_at: datetime
 
 
 @dataclass(frozen=True)
@@ -411,3 +432,48 @@ class Store:
                 " ON CONFLICT (source) DO UPDATE SET value = excluded.value",
                 (source, value),
             )
+
+    # --- channels added in the console --------------------------------------------------------
+    # Working state, like `incidents`: the log says who changed what and when, and holds
+    # neither an address nor a secret, since it can never forget one.
+
+    def console_channels(self) -> list[ConsoleChannel]:
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT name, type, config, stages, secrets, updated_at FROM console_channels"
+                " ORDER BY name"
+            ).fetchall()
+        return [
+            ConsoleChannel(
+                name=row[0],
+                type=row[1],
+                config=json.loads(row[2]),
+                stages=tuple(json.loads(row[3])),
+                secrets=json.loads(row[4]),
+                updated_at=datetime.fromisoformat(row[5]),
+            )
+            for row in rows
+        ]
+
+    def save_console_channel(self, channel: ConsoleChannel) -> None:
+        with self._lock:
+            self._db.execute(
+                "INSERT INTO console_channels (name, type, config, stages, secrets, updated_at)"
+                " VALUES (?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT (name) DO UPDATE SET type = excluded.type, config = excluded.config,"
+                " stages = excluded.stages, secrets = excluded.secrets,"
+                " updated_at = excluded.updated_at",
+                (
+                    channel.name,
+                    channel.type,
+                    json.dumps(channel.config, sort_keys=True),
+                    json.dumps(list(channel.stages)),
+                    json.dumps(channel.secrets, sort_keys=True),
+                    _iso(channel.updated_at),
+                ),
+            )
+
+    def delete_console_channel(self, name: str) -> bool:
+        with self._lock:
+            cursor = self._db.execute("DELETE FROM console_channels WHERE name = ?", (name,))
+        return cursor.rowcount > 0
