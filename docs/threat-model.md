@@ -179,7 +179,12 @@ own and read access for you alone. A one-tap approval is exactly as strong as th
 ### Hiding an alert
 
 - Paeon is never in the path of an alert: it receives a copy. Existing notifications stay.
-- Triage is in shadow mode: its verdict is recorded and acts on nothing.
+- Triage changes no notification, but its verdict decides whether the incident is investigated
+  (`investigation.verdicts`, by default `real` and `known_issue`). Text in an alert can talk the
+  triage model into `noise`: you are still paged by your own alerting, and Paeon stays silent on
+  that incident. List all four verdicts there if you prefer an investigation every time.
+- A postmortem draft is a model's text. Until you set its `status` to `reviewed`, triage is not
+  shown it, and the investigation sees it marked as an unreviewed draft.
 - Every failure fails open: a model down, an invalid answer, a spent budget, an unreachable
   executor each leave the incident marked for a person.
 - A pull source that stops answering raises an alert of its own, and Paeon can push a heartbeat,
@@ -192,9 +197,12 @@ own and read access for you alone. A one-tap approval is exactly as strong as th
 
 ### The console and the API
 
-- The API has one bearer token and no TLS. It is built for an internal network.
+- The API has one bearer token and no TLS. It is built for an internal network. A request with
+  a body is refused before the body is read if it has no token or is over 2 MB.
 - The console has no login and is off by default. It needs a reverse proxy that authenticates;
-  `require_header` refuses requests the proxy did not mark. State-changing forms refuse
+  `require_header` refuses requests the proxy did not mark, and anyone who reaches the port can
+  send that header: with `proxy_secret` the proxy adds a secret value too, which a neighbour on
+  the same Docker network does not know. State-changing forms refuse
   cross-site requests. Pages load nothing from another host (a strict Content-Security-Policy),
   so text from a log cannot load or run anything.
 - The console can stop automation. It cannot approve and cannot resume.

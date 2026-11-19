@@ -206,3 +206,17 @@ def test_unreachable_source_is_recorded_as_stale(store: Store) -> None:
     source = OpenObserveSource(Down(), store, Recorder(store))
     with TestClient(create_app(load(OO_ENV), store, openobserve=source)):
         assert wait_for_events(store, 1) == ["alert.firing source_stale:openobserve"]
+
+
+def test_a_body_is_refused_before_it_is_read(client: TestClient) -> None:
+    big = b"[" + b"1," * 1_100_000 + b"1]"
+    assert client.post("/ingest/alertmanager", content=big).status_code == 401
+    auth = {"Authorization": f"Bearer {TOKEN}"}
+    assert client.post("/ingest/alertmanager", content=big, headers=auth).status_code == 413
+
+    def chunks() -> Iterator[bytes]:
+        for _ in range(250):
+            yield b" " * 10_000
+
+    assert client.post("/ingest/alertmanager", content=chunks(), headers=auth).status_code == 413
+    assert client.post("/ingest/alertmanager", content=b"{}", headers=auth).status_code != 413

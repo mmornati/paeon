@@ -15,6 +15,7 @@ alert or model answer is shown.
 ui:
   enabled: true
   require_header: X-authentik-username   # optional
+  proxy_secret: {}                       # optional, recommended: see below
 ```
 
 Then open `http://paeon:8080/ui`.
@@ -27,6 +28,27 @@ Then open `http://paeon:8080/ui`.
     a request without it is refused. That is a second net against a route that bypasses the
     proxy, not a login: anyone who can reach the port directly can send the header. The ingest
     endpoints keep their bearer token either way.
+
+### A secret only the proxy knows
+
+The proxy's network is usually shared: every container on it can reach Paeon's port and send
+any header. `proxy_secret` closes that. Put a long random value in `PAEON_UI_PROXY_SECRET`
+(24 characters or more) and have the proxy add it to each request as `X-Paeon-Proxy`; a request
+without that exact value is refused. Both names can be changed (`header`, `value_env`).
+
+With Traefik, a second middleware after the one that authenticates:
+
+```yaml
+http:
+  middlewares:
+    paeon-proxy-secret:
+      headers:
+        customRequestHeaders:
+          X-Paeon-Proxy: "the same value as PAEON_UI_PROXY_SECRET"
+  routers:
+    paeon:
+      middlewares: [authentik@file, paeon-proxy-secret]
+```
 
 ## The pages
 

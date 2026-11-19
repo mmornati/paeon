@@ -273,13 +273,18 @@ class Triager:
         return redact(pack)
 
     def _past(self, incident: Incident, alerts: list[Alert]) -> list[dict[str, str]]:
-        """The three documents that best match the alert titles and the host."""
+        """The three documents that best match the alert titles and the host.
+
+        Reviewed ones only. A draft is a model's account of an earlier incident, written from
+        text an attacker may have chosen; the verdict it would sway here decides whether the
+        next incident is investigated.
+        """
         if not self._knowledge:
             return []
         query = " ".join([incident.host or "", *(alert.title for alert in alerts)])
         return [
             {"path": hit.path, "title": hit.title, "excerpt": hit.excerpt}
-            for hit in knowledge.search(self._knowledge, query, limit=3)
+            for hit in knowledge.search(self._knowledge, query, limit=3, drafts=False)
         ]
 
     def _alerts(self, incident: Incident) -> list[Alert]:

@@ -126,3 +126,18 @@ def test_settings_refuse_a_broken_rules_file(tmp_path: Path) -> None:
     rules.write_text("triage: {enabled: true}\n")
     with pytest.raises(ConfigError, match="PAEON_CONFIG"):
         load({"PAEON_INGEST_TOKEN": TOKEN, "PAEON_CONFIG": str(rules)})
+
+
+def test_a_budget_on_a_model_without_a_price_is_reported() -> None:
+    def rules(price: dict[str, float], budget: dict[str, float]) -> Rules:
+        return parse_rules(
+            {
+                "models": {"m": {"backend": "openai", "model": "x", "price": price}},
+                "triage": {"enabled": True, "model": "m", **budget},
+            }
+        )
+
+    (warning,) = rules({}, {"daily_budget": 1.0}).unpriced_budgets()
+    assert "models.m.price" in warning
+    assert rules({"input_per_mtok": 1.0}, {"daily_budget": 1.0}).unpriced_budgets() == []
+    assert rules({}, {}).unpriced_budgets() == []

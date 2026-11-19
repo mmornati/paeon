@@ -352,6 +352,18 @@ class Postmortems(_Rule):
     )
 
 
+class ProxySecret(_Rule):
+    """A header only your proxy can send: its value is a secret the proxy adds to each request."""
+
+    header: str = Field(default="X-Paeon-Proxy", min_length=1, pattern=r"^[A-Za-z0-9-]+$")
+    value_env: str = Field(
+        default="PAEON_UI_PROXY_SECRET",
+        min_length=1,
+        description="Name of the environment variable (or NAME_FILE) with the value, 24"
+        " characters or more.",
+    )
+
+
 class Ui(_Rule):
     """The console under `/ui`. It has no login of its own: the reverse proxy protects it."""
 
@@ -361,7 +373,13 @@ class Ui(_Rule):
         min_length=1,
         description="A header your proxy sets after authentication (for example"
         " X-authentik-username). A request without it is refused: a second net against a route"
-        " that bypasses the proxy, not a login.",
+        " that bypasses the proxy, not a login: whoever reaches the port can send the header.",
+    )
+    proxy_secret: ProxySecret | None = Field(
+        default=None,
+        description="A header and a secret value your proxy adds (in Traefik, a `headers`"
+        " middleware with `customRequestHeaders`). A request without that exact value is"
+        " refused: what reaches Paeon's port without passing the proxy cannot open the console.",
     )
     public_url: str | None = Field(
         default=None,
@@ -687,6 +705,44 @@ class Rules(_Rule):
             if stage.enabled and stage.model not in self.models:
                 raise ValueError(f"{name}.model {stage.model!r} is not defined under `models`")
         return self
+
+    def unpriced_budgets(self) -> list[str]:
+        """The budgets that can never be reached: a budget is counted from prices, and the
+        stage's model has none. Worth a warning at start, since nothing else would say it."""
+        investigation = self.investigation
+        stages: tuple[tuple[str, bool, tuple[str | None, ...], bool], ...] = (
+            (
+                "triage",
+                self.triage.enabled,
+                (self.triage.model,),
+                self.triage.daily_budget is not None,
+            ),
+            (
+                "investigation",
+                investigation.enabled,
+                (investigation.model, investigation.fallback_model),
+                investigation.daily_budget is not None
+                or investigation.budget_per_incident is not None,
+            ),
+            (
+                "postmortems",
+                self.postmortems.enabled,
+                (self.postmortems.model,),
+                self.postmortems.daily_budget is not None,
+            ),
+        )
+        found: list[str] = []
+        for name, enabled, aliases, budgeted in stages:
+            for alias in aliases if enabled and budgeted else ():
+                model = self.models.get(alias or "")
+                if model is None:
+                    continue
+                if model.price.input_per_mtok == 0 and model.price.output_per_mtok == 0:
+                    found.append(
+                        f"{name} has a budget, and models.{alias}.price is not set: the budget"
+                        " will never be reached"
+                    )
+        return found
 
     def maintenance_for(self, alert: Alert) -> str | None:
         for window in self.maintenance:

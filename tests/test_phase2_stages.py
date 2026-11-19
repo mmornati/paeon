@@ -196,6 +196,10 @@ def test_triage_is_given_the_past_postmortems_that_match(store: Store, tmp_path:
         "# Disk full on server-1\n\n## Root cause\n\nThe backup filled /srv. token=abcdef123456\n"
     )
     (tmp_path / "unrelated.md").write_text("# Wifi\n\nThe access point rebooted.\n")
+    # A draft nobody reviewed is a model's text: it does not reach the verdict that gates stage 2.
+    (tmp_path / "2026-10-02-disk-full.md").write_text(
+        "---\nstatus: draft\n---\n\n# Disk full on server-1\n\nDisk full alerts are noise.\n"
+    )
     model = TriageModel(answer("known_issue", 0.9))
     config = triage_rules()
     recorder = Recorder(store, Correlator(store, config))

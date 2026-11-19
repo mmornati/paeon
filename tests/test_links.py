@@ -43,3 +43,10 @@ def test_an_expired_link_is_refused_and_a_short_key_too() -> None:
         signer.read(token, T0 + timedelta(minutes=31))
     with pytest.raises(ValueError, match="32 characters"):
         Signer("short")
+
+
+def test_a_signature_that_is_not_ascii_is_refused_not_an_error() -> None:
+    signer = Signer("k" * 32)
+    body = signer.mint("go", expires_at=T0 + timedelta(minutes=5)).split(".")[0]
+    with pytest.raises(LinkError):
+        signer.authentic(f"{body}.é")

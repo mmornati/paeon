@@ -26,11 +26,13 @@ from paeon.actuators import CoolifyActuator, RepositoryActuator
 from paeon.catalog import Proposal
 from paeon.config import ExecutorSettings
 from paeon.executor import DockerActuator, Executor, ExecutorStore
+from paeon.guard import BodyGuard
 from paeon.links import LinkError, Signer
 
 log = logging.getLogger(__name__)
 
 EXPIRY_TICK_SECONDS = 30
+MAX_BODY_BYTES = 256_000  # a proposal is a few steps and two sentences
 HEADERS = {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self';"
     " base-uri 'none'; frame-ancestors 'none'",
@@ -166,6 +168,11 @@ def create_executor_app(settings: ExecutorSettings, executor: Executor) -> FastA
     quiet_access_log()
     app = FastAPI(
         title="Paeon executor", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
+    )
+
+    # Before any body is read: the core's token, and a size. A link is its own proof.
+    app.add_middleware(
+        BodyGuard, token=settings.token, max_bytes=MAX_BODY_BYTES, open_prefixes=("/act",)
     )
 
     def core(authorization: Annotated[str | None, Header()] = None) -> None:

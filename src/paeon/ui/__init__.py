@@ -12,6 +12,7 @@ with a policy that forbids it, so that nothing a log line contains can load or r
 
 from __future__ import annotations
 
+import hmac
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -73,6 +74,7 @@ def mount_ui(
     *,
     now: Callable[[], datetime] | None = None,
     stop: Callable[[], None] | None = None,
+    proxy_secret: str | None = None,
 ) -> None:
     acting = rules.actions.enabled
     keeps = rules.postmortems.enabled
@@ -121,6 +123,12 @@ def mount_ui(
         header = rules.ui.require_header
         if header is not None and not request.headers.get(header):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "not behind the proxy")
+        secret = rules.ui.proxy_secret
+        if secret is not None:
+            # Presence proves nothing to a neighbour on the same network; this value does.
+            given = request.headers.get(secret.header, "").encode()
+            if not proxy_secret or not hmac.compare_digest(given, proxy_secret.encode()):
+                raise HTTPException(status.HTTP_403_FORBIDDEN, "not behind the proxy")
 
     router = APIRouter(prefix="/ui", dependencies=[Depends(proxied)], include_in_schema=False)
 

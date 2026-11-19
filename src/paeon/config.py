@@ -7,11 +7,14 @@ for Docker secrets); the rules file only names the variable.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from paeon.rules import Rules, RulesError, load_rules
+
+log = logging.getLogger(__name__)
 
 
 class ConfigError(ValueError):
@@ -44,6 +47,7 @@ class Settings:
     executor_token: str | None = None  # how the core proves itself to the executor
     uptime_kuma_key: str | None = None
     telemetry_authorization: str | None = None
+    ui_proxy_secret: str | None = None  # what the proxy adds to each console request
 
 
 @dataclass(frozen=True)
@@ -117,6 +121,8 @@ def load(env: Mapping[str, str]) -> Settings:
             rules = load_rules(Path(rules_path))
         except RulesError as exc:
             raise ConfigError(f"PAEON_CONFIG: {exc}") from exc
+    for warning in rules.unpriced_budgets():
+        log.warning("%s", warning)
     model_keys = {
         name: _secret(env, alias.api_key_env)
         for name, alias in rules.models.items()
@@ -145,6 +151,15 @@ def load(env: Mapping[str, str]) -> Settings:
         else ""
     )
 
+    proxy = rules.ui.proxy_secret
+    proxy_secret = "" if proxy is None else _secret(env, proxy.value_env)
+    if proxy is not None and len(proxy_secret) < 24:
+        # Fail closed: a console that names a secret and runs without it would be open.
+        raise ConfigError(
+            f"ui.proxy_secret is set: {proxy.value_env} (or _FILE) is required, 24 characters"
+            " or more"
+        )
+
     port = int(_number(env, "PAEON_PORT", 8080, minimum=1))
     return Settings(
         db_path=Path(env.get("PAEON_DB", "").strip() or "paeon.sqlite"),
@@ -161,6 +176,7 @@ def load(env: Mapping[str, str]) -> Settings:
         executor_token=executor_token or None,
         uptime_kuma_key=kuma_key or None,
         telemetry_authorization=telemetry_authorization or None,
+        ui_proxy_secret=proxy_secret or None,
     )
 
 

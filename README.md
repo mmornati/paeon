@@ -156,7 +156,7 @@ Secrets never go in that file. It names the environment variable that holds them
 
 | Stage | What it does | Model |
 |---|---|---|
-| `triage` | One call per incident with a context pack built by code. Verdict: `noise`, `transient`, `known_issue` or `real`. **Shadow mode**: recorded and shown in the digest, nothing acts on it. Page-level alerts are never sent. | cheap |
+| `triage` | One call per incident with a context pack built by code. Verdict: `noise`, `transient`, `known_issue` or `real`. Recorded and shown in the digest. It changes no notification; the one thing it decides is whether stage 2 investigates the incident (`investigation.verdicts`). Page-level alerts are never sent. | cheap |
 | `investigation` | An agent loop with read-only tools and a budget. Hands in a summary, the impact, a root cause with a confidence, the evidence, the hypotheses it rejected and a plan. A second model can take over when the first fails or declines. | strong, with tool calls |
 | `postmortems` | A markdown draft with YAML front matter once an incident that was investigated or acted on has stayed resolved. Timeline and automation review come from the event log; the model writes the prose; the file says `status: draft`. Optionally committed and pushed to a git repository. | strong |
 | `actions` | No model. Plans from an analysis or from a runbook go to the executor. See [Acting](#acting). | none |
@@ -268,7 +268,8 @@ proxy that authenticates (Traefik with Authentik forward-auth, for example): rou
 it and do not publish Paeon's port. `require_header` names a header your proxy sets once the
 user is authenticated; a request without it is refused. That is a second net against a route
 that bypasses the proxy, not a login: anyone who can reach the port directly can send the
-header. The ingest endpoints keep their bearer token either way.
+header. `proxy_secret` adds a secret value that only your proxy sends
+([Console](docs/console.md)). The ingest endpoints keep their bearer token either way.
 
 Everything shown is redacted again first, and pages load nothing from another host.
 

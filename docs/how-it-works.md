@@ -33,7 +33,7 @@ Every stage is off until you enable it in the rules file.
 
 | Stage | What it does | Model |
 |---|---|---|
-| `triage` | One call per incident with a context pack built by code. Verdict: `noise`, `transient`, `known_issue` or `real`. **Shadow mode**: recorded and shown in the digest, nothing acts on it. Page-level alerts are never sent. | cheap |
+| `triage` | One call per incident with a context pack built by code. Verdict: `noise`, `transient`, `known_issue` or `real`. Recorded and shown in the digest. It changes no notification; the one thing it decides is whether stage 2 investigates the incident (`investigation.verdicts`). Page-level alerts are never sent. | cheap |
 | `investigation` | An agent loop with read-only tools and a budget. Hands in a summary, the impact, a root cause with a confidence, the evidence, the hypotheses it rejected and a plan. A second model can take over when the first fails or declines. | strong, with tool calls |
 | `postmortems` | A markdown draft with YAML front matter once an incident that was investigated or acted on has stayed resolved. Timeline and automation review come from the event log; the model writes the prose; the file says `status: draft`. Optionally committed and pushed to a git repository. | strong |
 | `actions` | No model. Plans from an analysis or from a runbook go to the executor. See [Acting](acting.md). | none |
