@@ -133,7 +133,9 @@ for when you enable actions.
 | Source | How |
 |---|---|
 | **uptime-kuma** | Add a notification of type **Webhook**: post URL `http://paeon:8080/ingest/uptime-kuma`, body `application/json`, additional header `{"Authorization": "Bearer <PAEON_INGEST_TOKEN>"}`. Apply it to every monitor. |
-| **Alertmanager, Grafana, others** | Point a webhook receiver at `http://paeon:8080/ingest/alertmanager` with the same bearer token. |
+| **Alertmanager, and what speaks its webhook** | Point a webhook receiver at `http://paeon:8080/ingest/alertmanager` with the same bearer token. |
+| **Grafana, Gatus, Healthchecks, Netdata, Zabbix, Beszel** | Name the service under `sources` in the rules file; it posts to `/ingest/<name>`, or Paeon polls it. See [Sources](docs/sources.md). |
+| **Prometheus, VictoriaMetrics, Loki, VictoriaLogs** | Read-only tools for the investigation: metrics, rules, targets and logs, behind allow-lists. Also under `sources`. |
 | **OpenObserve** | Create a user that can read the `triggers` stream and set the `PAEON_OPENOBSERVE_*` variables. Paeon polls; it never writes to OpenObserve and nothing changes in your alerts. |
 | **Planned work** | Announce a deploy, an update run or a backup from the script that does it, so triage knows about it (below). |
 
@@ -209,6 +211,7 @@ Every key of the rules file is in the
 | `paeon stop` / `paeon resume` | The kill switch, next to the executor |
 | `paeon reinstate <alert> <action> <container>` | Lift a demotion, next to the executor |
 | `paeon notify <channel>` | Send a test message through one notification channel |
+| `paeon source <name>` | Say what one source gives, and ask its service one question |
 | `paeon mcp` | Serve the record read-only to an assistant, over MCP on stdio |
 | `paeon replay triage\|investigation` | Re-run recorded incidents against the model and prompts of today |
 

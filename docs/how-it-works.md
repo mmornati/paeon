@@ -49,6 +49,10 @@ Tools only read, each behind an allow-list. What a tool returns is bounded, reda
 - **Docker**, through a socket proxy: list, inspect (without the environment), and logs for an
   allow-list of containers.
 - **uptime-kuma**: the state of every monitor right now.
+- **Every [source](sources.md) you name**: PromQL on Prometheus or VictoriaMetrics, alerting
+  rules and scrape targets, log lines from Loki or VictoriaLogs, what Alertmanager holds and
+  silences, Grafana's annotations, and the states Gatus, Healthchecks, Netdata, Zabbix and
+  Beszel keep. Each tool carries the name of its source.
 - **git**: the recent commits of working copies you mount (subjects and file names, no authors).
 - **Other hosts**, over SSH: commands you wrote, chosen by name. The model never writes a
   command or an argument.
@@ -65,7 +69,9 @@ One append-only SQLite log holds every alert, decision, model call (with its cos
 - **Recorder** (`paeon.recorder`): turns repeated observations into state changes, so an alert
   that is evaluated every five minutes for two hours is one `alert.firing` and one
   `alert.resolved`.
-- **Sources** (`paeon.sources`): the OpenObserve pull adapter and the webhook endpoints.
+- **Sources** (`paeon.sources`): one adapter per monitoring service. Each turns what the
+  service pushes, or what Paeon polls, into the alert schema, and offers read-only tools
+  through one client that asks fixed paths only.
 - **Correlation** (`paeon.correlation`): the same alert firing again within a window is the same
   incident; alerts on the same host within a few minutes join the open incident. Flapping and
   maintenance windows are flags on the incident. Nothing is dropped.

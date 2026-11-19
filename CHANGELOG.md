@@ -4,6 +4,32 @@ Paeon is pre-1.0: anything may change between versions. Dates are the day of the
 
 ## Unreleased
 
+### Sources
+
+- Monitoring services are named once under `sources`, each a `type` with its own keys, the way
+  notification channels are. A source can receive alerts at `/ingest/<name>`, be polled, and
+  give an investigation read-only tools. None adds a dependency.
+- Ten more services: `prometheus` (also VictoriaMetrics, Mimir and Thanos: PromQL on an
+  allow-list of metrics, alerting rules, scrape targets), `alertmanager` (active alerts and
+  silences, next to its webhook), `grafana` (webhook contact point, annotations, alert rules),
+  `loki` and `victorialogs` (log lines of the streams you name), `gatus`, `healthchecks`,
+  `netdata` and `zabbix` (a webhook in, their state read), and `beszel` (polled).
+- `openobserve` and `uptime_kuma` are source types too, for a second instance or to keep the
+  whole configuration in the rules file. `/ingest/alertmanager`, `/ingest/uptime-kuma` and the
+  `PAEON_OPENOBSERVE_*` variables work as before, with no entry.
+- A tool of a source carries its name (`query_metrics_prom`, `search_logs_logs`).
+- Sources are read through one client that asks only the paths its adapter lists, follows no
+  redirect and reports no URL. For logs the model gives words, not a query. A `url` that holds
+  a password is refused.
+- `/ingest/<name>` also takes a form, for senders that are a shell script (Netdata).
+- `paeon source <name>` says what a source gives and asks its service one question.
+- The console has a **Sources** page: how each source's alerts arrive, its tools, what it
+  fired, and whether a polled one is stale.
+- A [Sources guide](docs/sources.md) covers each service in full, and its key tables and
+  examples are checked against the schema.
+- The new adapters are written from each service's documentation and tested against the
+  payloads and answers it documents. None has met a live server yet.
+
 ### Documentation
 
 - A configuration reference (`docs/configuration-reference.md`) with every key of the rules

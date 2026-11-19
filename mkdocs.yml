@@ -98,6 +98,7 @@ nav:
   - Guides:
       - Configuration: configuration.md
       - The console: console.md
+      - Sources: sources.md
       - Notifications: notifications.md
       - Acting: acting.md
   - Reference:

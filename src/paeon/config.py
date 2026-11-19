@@ -49,6 +49,7 @@ class Settings:
     telemetry_authorization: str | None = None
     ui_proxy_secret: str | None = None  # what the proxy adds to each console request
     notifier_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # by channel
+    source_secrets: Mapping[str, Mapping[str, str]] = field(default_factory=dict)  # by source
 
 
 @dataclass(frozen=True)
@@ -88,6 +89,19 @@ def channel_secrets(env: Mapping[str, str], rules: Rules, name: str) -> dict[str
             found[key] = value
         elif required:
             raise ConfigError(f"notifiers.{name}: {variable} (or _FILE) is not set")
+    return found
+
+
+def source_secrets(env: Mapping[str, str], rules: Rules, name: str) -> dict[str, str]:
+    """The secrets of one named source, from the environment. Raises ConfigError for one that
+    is named and missing."""
+    found: dict[str, str] = {}
+    for key, (variable, required) in rules.sources[name].secret_envs().items():
+        value = _secret(env, variable)
+        if value:
+            found[key] = value
+        elif required:
+            raise ConfigError(f"sources.{name}: {variable} (or _FILE) is not set")
     return found
 
 
@@ -152,6 +166,11 @@ def load(env: Mapping[str, str]) -> Settings:
             raise ConfigError(f"PAEON_CONFIG: {exc}") from exc
     for warning in rules.unpriced_budgets():
         log.warning("%s", warning)
+    if openobserve is not None and "openobserve" in rules.sources:
+        raise ConfigError(
+            "OpenObserve is configured twice: by PAEON_OPENOBSERVE_URL and by"
+            " sources.openobserve. Keep one, or give the source another name."
+        )
     model_keys = {
         name: _secret(env, alias.api_key_env)
         for name, alias in rules.models.items()
@@ -207,6 +226,7 @@ def load(env: Mapping[str, str]) -> Settings:
         telemetry_authorization=telemetry_authorization or None,
         ui_proxy_secret=proxy_secret or None,
         notifier_secrets=_notifier_secrets(env, rules, ("digest", "investigation")),
+        source_secrets={name: source_secrets(env, rules, name) for name in rules.sources},
     )
 
 

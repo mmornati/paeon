@@ -26,6 +26,7 @@ PAGE = Path(__file__).resolve().parent.parent / "docs" / "configuration-referenc
 SECTIONS: tuple[tuple[str, str], ...] = (
     ("correlation", "[How it works](how-it-works.md)"),
     ("maintenance", "[How it works](how-it-works.md)"),
+    ("sources", "[Sources](sources.md)"),
     ("models", "[Configuration](configuration.md)"),
     ("triage", "[Configuration](configuration.md)"),
     ("investigation", "[Configuration](configuration.md)"),
@@ -178,6 +179,18 @@ def render() -> str:
                 kind = get_args(channel.model_fields["type"].annotation)[0]
                 out += [f"### `type: {kind}`", ""]
                 _table(channel, f"notifiers.<name>({kind})", out, set())
+            continue
+        if name == "sources":
+            out += [
+                "A map of a name of yours to a monitoring service. The `type` key says which"
+                " one it is, and the other keys depend on it. A source that pushes its alerts"
+                " posts them to `/ingest/<name>`.",
+                "",
+            ]
+            for source in _models_in(field.annotation):
+                kind = get_args(source.model_fields["type"].annotation)[0]
+                out += [f"### `type: {kind}`", ""]
+                _table(source, f"sources.<name>({kind})", out, set())
             continue
         models = _models_in(field.annotation)
         if get_origin(field.annotation) is dict:

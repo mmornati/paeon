@@ -12,7 +12,7 @@ import fnmatch
 import re
 from datetime import datetime, time, timedelta
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import yaml
@@ -1098,6 +1098,308 @@ class Actions(_Rule):
         return next((book for book in self.runbooks if book.match.matches(alert)), None)
 
 
+# --- sources --------------------------------------------------------------------------------
+
+# No `user:password@`: a secret goes in the environment, and a client would send it as it is.
+_URL = r"^https?://[^\s/@]+(/[^\s]*)?$"
+_PLAIN = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"
+
+
+class _Source(_Rule):
+    """One monitoring service: where alerts come from, and what the investigator may read."""
+
+    user: str | None = Field(
+        default=None,
+        min_length=1,
+        description="User for basic authentication, with `password_env`.",
+    )
+    password_env: str | None = Field(
+        default=None, min_length=1, description="Variable with the password of `user`."
+    )
+    token_env: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Variable with a token, sent as `Authorization: Bearer`.",
+    )
+
+    @model_validator(mode="after")
+    def _one_way_in(self) -> Self:
+        if (self.user is None) != (self.password_env is None):
+            raise ValueError("`user` and `password_env` go together")
+        if self.user is not None and self.token_env is not None:
+            raise ValueError("`user` and `token_env` are two ways to authenticate: keep one")
+        return self
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        """The secrets this source reads: key, environment variable, whether it is required."""
+        found: dict[str, tuple[str, bool]] = {}
+        if self.password_env is not None:
+            found["password"] = (self.password_env, True)
+        if self.token_env is not None:
+            found["token"] = (self.token_env, True)
+        return found
+
+
+_HEADERS: Any = Field(
+    default_factory=dict,
+    description="Headers added to every request, for a tenant: `X-Scope-OrgID` on Mimir and"
+    " Loki, `THANOS-TENANT`, `AccountID` on VictoriaLogs. Not for secrets.",
+)
+_SERVER = "The server, as Paeon reaches it. Without it, the source only receives alerts."
+
+
+def _plain_names(names: Any, what: str) -> None:
+    for name in names:
+        if re.fullmatch(_PLAIN, name) is None:
+            raise ValueError(f"{what}: {name!r} is not a plain name")
+
+
+class PrometheusSource(_Source):
+    """A Prometheus HTTP API, read with PromQL: Prometheus itself, VictoriaMetrics, Mimir or
+    Thanos. Its alerts arrive through Alertmanager."""
+
+    type: Literal["prometheus"]
+    url: str = Field(
+        pattern=_URL,
+        description="The server, with its path prefix if it has one: `http://prometheus:9090`,"
+        " `http://mimir:8080/prometheus`.",
+    )
+    headers: dict[str, str] = _HEADERS
+    metrics: tuple[str, ...] = Field(
+        default=(),
+        description="Metric name patterns (fnmatch) that PromQL queries may read. Empty: none.",
+    )
+    rules: bool = Field(
+        default=True, description="Offer the alerting rules, with their query and their state."
+    )
+    targets: bool = Field(
+        default=True, description="Offer the health of the scrape targets, without their URLs."
+    )
+
+
+class AlertmanagerSource(_Source):
+    """An Alertmanager: its webhook brings alerts in, and its API says what is silenced."""
+
+    type: Literal["alertmanager"]
+    url: str | None = Field(default=None, pattern=_URL, description=_SERVER)
+
+
+class GrafanaSource(_Source):
+    """Grafana's alerting: a webhook contact point brings alerts in, and a service account
+    reads the annotations and the alert rules."""
+
+    type: Literal["grafana"]
+    url: str | None = Field(default=None, pattern=_URL, description=_SERVER)
+    annotations: bool = Field(
+        default=True, description="Offer the annotations: alert state changes and deploy marks."
+    )
+    rules: bool = Field(
+        default=True,
+        description="Offer the alert rules. The service account needs the right to read them.",
+    )
+
+
+class LokiSource(_Source):
+    """Logs in Grafana Loki. The model chooses a stream by its name and gives words to look
+    for; it never writes a selector."""
+
+    type: Literal["loki"]
+    url: str = Field(pattern=_URL, description="The server, for example `http://loki:3100`.")
+    headers: dict[str, str] = _HEADERS
+    streams: dict[str, str] = Field(
+        default_factory=dict,
+        description="Name the model uses, to the LogQL stream selector you wrote, for example"
+        ' `{container="api"}`. Nothing else is readable.',
+    )
+    max_lines: int = Field(default=100, ge=1, le=1000, description="Most lines one search returns.")
+
+    @model_validator(mode="after")
+    def _selectors(self) -> LokiSource:
+        _plain_names(self.streams, "streams")
+        for name, selector in self.streams.items():
+            if re.fullmatch(r"\{.+\}", selector.strip()) is None:
+                raise ValueError(f"streams.{name}: a selector is written between braces")
+        return self
+
+
+class VictoriaLogsSource(_Source):
+    """Logs in VictoriaLogs. The model chooses a stream by its name and gives words to look
+    for; it never writes a filter."""
+
+    type: Literal["victorialogs"]
+    url: str = Field(pattern=_URL, description="The server, for example `http://vlogs:9428`.")
+    headers: dict[str, str] = _HEADERS
+    streams: dict[str, str] = Field(
+        default_factory=dict,
+        description="Name the model uses, to the LogsQL filter you wrote, for example"
+        ' `{app="api"}`. Nothing else is readable.',
+    )
+    max_lines: int = Field(default=100, ge=1, le=1000, description="Most lines one search returns.")
+
+    @model_validator(mode="after")
+    def _filters(self) -> VictoriaLogsSource:
+        _plain_names(self.streams, "streams")
+        for name, query in self.streams.items():
+            if not query.strip() or "|" in query:
+                raise ValueError(f"streams.{name}: one filter, without a pipe")
+        return self
+
+
+class OpenObserveSource(_Source):
+    """An OpenObserve organization, in the rules file instead of the `PAEON_OPENOBSERVE_*`
+    variables: its alerts are polled, and its logs and metrics are read."""
+
+    type: Literal["openobserve"]
+    url: str = Field(pattern=_URL, description="The server, for example `http://openobserve:5080`.")
+    org: str = Field(default="default", min_length=1, description="The organization.")
+    alerts: bool = Field(
+        default=True, description="Poll the `triggers` stream for alert evaluations."
+    )
+    poll_seconds: float = Field(default=60, ge=5, description="How often the alerts are polled.")
+    stale_seconds: float = Field(
+        default=900, ge=60, description="Without data for this long, the source is reported stale."
+    )
+    streams: tuple[str, ...] = Field(
+        default=(), description="Log streams that may be searched. Nothing else is readable."
+    )
+    metrics: tuple[str, ...] = Field(
+        default=(),
+        description="Metric name patterns (fnmatch) that PromQL queries may read. Empty: none.",
+    )
+    max_rows: int = Field(default=100, ge=1, le=1000, description="Most rows one search returns.")
+
+    @model_validator(mode="after")
+    def _account(self) -> OpenObserveSource:
+        if self.user is None:
+            raise ValueError("`user` and `password_env` are required: OpenObserve has no open API")
+        return self
+
+
+class UptimeKumaSource(_Source):
+    """uptime-kuma: its Webhook notification brings alerts in, and `/metrics` says the state
+    of every monitor."""
+
+    type: Literal["uptime_kuma"]
+    url: str | None = Field(default=None, pattern=_URL, description=_SERVER)
+    api_key_env: str | None = Field(
+        default=None, min_length=1, description="Variable with an API key, for `/metrics`."
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        found = super().secret_envs()
+        if self.api_key_env is not None:
+            found["api_key"] = (self.api_key_env, True)
+        return found
+
+
+class GatusSource(_Source):
+    """Gatus: a custom alert brings state changes in, and its API says how each endpoint is."""
+
+    type: Literal["gatus"]
+    url: str | None = Field(default=None, pattern=_URL, description=_SERVER)
+
+
+class HealthchecksSource(_Source):
+    """Healthchecks (healthchecks.io or your own): a webhook integration brings the checks that
+    go down and up, and a read-only API key reads their state and history."""
+
+    type: Literal["healthchecks"]
+    url: str | None = Field(
+        default=None, pattern=_URL, description=_SERVER + " `https://healthchecks.io` if hosted."
+    )
+    api_key_env: str | None = Field(
+        default=None, min_length=1, description="Variable with the project's read-only API key."
+    )
+
+    def secret_envs(self) -> dict[str, tuple[str, bool]]:
+        found = super().secret_envs()
+        if self.api_key_env is not None:
+            found["api_key"] = (self.api_key_env, True)
+        return found
+
+
+class NetdataSource(_Source):
+    """A Netdata agent: its custom notification brings alert transitions in, and its API reads
+    the active alerts and the charts you list."""
+
+    type: Literal["netdata"]
+    url: str | None = Field(default=None, pattern=_URL, description=_SERVER)
+    charts: tuple[str, ...] = Field(
+        default=(),
+        description="Chart id patterns (fnmatch) whose data may be read, for example"
+        " `system.*`, `disk_space.*`. Empty: none.",
+    )
+
+
+class ZabbixSource(_Source):
+    """Zabbix: a webhook media type brings problems and recoveries in, and an API token of a
+    read-only user reads problems, items and their history."""
+
+    type: Literal["zabbix"]
+    url: str | None = Field(
+        default=None,
+        pattern=_URL,
+        description=_SERVER + " The frontend's address, without `api_jsonrpc.php`.",
+    )
+    hosts: tuple[str, ...] = Field(
+        default=(),
+        description="Host name patterns (fnmatch) whose items and history may be read."
+        " Empty: none. Problems are listed for every host the token can see.",
+    )
+    max_values: int = Field(
+        default=200, ge=1, le=2000, description="Most history values one request returns."
+    )
+
+
+class BeszelSource(_Source):
+    """A Beszel hub, polled: the alerts that are triggered and the systems that are down. Its
+    notifications carry a sentence only, so nothing is pushed."""
+
+    type: Literal["beszel"]
+    url: str = Field(pattern=_URL, description="The hub, for example `http://beszel:8090`.")
+    alerts: bool = Field(
+        default=True, description="Poll the triggered alerts and the status of the systems."
+    )
+    poll_seconds: float = Field(default=60, ge=10, description="How often the hub is polled.")
+    stale_seconds: float = Field(
+        default=900, ge=60, description="Without an answer for this long, the source is stale."
+    )
+
+    @model_validator(mode="after")
+    def _account(self) -> BeszelSource:
+        if self.user is None:
+            raise ValueError("`user` (the account's e-mail) and `password_env` are required")
+        if self.token_env is not None:
+            raise ValueError("Beszel signs in with `user` and `password_env`, not with a token")
+        return self
+
+
+# One entry of `sources`, told apart by its `type`.
+Source = Annotated[
+    PrometheusSource
+    | AlertmanagerSource
+    | GrafanaSource
+    | LokiSource
+    | VictoriaLogsSource
+    | OpenObserveSource
+    | UptimeKumaSource
+    | GatusSource
+    | HealthchecksSource
+    | NetdataSource
+    | ZabbixSource
+    | BeszelSource,
+    Field(discriminator="type"),
+]
+# A name that is an address of its own (`/ingest/change`) or Paeon's own source.
+_RESERVED_SOURCES = frozenset({"change", "paeon"})
+# The names of the sources that need no entry: each keeps its type.
+BUILT_IN_SOURCES = {
+    "alertmanager": "alertmanager",
+    "uptime-kuma": "uptime_kuma",
+    "openobserve": "openobserve",
+}
+
+
 class Rules(_Rule):
     correlation: Correlation = Field(
         default_factory=Correlation, description="How alerts become incidents."
@@ -1108,6 +1410,11 @@ class Rules(_Rule):
     notifiers: dict[str, Channel] = Field(
         default_factory=dict,
         description="Named notification channels. A stage sends to those its `notify` lists.",
+    )
+    sources: dict[str, Source] = Field(
+        default_factory=dict,
+        description="Named monitoring services: where alerts come from, and what the"
+        " investigator may read in each.",
     )
     models: dict[str, ModelAlias] = Field(
         default_factory=dict, description="Model aliases: a stage names an alias, never a model."
@@ -1224,6 +1531,21 @@ class Rules(_Rule):
                     raise ValueError(f"{stage}.notify: {name!r} is not defined under `notifiers`")
             if len(set(listed)) != len(listed):
                 raise ValueError(f"{stage}.notify names a channel twice")
+        return self
+
+    @model_validator(mode="after")
+    def _sources_named(self) -> Rules:
+        for name, source in self.sources.items():
+            if not re.fullmatch(_CHANNEL_NAME, name) or name in _RESERVED_SOURCES:
+                raise ValueError(
+                    f"sources: {name!r} is not a source name (lower-case letters, digits,"
+                    f" - and _, 32 at most, and not {sorted(_RESERVED_SOURCES)})"
+                )
+            if name.replace("-", "_") in {o.replace("-", "_") for o in self.sources if o != name}:
+                raise ValueError(f"sources: {name!r} differs from another name only by - and _")
+            kept = BUILT_IN_SOURCES.get(name)
+            if kept is not None and source.type != kept:
+                raise ValueError(f"sources: the name {name!r} is kept for `type: {kept}`")
         return self
 
     def channels(self, stage: str) -> list[tuple[str, Channel]]:

@@ -8,13 +8,13 @@ of secret-shaped strings:
 | Stage | Sent to the model |
 |---|---|
 | Triage | Alert titles, descriptions and labels, and excerpts of the three runbooks or reviewed postmortems that match them. No raw payload, no log line. |
-| Investigation | The same, plus what its tools return: rows of the log streams you listed, the metrics you listed, container state without the environment, log lines of the containers you listed, the definition of an OpenObserve alert, monitor names and states, commit subjects and file names of the repositories you listed, the output of the commands you prepared on other hosts, and excerpts of your runbooks and postmortems. |
+| Investigation | The same, plus what its tools return: rows of the log streams you listed, the metrics you listed, container state without the environment, log lines of the containers you listed, the definition of an OpenObserve alert, monitor names and states, commit subjects and file names of the repositories you listed, the output of the commands you prepared on other hosts, excerpts of your runbooks and postmortems, and what the tools of your [sources](sources.md) return: the metrics, log streams, charts and hosts you listed, alert rules and silences, monitor and check states. |
 | Postmortems | The incident's timeline and the investigation's findings. |
 | Actions | Nothing: no model is involved. The catalog (action names, target name patterns, the Coolify resource names and the files and keys you allow) is part of the investigator's prompt when actions are on. |
 | Replay | What was sent at the time, again: recorded context packs and recorded tool results. |
 | Traces | To your OTLP endpoint, not to a model: kinds, durations, model names, token counts, costs, outcomes, and incident and alert titles. |
 
-The allow-lists in `investigation.tools` are the control: a stream or a container that is not
+The allow-lists in `investigation.tools` and in each entry of `sources` are the control: a stream or a container that is not
 listed cannot be read. Leave out anything that holds personal data. Give Paeon credentials that
 can only read as well (an OpenObserve account limited to search, a Docker socket proxy limited to
 `GET`), so that the allow-lists are the second net and not the only one.

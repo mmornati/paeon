@@ -14,17 +14,19 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hmac
+import json
 import logging
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
+from urllib.parse import parse_qs
 from zoneinfo import ZoneInfo
 
 import httpx2 as httpx
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from paeon import autonomy, notify
+from paeon import autonomy, notify, sources
 from paeon import digest as digests
 from paeon import postmortem as postmortems
 from paeon.config import Settings
@@ -35,7 +37,7 @@ from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_clien
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.remediation import ExecutorApi, ExecutorClient, Remediator, pending_approvals
-from paeon.schema import Change, IncidentStatus
+from paeon.schema import Alert, Change, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
@@ -92,9 +94,10 @@ def create_app(
     model_clients: Mapping[str, ModelClient] | None = None,
     toolbox: Toolbox | None = None,
     executor: ExecutorApi | None = None,
+    source_transport: httpx.BaseTransport | None = None,
 ) -> FastAPI:
     """Build the app. `model_clients` (by alias), `toolbox` and `executor` replace the real
-    ones in tests."""
+    ones in tests, and `source_transport` answers in place of the services of `sources`."""
     rules = settings.rules
     recorder = Recorder(store, Correlator(store, rules))
     closers: list[Callable[[], None]] = []
@@ -125,6 +128,23 @@ def create_app(
             base_url=settings.openobserve.url,
             definitions=client.alert_definition,
         )
+
+    # The sources of the rules file, then the two webhooks that need no entry.
+    connected: dict[str, sources.Connected] = {}
+    for name, config in rules.sources.items():
+        connected[name] = sources.build(
+            name,
+            config,
+            settings.source_secrets.get(name, {}),
+            store=store,
+            recorder=recorder,
+            transport=source_transport,
+        )
+        closers.append(connected[name].close)
+    for name in ("uptime-kuma", "alertmanager"):
+        standing = sources.built_in(name)
+        if name not in connected and standing is not None:
+            connected[name] = sources.build(name, standing, {})
 
     knowledge_paths = [*rules.investigation.tools.knowledge.paths]
     if rules.postmortems.enabled:
@@ -162,6 +182,8 @@ def create_app(
                 tools += git_tools(wanted.git)
             if wanted.ssh is not None:
                 tools += ssh_tools(wanted.ssh)
+            for one in connected.values():
+                tools += one.tools
             toolbox = Toolbox(tools, max_result_chars=rules.investigation.max_result_chars)
         fallback = rules.investigation.fallback_model
         investigator = Investigator(
@@ -201,6 +223,21 @@ def create_app(
                 now=_now(),
                 stale_after=timedelta(seconds=settings.openobserve.stale_seconds),
             )
+
+    def poll_of(name: str, polling: sources.Polling) -> Callable[[], Awaitable[None]]:
+        async def poll() -> None:
+            try:
+                await asyncio.to_thread(polling.poller.poll, _now())
+            finally:
+                # Also after a failed poll: an unreachable source is exactly what must be recorded.
+                recorder.source_health(
+                    name,
+                    last_data_at=polling.poller.last_data_at(),
+                    now=_now(),
+                    stale_after=timedelta(seconds=polling.stale_seconds),
+                )
+
+        return poll
 
     async def heartbeat() -> None:
         if settings.heartbeat_url is None:  # pragma: no cover - not scheduled
@@ -307,6 +344,12 @@ def create_app(
             tasks.append(
                 asyncio.create_task(_every(poll_seconds, "openobserve poll", poll_openobserve))
             )
+        for name, one in connected.items():
+            if one.polling is not None:
+                every = one.polling.every_seconds
+                tasks.append(
+                    asyncio.create_task(_every(every, f"{name} poll", poll_of(name, one.polling)))
+                )
         if settings.heartbeat_url is not None:
             tasks.append(
                 asyncio.create_task(_every(settings.heartbeat_seconds, "heartbeat", heartbeat))
@@ -387,6 +430,22 @@ def create_app(
         payload = change.model_dump(mode="json")
         payload["started_at"] = (change.started_at or _now()).isoformat()
         return {"event": store.append("change.recorded", payload, source="change")}
+
+    def received(name: str, payload: dict[str, Any]) -> dict[str, int]:
+        parse = connected[name].parse
+        store.append("webhook.received", payload, source=name)
+        alerts: list[Alert] = [] if parse is None else parse(payload, _now())
+        changes = sum(recorder.observe(alert) is not None for alert in alerts)
+        return {"alerts": len(alerts), "changes": changes}
+
+    @app.post("/ingest/{name}", dependencies=[Depends(authorized)])
+    async def ingest_source(name: str, request: Request) -> dict[str, int]:
+        """What a source of the rules file pushes: `/ingest/<its name>`. JSON, or a form for
+        the senders that are a shell script."""
+        if name not in connected or connected[name].parse is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no source of this name receives")
+        payload = _payload(await request.body(), request.headers.get("content-type", ""))
+        return await asyncio.to_thread(received, name, payload)
 
     @app.get("/incidents", dependencies=[Depends(authorized)])
     def list_incidents(
@@ -488,8 +547,10 @@ def create_app(
             now=_now,
             stop=None if remediator is None else remediator.stop,
             proxy_secret=settings.ui_proxy_secret,
+            sources=_sources_shown(connected, source),
         )
 
+    app.state.sources = connected
     app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager
@@ -497,3 +558,30 @@ def create_app(
     app.state.postmortems = writer
     app.state.send_digest = send_digest
     return app
+
+
+def _payload(body: bytes, content_type: str) -> dict[str, Any]:
+    """The body of a push as a mapping: a JSON object, or the fields of a form."""
+    try:
+        if content_type.split(";")[0].strip().lower() == "application/x-www-form-urlencoded":
+            fields = parse_qs(body.decode("utf-8"), keep_blank_values=True)
+            return {key: values[-1] for key, values in fields.items()}
+        payload = json.loads(body)
+    except ValueError:  # not UTF-8, or not JSON
+        raise HTTPException(422, "not a JSON body") from None
+    if not isinstance(payload, dict):
+        raise HTTPException(422, "the body must be an object")
+    return payload
+
+
+def _sources_shown(
+    connected: Mapping[str, sources.Connected], openobserve: OpenObserveSource | None
+) -> tuple[tuple[str, str, str, tuple[str, ...]], ...]:
+    """For the console: each source's name, service, how its alerts arrive and its tools."""
+    shown = [
+        (one.name, one.kind, one.alerts, tuple(tool.spec.name for tool in one.tools))
+        for one in connected.values()
+    ]
+    if openobserve is not None:  # the one the PAEON_OPENOBSERVE_* variables define
+        shown.append((openobserve.name, "openobserve", "polled", ()))
+    return tuple(shown)

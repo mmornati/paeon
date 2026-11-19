@@ -29,6 +29,33 @@ SECTION = {  # the heading of each service in the guide
 }
 
 
+SOURCES = (ROOT / "docs" / "sources.md").read_text(encoding="utf-8")
+SOURCE_SECTION = {  # the heading of each service in the sources guide
+    "prometheus": "Prometheus",
+    "alertmanager": "Alertmanager",
+    "grafana": "Grafana",
+    "loki": "Loki",
+    "victorialogs": "VictoriaLogs",
+    "openobserve": "OpenObserve",
+    "uptime_kuma": "uptime-kuma",
+    "gatus": "Gatus",
+    "healthchecks": "Healthchecks",
+    "netdata": "Netdata",
+    "zabbix": "Zabbix",
+    "beszel": "Beszel",
+}
+
+
+def kinds_of(section_name: str) -> dict[str, Any]:
+    """The classes of a map told apart by `type` (`notifiers`, `sources`), by their type."""
+    union = get_args(rules.Rules.model_fields[section_name].annotation)[1]
+    found = {}
+    for model in get_args(get_args(union)[0]):
+        (kind,) = get_args(model.model_fields["type"].annotation)
+        found[kind] = model
+    return found
+
+
 def channels() -> dict[str, Any]:
     union = get_args(rules.Rules.model_fields["notifiers"].annotation)[1]
     found = {}
@@ -38,11 +65,11 @@ def channels() -> dict[str, Any]:
     return found
 
 
-def section(heading: str) -> str:
-    """The text of one service of the guide, up to the next heading."""
-    start = GUIDE.index(f"\n### {heading}\n")
-    following = [at for mark in ("\n### ", "\n## ") if (at := GUIDE.find(mark, start + 1)) > 0]
-    return GUIDE[start : min(following)]
+def section(heading: str, guide: str = GUIDE) -> str:
+    """The text of one service of a guide, up to the next heading."""
+    start = guide.index(f"\n### {heading}\n")
+    following = [at for mark in ("\n### ", "\n## ") if (at := guide.find(mark, start + 1)) > 0]
+    return guide[start : min(following)]
 
 
 def test_the_reference_page_is_what_the_schema_says() -> None:
@@ -93,6 +120,36 @@ def test_every_channel_example_of_the_guide_is_accepted() -> None:
         parsed = parse_rules(document)
         kinds |= {channel.type for channel in parsed.notifiers.values()}
     assert kinds == set(SECTION)
+
+
+def test_the_sources_guide_lists_the_keys_of_each_service_and_no_other() -> None:
+    known = kinds_of("sources")
+    assert set(known) == set(SOURCE_SECTION)
+    for kind, model in known.items():
+        text = section(SOURCE_SECTION[kind], SOURCES)
+        table = [line for line in text.splitlines() if line.startswith("| ") and "`" in line]
+        listed = {re.findall(r"`([a-z_]+)`", line.split("|")[1])[0] for line in table}
+        expected = set(model.model_fields) - {"type"}
+        assert listed == expected, f"{kind}: the guide lists {sorted(listed)}"
+        for line in table:
+            key = re.findall(r"`([a-z_]+)`", line.split("|")[1])[0]
+            assert ("**" in line.split("|")[1]) == model.model_fields[key].is_required(), (
+                f"{kind}.{key}: bold means required"
+            )
+        assert f"| `{kind}` |" in SOURCES, f"{kind} is not in the table of services"
+
+
+def test_every_source_example_of_the_guide_is_accepted() -> None:
+    kinds: set[str] = set()
+    for block in re.findall(r"```yaml\n(.*?)```", SOURCES, re.S):
+        document = yaml.safe_load(block)
+        if "sources" not in document:
+            entries = list(document.values())
+            if not all(isinstance(entry, dict) and "type" in entry for entry in entries):
+                continue  # the configuration of the service itself, not Paeon's
+            document = {"sources": document}
+        kinds |= {source.type for source in parse_rules(document).sources.values()}
+    assert kinds == set(SOURCE_SECTION)
 
 
 def test_every_variable_the_code_reads_is_in_the_configuration_guide() -> None:

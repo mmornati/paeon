@@ -13,7 +13,7 @@ with a policy that forbids it, so that nothing a log line contains can load or r
 from __future__ import annotations
 
 import hmac
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -75,6 +75,7 @@ def mount_ui(
     now: Callable[[], datetime] | None = None,
     stop: Callable[[], None] | None = None,
     proxy_secret: str | None = None,
+    sources: Sequence[views.SourceShown] = (),
 ) -> None:
     acting = rules.actions.enabled
     keeps = rules.postmortems.enabled
@@ -205,6 +206,11 @@ def mount_ui(
     def channels(request: Request) -> Response:
         lines = views.channels_view(store, rules, clock())
         return page(request, "channels.html", lines=lines, days=30, here="channels")
+
+    @router.get("/sources", response_class=HTMLResponse)
+    def sources_page(request: Request) -> Response:
+        lines = views.sources_view(store, sources, clock())
+        return page(request, "sources.html", lines=lines, days=30, here="sources")
 
     @router.get("/actions", response_class=HTMLResponse)
     def actions(request: Request, stopped: Annotated[str | None, Query()] = None) -> Response:

@@ -14,6 +14,7 @@
 | `paeon stop` / `paeon resume` | The kill switch, next to the executor |
 | `paeon reinstate <alert> <action> <container>` | Lift a demotion, next to the executor |
 | `paeon notify <channel>` | Send a test message through one notification channel |
+| `paeon source <name>` | Say what one source gives, and ask its service one question |
 | `paeon mcp` | Serve the record read-only to an assistant, over MCP on stdio |
 | `paeon replay triage\|investigation` | Re-run recorded incidents against the model and prompts of today |
 
@@ -21,6 +22,9 @@ The same is available over HTTP behind the bearer token: `GET /incidents`, `GET 
 `POST /incidents/{id}/feedback`, `GET /digest`, `GET /postmortems`, `GET /autonomy`, and
 `GET /brief` (what is open, what waits for your answer, what waits for a review: made for a
 daily brief).
+
+Alerts come in by `POST /ingest/<name>`, one address per [source](sources.md), and planned work
+by `POST /ingest/change`.
 
 ## Ask it from your assistant
 

@@ -1,6 +1,7 @@
 """`paeon serve` runs the core and `paeon executor` the executor; `events`, `incidents`,
 `digest`, `autonomy` and `feedback` read and annotate the record; `mcp` serves it read-only to
-an assistant; `stop`, `resume` and `reinstate` are the owner's switches on the executor."""
+an assistant; `notify` and `source` try one channel and one source; `stop`, `resume` and
+`reinstate` are the owner's switches on the executor."""
 
 from __future__ import annotations
 
@@ -94,6 +95,41 @@ def _notify(name: str) -> int:
         return 0
     sys.stderr.write(f"paeon: not sent: {delivery.error}\n")
     return 1
+
+
+def _source(name: str) -> int:
+    """Say what one source gives, and ask its service one question."""
+    from paeon import sources
+    from paeon.config import source_secrets
+
+    rules = _rules()
+    if name not in rules.sources:
+        known = ", ".join(sorted(rules.sources)) or "none is defined"
+        sys.stderr.write(f"paeon: no source {name!r} under `sources` ({known})\n")
+        return 2
+    config = rules.sources[name]
+    source = sources.build(name, config, source_secrets(os.environ, rules, name))
+    try:
+        sys.stdout.write(f"{name}: {source.kind}\n")
+        if source.parse is not None:
+            sys.stdout.write(f"  receives alerts at /ingest/{name}\n")
+        if getattr(config, "alerts", False):
+            every = getattr(config, "poll_seconds", 0.0)
+            sys.stdout.write(f"  polls for alerts every {every:g} seconds\n")
+        offered = ", ".join(tool.spec.name for tool in source.tools) or "none"
+        sys.stdout.write(f"  tools for an investigation: {offered}\n")
+        if source.probe is None:
+            sys.stdout.write("  nothing to ask: without a `url`, this source only receives\n")
+            return 0
+        try:
+            answer = source.probe()
+        except sources.ReadError as exc:
+            sys.stderr.write(f"paeon: not read: {exc}\n")
+            return 1
+        sys.stdout.write(f"  answered: {answer}\n")
+        return 0
+    finally:
+        source.close()
 
 
 def _mcp(db: str) -> int:
@@ -275,6 +311,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     commands.add_parser("executor", help="run the executor (PAEON_EXECUTOR_* variables)")
     test = commands.add_parser("notify", help="send a test message through one channel")
     test.add_argument("channel", help="a name from `notifiers` in the rules file")
+    check = commands.add_parser("source", help="ask one source's service a question")
+    check.add_argument("name", help="a name from `sources` in the rules file")
     mcp = commands.add_parser("mcp", help="serve the record read-only over MCP, on stdio")
     mcp.add_argument("--db", default=default_db)
     matrix = commands.add_parser("autonomy", help="print each action's level and track record")
@@ -316,6 +354,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _executor()
         if args.command == "notify":
             return _notify(args.channel)
+        if args.command == "source":
+            return _source(args.name)
         if args.command == "mcp":
             return _mcp(args.db)
         if args.command == "autonomy":

@@ -3,7 +3,7 @@
 Paeon is configured in two places:
 
 - **The rules file**, one YAML file named by `PAEON_CONFIG`: what Paeon does. Correlation,
-  maintenance windows, models, the stages, notification channels, actions, the console.
+  maintenance windows, sources, models, the stages, notification channels, actions, the console.
 - **The environment**: where a process runs and every secret. The address it listens on, the
   database path, tokens and keys.
 
@@ -16,6 +16,7 @@ Paeon records alerts and groups them into incidents.
 |---|---|
 | Every key of the rules file, with its type and default | [Configuration reference](configuration-reference.md) |
 | Where alerts come from | [Connect your alerts](connect-alerts.md) |
+| Each monitoring service: its alerts and what an investigation may read | [Sources](sources.md) |
 | Where Paeon sends, service by service | [Notifications](notifications.md) |
 | Plans, approvals and the executor | [Acting](acting.md) |
 | The console and its proxy | [The console](console.md) |
@@ -25,7 +26,8 @@ Paeon records alerts and groups them into incidents.
 - The file is read **once, when the process starts**. A change needs a restart of the process
   that reads it (`paeon serve`, and `paeon executor` for its own copy).
 - It is checked as a whole before anything starts. A key that does not exist, a value of the
-  wrong type, a model alias or a channel that is named and not defined: each stops the start
+  wrong type, a model alias or a channel that is named and not defined, a source with a key
+  its service does not have: each stops the start
   and says which key is wrong.
 - Secrets never go in the file. A key ending in `_env` holds the **name** of an environment
   variable (`api_key_env`, `token_env`, `webhook_env`), and every secret also accepts
@@ -39,6 +41,7 @@ Paeon records alerts and groups them into incidents.
 |---|---|---|
 | `correlation` | How alerts become incidents: windows, host labels, flapping. | [correlation](configuration-reference.md#correlation) |
 | `maintenance` | Weekly windows in which alerts are expected. | [maintenance](configuration-reference.md#maintenance) |
+| `sources` | Named monitoring services: their alerts, and what an investigation may read. | [sources](configuration-reference.md#sources) |
 | `models` | Model aliases: backend, model name, key, price. A stage names an alias. | [models](configuration-reference.md#models) |
 | `triage` | Stage 1: a cheap first look at each incident. | [triage](configuration-reference.md#triage) |
 | `investigation` | Stage 2: a strong model with the read-only tools you allow. | [investigation](configuration-reference.md#investigation) |
@@ -60,6 +63,14 @@ Paeon records alerts and groups them into incidents.
 
 The budgets (`daily_budget`, `budget_per_incident`), the storm guard (`max_per_hour`) and the limits on tool calls and time are set per stage in the same file. A spent budget never hides an alert: Paeon fails open and treats the incident as real.
 
+## Sources
+
+A monitoring service is defined once under `sources`, by a name of yours: Prometheus,
+Alertmanager, Grafana, Loki, VictoriaLogs, OpenObserve, uptime-kuma, Gatus, Healthchecks,
+Netdata, Zabbix or Beszel. A source that pushes its alerts posts them to `/ingest/<name>`, and
+what an investigation may read in it is the allow-list of that source. See
+[Sources](sources.md).
+
 ## Notifications
 
 The digest, the analysis and the approvals go to the channels you name: ntfy, Telegram, Discord,
@@ -80,7 +91,7 @@ Every secret below also accepts `NAME_FILE=/path`.
 | `PAEON_DB` | `paeon.sqlite` | Where the event log lives. |
 | `PAEON_HOST` | `127.0.0.1` | The address the API listens on. `0.0.0.0` in a container. |
 | `PAEON_PORT` | `8080` | Its port. |
-| `PAEON_OPENOBSERVE_URL` | none | Switches on the OpenObserve pull adapter. The internal address, for example `http://openobserve:5080`. |
+| `PAEON_OPENOBSERVE_URL` | none | Switches on the OpenObserve pull adapter. The internal address, for example `http://openobserve:5080`. The same can be written in the rules file, as a [source](sources.md#openobserve). |
 | `PAEON_OPENOBSERVE_ORG` | `default` | The organisation. |
 | `PAEON_OPENOBSERVE_USER` | | The account. Required with the URL. |
 | `PAEON_OPENOBSERVE_PASSWORD` | | Its password. Required with the URL. |
@@ -112,6 +123,7 @@ are the ones the examples use.
 |---|---|---|---|
 | `models.<alias>.api_key_env` | `ANTHROPIC_API_KEY` | core | A model provider's API key. |
 | `notifiers.<name>.token_env`, `webhook_env`, `password_env`, `user_env`, `url_env`, `authorization_env`, `urls_env` | `PAEON_TELEGRAM_TOKEN` | the process that sends to the channel | A channel's secret. See [Notifications](notifications.md). |
+| `sources.<name>.token_env`, `password_env`, `api_key_env` | `PAEON_GRAFANA_TOKEN` | core | A source's secret. See [Sources](sources.md). |
 | `digest.ntfy.token_env`, `investigation.ntfy.token_env` | `PAEON_NTFY_TOKEN` | core | The ntfy token of a stage's own `ntfy:` block. |
 | `actions.ntfy.token_env` | `PAEON_ACTIONS_NTFY_TOKEN` | executor | The ntfy token of the approval topic. |
 | `investigation.tools.uptime_kuma.api_key_env` | `PAEON_UPTIME_KUMA_API_KEY` | core | An uptime-kuma API key, for `/metrics`. |
