@@ -31,7 +31,8 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 - Replay judges a triage verdict by itself; for an investigation it shows the old and new root
   cause and leaves the judgment to you.
 - There is no retention period for tool results in the event log.
-- The notification adapters other than ntfy were tested against each service's documented
-  request, not against the live service. A tap cannot be answered from inside a chat: a button
+- Of the notification channels, ntfy, Gotify, e-mail and the webhook were run against real
+  servers; the others were tested against each service's documented request, not the live
+  service. A tap cannot be answered from inside a chat: a button
   opens the executor's page.
 - The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.

@@ -2,7 +2,9 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.2.0
+
+Notification channels: ten services and Apprise, each stage sending to the ones you name.
 
 ### Notifications
 
