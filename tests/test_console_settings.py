@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any, get_args
 
@@ -14,9 +15,11 @@ from fastapi.testclient import TestClient
 from paeon.app import create_app
 from paeon.channels import SERVICES, STAGES, Channels
 from paeon.config import ConfigError, Settings, load
+from paeon.console_sources import SOURCE_SERVICES, Sources
 from paeon.notify import Message, deliver
-from paeon.rules import Channel, RulesError, parse_rules
+from paeon.rules import Channel, RulesError, Source, parse_rules
 from paeon.store import Store
+from paeon.tools import Toolbox
 from paeon.ui.access import Gate, Sessions, role_from_groups
 from paeon.vault import Vault, VaultError
 
@@ -499,6 +502,7 @@ def test_each_service_form_renders(store: Store, kind: str) -> None:
     for spec in SERVICES[kind].fields:
         assert f'name="{spec.key}"' in text
     assert "Approvals are not on this list." in text
+    assert "[REDACTED]" not in text  # a help line must not read like a secret
 
 
 def test_a_kept_secret_does_not_follow_a_channel_to_a_new_address(store: Store) -> None:
@@ -578,3 +582,315 @@ def test_an_ipv4_client_on_a_dual_stack_socket_is_itself() -> None:
         sessions.sign_in("nope", "::ffff:203.0.113.9")
     assert sessions.locked("203.0.113.9") > 0
     assert sessions.locked("::ffff:203.0.113.10") == 0
+
+
+# --- sources added in the console --------------------------------------------------------------
+
+
+class Monitoring:
+    """Stands in for the monitoring services console sources read."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx.Request] = []
+        self.status = 200
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        return httpx.Response(self.status, json={"status": "success", "data": []})
+
+
+def sources_app(
+    store: Store,
+    monitoring: Monitoring | None = None,
+    ui: dict[str, Any] | None = None,
+    **rules: Any,
+) -> tuple[TestClient, Toolbox]:
+    base = load({"PAEON_INGEST_TOKEN": TOKEN})
+    settings = Settings(
+        db_path=base.db_path,
+        host=base.host,
+        port=base.port,
+        ingest_token=TOKEN,
+        openobserve=None,
+        heartbeat_url=None,
+        heartbeat_seconds=60,
+        rules=parse_rules({"ui": ui or PROXIED_UI, **rules}),
+        ui_proxy_secret=PROXY,
+        ui_admin_password=PASSWORD,
+        secret_key=KEY,
+    )
+    toolbox = Toolbox([])
+    transport = httpx.MockTransport(monitoring or Monitoring())
+    app = create_app(settings, store, toolbox=toolbox, source_transport=transport)
+    return TestClient(app, follow_redirects=False), toolbox
+
+
+PROM = {
+    "name": "prom",
+    "url": "http://prometheus:9090",
+    "token": "tk_prometheus_secret",
+    "metrics": "node_*, up",
+    "rules": "on",
+    "then": "save",
+}
+BEARER = {"Authorization": f"Bearer {TOKEN}"}
+
+
+def test_every_source_type_has_a_form_for_each_of_its_keys() -> None:
+    models = {
+        get_args(model.model_fields["type"].annotation)[0]: model
+        for model in get_args(get_args(Source)[0])
+    }
+    assert set(SOURCE_SERVICES) == set(models)
+    for kind, service in SOURCE_SERVICES.items():
+        assert {spec.model_key for spec in service.fields} == set(models[kind].model_fields) - {
+            "type"
+        }, kind
+        assert service.fields[0].key == "url"
+
+
+def test_a_source_added_in_the_console_is_connected_at_once(store: Store) -> None:
+    monitoring = Monitoring()
+    client, toolbox = sources_app(store, monitoring)
+    assert toolbox.specs == []
+    saved = client.post("/ui/sources/add/prometheus", data={**PROM, "then": "test"}, headers=ADMIN)
+    assert saved.status_code == 303
+    assert saved.headers["location"] == "/ui/sources?tested=prom&ok=1"
+    assert monitoring.requests[-1].headers["authorization"] == "Bearer tk_prometheus_secret"
+    assert monitoring.requests[-1].url.host == "prometheus"
+
+    names = {spec.name for spec in toolbox.specs}
+    assert "query_metrics_prom" in names
+    assert "list_scrape_targets_prom" not in names  # `targets` was left unticked
+
+    page = client.get(saved.headers["location"], headers=ADMIN).text
+    assert "answered" in page
+    assert "/ui/sources/prom/edit" in page
+    assert "query_metrics_prom" in page
+    assert "prometheus:9090" not in page
+    assert [e.kind for e in store.events()] == ["console.source.saved"]
+
+
+def test_a_console_source_receives_at_its_address_until_it_is_removed(store: Store) -> None:
+    client, _ = sources_app(store)
+    alert = {"alerts": [{"status": "firing", "labels": {"alertname": "Down"}, "fingerprint": "f1"}]}
+    assert client.post("/ingest/am2", json=alert, headers=BEARER).status_code == 404
+    saved = client.post(
+        "/ui/sources/add/alertmanager", data={"name": "am2", "then": "test"}, headers=ADMIN
+    )
+    # Nothing to ask a source with no server: it is saved, and only receives.
+    assert saved.headers["location"] == "/ui/sources?saved=am2"
+    received = client.post("/ingest/am2", json=alert, headers=BEARER)
+    assert received.status_code == 200
+    assert received.json()["alerts"] == 1
+    assert "/ingest/am2" in client.get("/ui/sources", headers=ADMIN).text
+
+    assert client.post("/ui/sources/am2/remove", headers=ADMIN).status_code == 303
+    assert client.post("/ingest/am2", json=alert, headers=BEARER).status_code == 404
+    assert store.console_sources() == []
+
+
+def test_removing_a_source_withdraws_its_tools(store: Store) -> None:
+    client, toolbox = sources_app(store)
+    client.post("/ui/sources/add/prometheus", data=PROM, headers=ADMIN)
+    assert toolbox.specs
+    client.post("/ui/sources/prom/remove", headers=ADMIN)
+    assert toolbox.specs == []
+    assert toolbox.call("query_metrics_prom", {"promql": "up"})[1] is True
+    last = list(store.events())[-1]
+    assert (last.kind, last.payload) == (
+        "console.source.removed",
+        {"name": "prom", "by": "admin"},
+    )
+
+
+def test_only_an_admin_changes_sources(store: Store) -> None:
+    client, _ = sources_app(store)
+    for headers in (VIEWER, OPERATOR):
+        assert client.get("/ui/sources", headers=headers).status_code == 200
+        assert client.get("/ui/sources/add", headers=headers).status_code == 403
+        assert (
+            client.post("/ui/sources/add/prometheus", data=PROM, headers=headers).status_code == 403
+        )
+        assert "Add a source" not in client.get("/ui/sources", headers=headers).text
+    without_origin = {k: v for k, v in ADMIN.items() if k != "Sec-Fetch-Site"}
+    refused = client.post("/ui/sources/add/prometheus", data=PROM, headers=without_origin)
+    assert refused.status_code == 403
+    assert store.console_sources() == []
+
+
+def test_source_names_the_file_or_paeon_holds_cannot_be_taken(store: Store) -> None:
+    client, _ = sources_app(
+        store, sources={"metrics": {"type": "prometheus", "url": "http://prometheus:9090"}}
+    )
+    for name, said in (
+        ("metrics", "The rules file already defines a source of this name."),
+        ("alertmanager", "This name is kept by Paeon."),
+        ("change", "This name is kept by Paeon."),
+        ("My Prom", "lower-case letters"),
+    ):
+        answer = client.post(
+            "/ui/sources/add/prometheus", data={**PROM, "name": name}, headers=ADMIN
+        )
+        assert answer.status_code == 422, name
+        assert said in answer.text, name
+        assert "tk_prometheus_secret" not in answer.text
+    client.post("/ui/sources/add/prometheus", data={**PROM, "name": "prom-a"}, headers=ADMIN)
+    close = client.post(
+        "/ui/sources/add/prometheus", data={**PROM, "name": "prom_a"}, headers=ADMIN
+    )
+    assert "but for - and _" in close.text
+    page = client.get("/ui/sources", headers=ADMIN).text
+    assert "rules file</span>" in page
+    assert "built in</span>" in page
+    assert "/ui/sources/metrics/edit" not in page
+    assert client.get("/ui/sources/metrics/edit", headers=ADMIN).status_code == 404
+    assert client.post("/ui/sources/metrics/remove", headers=ADMIN).status_code == 404
+
+
+def test_a_source_secret_is_sealed_and_stays_with_its_server(store: Store, tmp_path: Path) -> None:
+    monitoring = Monitoring()
+    client, _ = sources_app(store, monitoring)
+    client.post("/ui/sources/add/prometheus", data=PROM, headers=ADMIN)
+    database = sqlite3.connect(tmp_path / "paeon.sqlite")
+    stored = json.dumps(database.execute("SELECT * FROM console_sources").fetchall())
+    logged = json.dumps(database.execute("SELECT payload FROM events").fetchall())
+    database.close()
+    assert "tk_prometheus_secret" not in stored + logged
+    assert "prometheus:9090" not in logged
+    edit = client.get("/ui/sources/prom/edit", headers=ADMIN).text
+    assert "tk_prometheus_secret" not in edit
+    assert "Kept. Type a new one" in edit
+    assert 'value="node_*, up"' in edit
+
+    moved = {"url": "http://collector.example.net", "metrics": "up", "then": "test"}
+    refused = client.post("/ui/sources/prom/edit", data=moved, headers=ADMIN)
+    assert refused.status_code == 422
+    assert "Type it again." in refused.text
+    assert monitoring.requests == []
+    same = {"url": "http://prometheus:9090", "metrics": "up", "then": "test"}
+    assert client.post("/ui/sources/prom/edit", data=same, headers=ADMIN).status_code == 303
+    assert monitoring.requests[-1].headers["authorization"] == "Bearer tk_prometheus_secret"
+    assert store.console_sources()[0].config["metrics"] == ["up"]
+
+
+def test_a_source_that_does_not_answer_says_so_and_is_kept(store: Store) -> None:
+    monitoring = Monitoring()
+    monitoring.status = 401
+    client, _ = sources_app(store, monitoring)
+    saved = client.post("/ui/sources/add/prometheus", data={**PROM, "then": "test"}, headers=ADMIN)
+    assert saved.headers["location"] == "/ui/sources?tested=prom&ok=0"
+    page = client.get(saved.headers["location"], headers=ADMIN).text
+    assert "did not answer as expected" in page
+    assert "no answer" in page
+    assert [row.name for row in store.console_sources()] == ["prom"]
+
+
+def test_what_is_wrong_with_a_source_is_said_on_its_form(store: Store) -> None:
+    client, _ = sources_app(store)
+    half = client.post(
+        "/ui/sources/add/prometheus", data={**PROM, "token": "", "user": "paeon"}, headers=ADMIN
+    )
+    assert half.status_code == 422
+    assert "User and password go together." in half.text
+    not_a_url = client.post(
+        "/ui/sources/add/prometheus", data={**PROM, "url": "prometheus:9090"}, headers=ADMIN
+    )
+    assert "starts with http:// or https://" in not_a_url.text
+    with_password = client.post(
+        "/ui/sources/add/prometheus",
+        data={**PROM, "url": "http://admin:hunter2@prometheus:9090"},
+        headers=ADMIN,
+    )
+    assert with_password.status_code == 422
+    streams = client.post(
+        "/ui/sources/add/loki",
+        data={"name": "logs", "url": "http://loki:3100", "streams": "api {container=api}"},
+        headers=ADMIN,
+    )
+    assert streams.status_code == 422
+    assert "per line" in streams.text
+    assert store.console_sources() == []
+
+
+def test_a_polled_console_source_asks_for_a_poll_loop(store: Store) -> None:
+    client, _ = sources_app(store)
+    beszel = {
+        "name": "hub",
+        "url": "http://beszel:8090",
+        "user": "paeon@example.org",
+        "password": "a-test-password",
+        "alerts": "on",
+        "poll_seconds": "30",
+        "stale_seconds": "900",
+    }
+    assert client.post("/ui/sources/add/beszel", data=beszel, headers=ADMIN).status_code == 303
+    book: Sources = client.app.state.console_sources  # type: ignore[attr-defined]
+    first, polling = book.polling()["hub"]
+    assert polling.every_seconds == 30
+    # Saved again: the moment changes, which is what restarts its loop.
+    client.post(
+        "/ui/sources/hub/edit",
+        data={**beszel, "poll_seconds": "45", "password": ""},
+        headers=ADMIN,
+    )
+    again, polling = book.polling()["hub"]
+    assert again >= first
+    assert polling.every_seconds == 45
+    client.post("/ui/sources/hub/remove", headers=ADMIN)
+    assert book.polling() == {}
+
+
+def test_poll_loops_follow_the_console_sources(store: Store) -> None:
+    monitoring = Monitoring()
+    client, _ = sources_app(store, monitoring)
+    beszel = {
+        "name": "hub",
+        "url": "http://beszel:8090",
+        "user": "paeon@example.org",
+        "password": "a-test-password",
+        "alerts": "on",
+        "poll_seconds": "10",
+        "stale_seconds": "900",
+    }
+    with client:  # the app's lifespan: the supervisor runs
+        client.post("/ui/sources/add/beszel", data=beszel, headers=ADMIN)
+        deadline = time.monotonic() + 10
+        while not monitoring.requests and time.monotonic() < deadline:
+            time.sleep(0.1)
+        assert monitoring.requests, "the hub was never polled"
+        assert monitoring.requests[0].url.host == "beszel"
+
+
+def test_console_sources_are_ignored_with_settings_off(store: Store) -> None:
+    client, _ = sources_app(store)
+    client.post("/ui/sources/add/prometheus", data=PROM, headers=ADMIN)
+    off, toolbox = sources_app(store, ui={"enabled": True})
+    assert off.app.state.console_sources is None  # type: ignore[attr-defined]
+    assert toolbox.specs == []
+    assert "prom" not in off.get("/ui/sources").text
+    assert off.get("/ui/sources/add").status_code == 404
+
+
+def test_a_source_the_file_later_claims_is_set_aside(store: Store) -> None:
+    client, _ = sources_app(store)
+    client.post("/ui/sources/add/prometheus", data=PROM, headers=ADMIN)
+    claimed, _toolbox = sources_app(
+        store, sources={"prom": {"type": "prometheus", "url": "http://other:9090"}}
+    )
+    book: Sources = claimed.app.state.console_sources  # type: ignore[attr-defined]
+    found = book.find("prom")
+    assert found is not None
+    assert found.broken == "the rules file now defines a source of this name"
+    assert book.tools() == []
+    assert claimed.app.state.sources["prom"].kind == "prometheus"  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize("kind", sorted(SOURCE_SERVICES))
+def test_each_source_form_renders(store: Store, kind: str) -> None:
+    client, _ = sources_app(store)
+    text = client.get(f"/ui/sources/add/{kind}", headers=ADMIN).text
+    for spec in SOURCE_SERVICES[kind].fields:
+        assert f'name="{spec.key}"' in text
+    assert "is sent to the model that investigates" in text
+    assert "[REDACTED]" not in text  # a help line must not read like a secret

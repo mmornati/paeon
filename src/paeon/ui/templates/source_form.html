@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{% if editing %}{{ name }}{% else %}Add {{ service.label }}{% endif %}{% endblock %}
+{% block main %}
+{% import "_fields.html" as forms %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/ui/sources">Sources</a>{% if editing %}<span>{{ name }}</span>{% else %}<a href="/ui/sources/add">Add</a><span>{{ service.label }}</span>{% endif %}</nav>
+<div class="head">
+  <div>
+    <h1>{% if editing %}{{ name }}{% else %}New {{ service.label }} source{% endif %}</h1>
+    <p class="sub">{{ service.summary }}</p>
+  </div>
+  {% if editing %}<span class="badge">{{ service.label }}</span>{% endif %}
+</div>
+
+{% if problems %}
+<div class="banner" role="alert" id="problems">
+  <p>{% if problems[""] %}{{ problems[""] }}{% else %}Not saved yet: {{ problems|length }} field{{ "" if problems|length == 1 else "s" }} need{{ "s" if problems|length == 1 else "" }} a look.{% endif %} Secrets are never sent back to the page, so type them again.</p>
+</div>
+{% elif broken %}
+<p class="banner" role="alert">Paeon is not using this source: {{ broken }}. Saving it again with its secrets puts it back.</p>
+{% endif %}
+
+<form class="block form" method="post" action="{% if editing %}/ui/sources/{{ name }}/edit{% else %}/ui/sources/add/{{ service.type }}{% endif %}" autocomplete="off">
+  <div class="block-body">
+    {% if not editing %}
+    {% call forms.name_field(name, problems, "prom") %}What the log calls it, and the end of its address: alerts are posted to <code>/ingest/&lt;name&gt;</code>. Lower-case letters, digits, - and _. It cannot be changed later.{% endcall %}
+    {% endif %}
+    {{ forms.fields(service, values, kept, problems) }}
+    <p class="note">What you allow here is what an investigation may read in this service, and what it reads is sent to the model that investigates. Leave an allow-list empty to offer nothing from it.</p>
+    <div class="form-actions">
+      <button class="btn btn-primary" name="then" value="test">Save and test</button>
+      <button class="btn" name="then" value="save">Save</button>
+      <a class="btn btn-quiet" href="/ui/sources">Cancel</a>
+    </div>
+  </div>
+</form>
+
+{% if editing %}
+<section class="block" aria-labelledby="h-remove">
+  <div class="block-head"><h2 id="h-remove">Remove this source</h2></div>
+  <div class="block-body">
+    <p>Paeon stops receiving at its address, stops polling it, withdraws its tools from the next investigation, and deletes its stored secrets. The log keeps the alerts it sent, and that it was removed.</p>
+    <details class="confirm">
+      <summary class="btn">Remove…</summary>
+      <form class="vote" method="post" action="/ui/sources/{{ name }}/remove">
+        <p class="vote-ask">Remove <span class="typed">{{ name }}</span>? This cannot be undone from the console.</p>
+        <div class="vote-buttons"><button class="btn btn-stop">Remove source</button></div>
+      </form>
+    </details>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

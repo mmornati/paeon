@@ -344,6 +344,7 @@ input, select, textarea { accent-color: var(--accent); caret-color: var(--accent
 .check > span { display: grid; gap: 0.125rem; font-size: 0.875rem; color: var(--text); font-weight: 400; }
 .check strong { font-weight: 600; }
 .check small { font-size: 0.8125rem; color: var(--text-2); }
+.check-plain { max-width: 30rem; }
 .check-inline { border: 0; padding: 0.25rem 0; gap: 0.5rem; width: fit-content; }
 .check-inline:has(input:checked) { background: none; }
 .check-inline > span { font-size: 0.8125rem; color: var(--text-2); }

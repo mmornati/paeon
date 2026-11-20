@@ -1,0 +1,37 @@
+{#- The inputs of a settings form: one per field of a service. Shared by channels and sources. -#}
+{% from "_icons.html" import icon %}
+{% macro name_field(name, problems, what) %}
+    <div class="field{% if problems.name %} is-bad{% endif %}">
+      <label for="f-name"><span>Name</span></label>
+      <input id="f-name" type="text" name="name" value="{{ name }}" required maxlength="32" pattern="[a-z0-9][a-z0-9_\-]{0,31}" placeholder="{{ what }}" autocapitalize="none" spellcheck="false" aria-describedby="help-name"{% if problems.name %} aria-invalid="true"{% endif %}>
+      <small id="help-name">{% if problems.name %}<strong class="field-error">{{ problems.name }}</strong>{% else %}{{ caller() }}{% endif %}</small>
+    </div>
+{% endmacro %}
+{% macro fields(service, values, kept, problems) %}
+    {% for spec in service.fields -%}
+    {% if spec.kind == "bool" -%}
+    <label class="check check-plain"><input type="checkbox" name="{{ spec.key }}"{% if values.get(spec.key) %} checked{% endif %}><span><strong>{{ spec.label }}</strong><small>{{ spec.help }}</small></span></label>
+    {%- else %}
+    {% set bad = problems[spec.key] %}
+    {% set is_kept = spec.key in kept %}
+    <div class="field{% if bad %} is-bad{% endif %}">
+      <label for="f-{{ spec.key }}"><span>{{ spec.label }}</span>{% if spec.secret %} <span class="tag secret">{{ icon("lock") }}{% if is_kept %}kept{% else %}secret{% endif %}</span>{% endif %}{% if not spec.required %} <span class="dim optional">optional</span>{% endif %}</label>
+      {% if spec.kind == "select" -%}
+      <select id="f-{{ spec.key }}" name="{{ spec.key }}" aria-describedby="help-{{ spec.key }}">
+        {% for option in spec.options %}<option value="{{ option }}"{% if values.get(spec.key, spec.default) == option %} selected{% endif %}>{{ option }}</option>{% endfor %}
+      </select>
+      {%- elif spec.kind == "map" -%}
+      <textarea id="f-{{ spec.key }}" name="{{ spec.key }}" rows="3" spellcheck="false" autocapitalize="none" placeholder="name: value" aria-describedby="help-{{ spec.key }}"{% if bad %} aria-invalid="true"{% endif %}>{{ values.get(spec.key, "") }}</textarea>
+      {%- elif spec.kind == "lines" -%}
+      <textarea id="f-{{ spec.key }}" name="{{ spec.key }}" rows="3" spellcheck="false" autocapitalize="none" aria-describedby="help-{{ spec.key }}"{% if spec.required and not is_kept %} required{% endif %}{% if is_kept %} placeholder="Kept. Type new ones to replace them."{% endif %}{% if bad %} aria-invalid="true"{% endif %}></textarea>
+      {%- elif spec.secret -%}
+      <input id="f-{{ spec.key }}" type="password" name="{{ spec.key }}" autocomplete="new-password" spellcheck="false" aria-describedby="help-{{ spec.key }}"{% if spec.required and not is_kept %} required{% endif %}{% if is_kept %} placeholder="Kept. Type a new one to replace it."{% endif %}{% if bad %} aria-invalid="true"{% endif %}>
+      {%- else -%}
+      <input id="f-{{ spec.key }}" type="{{ "url" if spec.kind == "url" else "text" }}" name="{{ spec.key }}" value="{{ values.get(spec.key, "") }}"{% if spec.kind == "number" %} inputmode="decimal" pattern="[0-9]+(\.[0-9]+)?"{% endif %}{% if spec.placeholder %} placeholder="{{ spec.placeholder }}"{% endif %}{% if spec.required %} required{% endif %} autocapitalize="none" spellcheck="false" aria-describedby="help-{{ spec.key }}"{% if bad %} aria-invalid="true"{% endif %}>
+      {%- endif %}
+      <small id="help-{{ spec.key }}">{% if bad %}<strong class="field-error">{{ bad }}</strong> {% endif %}{{ spec.help }}</small>
+      {% if spec.secret and is_kept and not spec.required %}<label class="check check-inline"><input type="checkbox" name="forget_{{ spec.key }}"><span>Remove the stored {{ spec.label|lower }}</span></label>{% endif %}
+    </div>
+    {%- endif %}
+    {% endfor -%}
+{% endmacro %}

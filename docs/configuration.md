@@ -36,7 +36,8 @@ Paeon records alerts and groups them into incidents.
   [Acting](acting.md).
 - The file is never written by Paeon. With `ui.settings` on, an admin can add notification
   channels in the console; they are kept in the database and laid over the file, which wins
-  on a name both define. See [The console](console.md#channels-in-the-console).
+  on a name both define. Sources can be added the same way. See
+  [The console](console.md#channels-and-sources-in-the-console).
 
 ## The sections of the file
 

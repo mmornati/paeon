@@ -756,10 +756,11 @@ class Ui(_Rule):
     )
     settings: bool = Field(
         default=False,
-        description="Lets an admin add, change, test and remove notification channels in the"
-        " console. They are kept in the database, next to those of this file, which the"
-        " console never changes. Needs PAEON_SECRET_KEY, and `auth: local` or `roles`. Off:"
-        " channels added in the console are ignored, and this file is all there is.",
+        description="Lets an admin add, change, test and remove notification channels and"
+        " sources in the console. They are kept in the database, next to those of this file,"
+        " which the console never changes. Needs PAEON_SECRET_KEY, and `auth: local` or"
+        " `roles`. Off: what was added in the console is ignored, and this file is all there"
+        " is.",
     )
     roles: Roles | None = Field(
         default=None,

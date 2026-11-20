@@ -17,6 +17,7 @@ from typing import Any, Literal
 from paeon import autonomy, ledger, remediation
 from paeon import postmortem as postmortems
 from paeon.channels import Channels
+from paeon.console_sources import Sources
 from paeon.redact import redact
 from paeon.rules import Rules
 from paeon.schema import Incident, IncidentStatus, StageState, Status
@@ -338,6 +339,14 @@ def describe(event: Event) -> str:
                 f"Channel {_text(p.get('name'))} ({_text(p.get('channel'))}) {verb} in the"
                 f" console by {_text(p.get('by'))}: carries {what or 'nothing'}"
             )
+        case "console.source.saved":
+            verb = "added" if p.get("created") else "changed"
+            return (
+                f"Source {_text(p.get('name'))} ({_text(p.get('service'))}) {verb} in the"
+                f" console by {_text(p.get('by'))}"
+            )
+        case "console.source.removed":
+            return f"Source {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
         case "console.channel.removed":
             return f"Channel {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
         case "console.signin":
@@ -1002,6 +1011,10 @@ class SourceLine:
     fired: int
     last_at: datetime | None
     stale: bool
+    origin: str = "file"  # file: the rules file (or Paeon itself); console: added here
+    broken: str | None = None
+    probe: tuple[bool, str] | None = None  # what its last test answered
+    can_test: bool = False
 
     @property
     def address(self) -> str | None:
@@ -1010,12 +1023,23 @@ class SourceLine:
 
 
 def sources_view(
-    store: Store, shown: Sequence[SourceShown], now: datetime, *, days: int = 30
+    store: Store,
+    shown: Sequence[SourceShown],
+    now: datetime,
+    *,
+    days: int = 30,
+    console: Sources | None = None,
 ) -> tuple[SourceLine, ...]:
-    """Every source, what it gives, and what came from it. Never its address or its secret."""
+    """Every source, what it gives, and what came from it. Never its address or its secret.
+    With `console`, the sources added there too, even one that is set aside."""
     since = now - timedelta(days=days)
     lines = []
-    for name, kind, alerts, tools in shown:
+    added = {} if console is None else {one.name: one for one in console.shown()}
+    listed = {name for name, *_ in shown}
+    aside = [
+        (one.name, one.service.type, "none", ()) for one in added.values() if one.name not in listed
+    ]
+    for name, kind, alerts, tools in (*shown, *aside):
         fired = 0
         last: datetime | None = None
         for event in store.events(
@@ -1033,9 +1057,13 @@ def sources_view(
                 fired=fired,
                 last_at=last,
                 stale=state is not None and state.status == Status.FIRING.value,
+                origin="file" if console is None else console.origin(name),
+                broken=added[name].broken if name in added else None,
+                probe=None if console is None else console.probed(name),
+                can_test=console is not None and console.can_test(name),
             )
         )
-    return tuple(lines)
+    return tuple(sorted(lines, key=lambda line: line.origin == "console"))  # the file's first
 
 
 # --- actions and autonomy -------------------------------------------------------------------

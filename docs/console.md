@@ -91,7 +91,7 @@ ui:
 nothing. Without `roles`, everyone the proxy lets in is an operator, as in earlier versions,
 and nobody is an admin.
 
-## Channels in the console
+## Channels and sources in the console
 
 ```yaml
 ui:
@@ -118,8 +118,23 @@ A channel added there takes effect at once, without a restart. This also needs
   executor, from its own copy of the rules file, next to the key that signs them.
 - **The log says who changed what**: the service, what the channel carries and who saved it.
   It holds neither an address nor a secret.
-- **With `settings` off, the file is all there is**: channels added in the console are kept and
-  ignored. That is the setting for a deployment configured from git.
+### Sources
+
+The Sources page works the same way, for the monitoring services of
+[Sources](sources.md): choose the service, name the source, give its server and what an
+investigation may read in it, then save and test. A source added there is connected at once:
+
+- it receives at `/ingest/<name>` if its service pushes alerts (the page shows the address);
+- it is polled if its service is polled, and reported stale like any other;
+- its tools are offered to the next investigation, and withdrawn when it is removed.
+
+What you allow in a source is what a model provider may be shown, which is why adding one
+takes the admin role. The names the rules file defines, and those Paeon answers on its own
+(`alertmanager`, `uptime-kuma`), cannot be taken. Changing a source's server asks for its
+secrets again.
+
+- **With `settings` off, the file is all there is**: channels and sources added in the console are kept
+  and ignored. That is the setting for a deployment configured from git.
 
 ## The pages
 

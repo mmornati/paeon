@@ -31,6 +31,7 @@ from paeon import digest as digests
 from paeon import postmortem as postmortems
 from paeon.channels import Channels
 from paeon.config import Settings
+from paeon.console_sources import Sources
 from paeon.correlation import Correlator
 from paeon.guard import BodyGuard
 from paeon.investigation import Investigator
@@ -66,6 +67,7 @@ INVESTIGATION_TICK_SECONDS = 15
 POSTMORTEM_TICK_SECONDS = 60
 DIGEST_TICK_SECONDS = 300
 REMEDIATION_TICK_SECONDS = 5
+SOURCES_TICK_SECONDS = 2
 
 
 class Feedback(BaseModel):
@@ -184,11 +186,16 @@ def create_app(
         else []
     )
     console_channels: Channels | None = None
-    if rules.ui.enabled and rules.ui.settings and settings.secret_key:
+    vault = (
+        Vault(settings.secret_key)
+        if rules.ui.enabled and rules.ui.settings and settings.secret_key
+        else None
+    )
+    if vault is not None:
         console_channels = Channels(
             store,
             rules,
-            Vault(settings.secret_key),
+            vault,
             base={"digest": digest_channels, "investigation": analysis_channels},
             transport=channel_transport,
         )
@@ -228,6 +235,25 @@ def create_app(
             extras=None if remediator is None else remediator.extras,
             after=None if remediator is None else remediator.on_findings,
         )
+    # The sources an admin adds in the console, connected after those of the rules file so
+    # that the toolbox knows which tools it started with: only the others ever change.
+    console_sources: Sources | None = None
+    if vault is not None:
+        console_sources = Sources(
+            store,
+            rules,
+            vault,
+            connected=connected,
+            recorder=recorder,
+            reserved=("openobserve",) if openobserve is not None else (),
+            transport=source_transport,
+        )
+        closers.append(console_sources.close)
+        if toolbox is not None:
+            offered, book = toolbox, console_sources
+            book.changed = lambda: offered.extend(book.tools())
+            book.changed()
+
     writer = (
         PostmortemWriter(store, rules, model_client(rules.postmortems.model))
         if rules.postmortems.enabled
@@ -265,6 +291,36 @@ def create_app(
                 )
 
         return poll
+
+    async def supervise_sources() -> None:
+        """Keep one poll loop per polled source of the console: started when the source is
+        added, restarted when it is saved again, stopped when it is removed."""
+        if console_sources is None:  # pragma: no cover - not scheduled
+            return
+        running: dict[str, tuple[datetime, asyncio.Task[None]]] = {}
+        try:
+            while True:
+                wanted = console_sources.polling()
+                for name in list(running):
+                    if name not in wanted or wanted[name][0] != running[name][0]:
+                        running.pop(name)[1].cancel()
+                    if name not in wanted:
+                        # Gone on purpose: it must not stay reported as stale.
+                        await asyncio.to_thread(
+                            recorder.source_health,
+                            name,
+                            last_data_at=_now(),
+                            now=_now(),
+                            stale_after=timedelta(days=1),
+                        )
+                for name, (stamp, polling) in wanted.items():
+                    if name not in running:
+                        job = _every(polling.every_seconds, f"{name} poll", poll_of(name, polling))
+                        running[name] = (stamp, asyncio.create_task(job))
+                await asyncio.sleep(SOURCES_TICK_SECONDS)
+        finally:
+            for _, task in running.values():
+                task.cancel()
 
     async def heartbeat() -> None:
         if settings.heartbeat_url is None:  # pragma: no cover - not scheduled
@@ -373,6 +429,8 @@ def create_app(
                 tasks.append(
                     asyncio.create_task(_every(every, f"{name} poll", poll_of(name, one.polling)))
                 )
+        if console_sources is not None:
+            tasks.append(asyncio.create_task(supervise_sources()))
         if settings.heartbeat_url is not None:
             tasks.append(
                 asyncio.create_task(_every(settings.heartbeat_seconds, "heartbeat", heartbeat))
@@ -570,8 +628,9 @@ def create_app(
             now=_now,
             stop=None if remediator is None else remediator.stop,
             proxy_secret=settings.ui_proxy_secret,
-            sources=_sources_shown(connected, source),
+            sources=lambda: _sources_shown(connected, source),
             channels=console_channels,
+            source_book=console_sources,
             sessions=(
                 Sessions(settings.secret_key, settings.ui_admin_password)
                 if rules.ui.auth == "local" and settings.secret_key and settings.ui_admin_password
@@ -581,6 +640,7 @@ def create_app(
 
     app.state.sources = connected
     app.state.channels = console_channels
+    app.state.console_sources = console_sources
     app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager

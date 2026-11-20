@@ -27,6 +27,13 @@ are, Paeon gets a copy, and nothing it does changes anything in a source.
 Anything else that can send the Alertmanager webhook (vmalert through Alertmanager, SigNoz,
 Karma, many others) can post to an `alertmanager` source.
 
+!!! tip "Or add them in the console"
+
+    With `ui.settings` on, an admin can add a source on the console's Sources page instead of
+    writing it here: same services, same keys, the secret typed in the browser and stored
+    encrypted, and no restart. See
+    [The console](console.md#channels-and-sources-in-the-console).
+
 ## Set up a source
 
 1. **Define it** under `sources`, with a name of yours and the keys of its service (below).

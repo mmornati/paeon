@@ -240,7 +240,7 @@ SERVICES: dict[str, Service] = {
                 FieldSpec(
                     "authorization",
                     "Authorization header",
-                    "The whole value, for example Bearer followed by a token.",
+                    "The whole value of the header, scheme included.",
                     secret=True,
                     required=False,
                 ),
