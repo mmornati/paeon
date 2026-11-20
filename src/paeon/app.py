@@ -56,7 +56,7 @@ from paeon.tools import (
 )
 from paeon.triage import Triager
 from paeon.ui import mount_ui
-from paeon.ui.access import Sessions
+from paeon.ui.access import Passwords, Sessions
 from paeon.vault import Vault
 
 log = logging.getLogger(__name__)
@@ -632,8 +632,8 @@ def create_app(
             channels=console_channels,
             source_book=console_sources,
             sessions=(
-                Sessions(settings.secret_key, settings.ui_admin_password)
-                if rules.ui.auth == "local" and settings.secret_key and settings.ui_admin_password
+                Sessions(settings.secret_key, Passwords(store, settings.ui_admin_password))
+                if rules.ui.auth == "local" and settings.secret_key
                 else None
             ),
         )

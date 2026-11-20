@@ -60,8 +60,12 @@ ui:
   auth: local
 ```
 
-Set `PAEON_UI_ADMIN_PASSWORD` (12 characters or more) and `PAEON_SECRET_KEY` (32 or more, any
-long random value). Whoever signs in is the admin. The session is a signed cookie that lasts 14
+Set `PAEON_SECRET_KEY` (32 characters or more, any long random value). The password is chosen
+in the browser the first time: Paeon prints a code in its log at each start until a password
+exists, and `/ui/setup` asks for that code, so that only someone who can read the log of this
+server can choose it. Only a salted hash of the password is kept. To set it from the
+environment instead, or to get back in after forgetting it, set `PAEON_UI_ADMIN_PASSWORD`
+(12 characters or more): it takes over. Whoever signs in is the admin. The session is a signed cookie that lasts 14
 days; changing the password or the key signs everyone out. After five wrong passwords in a row
 from one address, no password from that address is looked at for a minute; after fifty
 in a row from anywhere, none is for anyone. There is one account and no user list: for several
@@ -90,6 +94,19 @@ ui:
 `roles` needs `proxy_secret`: a groups header anyone on the network can send would prove
 nothing. Without `roles`, everyone the proxy lets in is an operator, as in earlier versions,
 and nobody is an admin.
+
+### With no rules file at all
+
+```bash
+PAEON_CONSOLE=local
+```
+
+With no `PAEON_CONFIG`, this variable alone turns the console on with `auth: local` and
+`settings: true`: start Paeon, open `/ui`, choose the password, and add your sources and
+channels there. The incidents page lists what is left to do until it is done. Stages that call
+a model, and everything about acting, are still configured in a rules file; when you write
+one, remove `PAEON_CONSOLE` and set `ui` in the file. What you added in the console stays, as
+long as the file keeps `settings: true`.
 
 ## Channels and sources in the console
 

@@ -378,6 +378,17 @@ a.typed { color: var(--accent); font-weight: 600; }
 .head > .btn, .head > .badge { flex: none; }
 .head > div:first-child { flex: 1 1 16rem; min-width: 0; }
 
+/* Getting started, on the board, until it is all done. */
+.setup-steps { border: 0; border-radius: 0; }
+.setup-steps > li { padding-right: 1.125rem; }
+.setup-steps > li::before { left: 1.125rem; top: 0.75rem; }
+.plan.setup-steps > li { padding-left: 3.25rem; padding-block: 0.75rem; }
+.setup-step { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1.5rem; }
+.setup-step p { flex: 1 1 18rem; max-width: 40rem; line-height: 1.45; }
+.setup-text { color: var(--text-2); font-size: 0.8125rem; }
+.setup-steps > li.is-done::before { background: var(--ok-bg); color: var(--ok); }
+.setup-steps > li.is-done strong { color: var(--text-2); font-weight: 500; }
+
 /* The sign-in page: no shell around it, since nothing of the console is shown yet. */
 .door { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem var(--gutter); }
 .door-card { width: 100%; max-width: 23rem; display: grid; gap: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.75rem 1.5rem 1.5rem; }

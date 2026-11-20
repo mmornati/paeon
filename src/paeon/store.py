@@ -87,6 +87,11 @@ CREATE TABLE IF NOT EXISTS console_sources (
     updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS console_state (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS incidents (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     status           TEXT NOT NULL,
@@ -509,3 +514,20 @@ class Store:
         with self._lock:
             cursor = self._db.execute(f"DELETE FROM {table} WHERE name = ?", (name,))  # noqa: S608
         return cursor.rowcount > 0
+
+    # What the console keeps for itself: the hash of the password chosen at setup.
+
+    def console_state(self, key: str) -> str | None:
+        with self._lock:
+            row = self._db.execute(
+                "SELECT value FROM console_state WHERE key = ?", (key,)
+            ).fetchone()
+        return None if row is None else str(row[0])
+
+    def set_console_state(self, key: str, value: str) -> None:
+        with self._lock:
+            self._db.execute(
+                "INSERT INTO console_state (key, value) VALUES (?, ?)"
+                " ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+                (key, value),
+            )

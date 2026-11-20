@@ -1,8 +1,8 @@
 # Quickstart
 
-One machine, no account and no model key. In six steps you will start Paeon, send it an alert,
-watch it become an incident, and open the console. Nothing leaves your machine: without a rules
-file that enables a stage, Paeon calls no model.
+One machine, no account, no model key and no file to write. In six steps you will start Paeon,
+send it an alert, watch it become an incident, and finish its configuration in the console.
+Nothing leaves your machine: without a rules file that enables a stage, Paeon calls no model.
 
 You need Python 3.12 or later and [uv](https://docs.astral.sh/uv/).
 
@@ -24,17 +24,31 @@ uv sync
 
 ## 2. Configure the minimum
 
-Paeon needs one secret, the token your alert senders present. Generate it into `.env`:
+Paeon needs two secrets: the token your alert senders present, and a key that protects what
+the console stores. Generate both into `.env`:
 
 ```bash
 echo "PAEON_INGEST_TOKEN=$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')" > .env
 ```
 
-And a rules file that turns the console on:
+```bash
+echo "PAEON_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" >> .env
+```
+
+Then say that this Paeon is configured from the browser:
 
 ```bash
-printf 'ui:\n  enabled: true\n' > paeon.yaml && echo "PAEON_CONFIG=paeon.yaml" >> .env
+echo "PAEON_CONSOLE=local" >> .env
 ```
+
+That one line turns the console on, makes it ask for a password, and lets you add sources and
+notification channels in it. It is for a start with no rules file.
+
+??? note "Prefer a file, kept in git?"
+
+    Leave `PAEON_CONSOLE` out, write the [rules file](configuration.md) and name it with
+    `PAEON_CONFIG`. The console is then what the file's `ui` section says, read-only by
+    default, and nothing set in a browser changes what Paeon does.
 
 ## 3. Start it
 
@@ -42,8 +56,9 @@ printf 'ui:\n  enabled: true\n' > paeon.yaml && echo "PAEON_CONFIG=paeon.yaml" >
 set -a && . ./.env && set +a && uv run paeon serve
 ```
 
-It listens on `127.0.0.1:8080` and keeps its event log in `paeon.sqlite`. Leave it running and
-open a second terminal in the same folder.
+It listens on `127.0.0.1:8080` and keeps its event log in `paeon.sqlite`. Among its first lines
+is one that names `/ui/setup` and ends with a code: you will need it in step 5. Leave it running
+and open a second terminal in the same folder.
 
 ## 4. Send a first alert
 
@@ -67,15 +82,22 @@ Paeon answers `{"alerts":1,"changes":1}`: one alert received, one state change r
 uv run paeon incidents
 ```
 
-One line of JSON: incident 1, `open`, on `server-1`, with the alert attached. Now open the
-console at <http://127.0.0.1:8080/ui>: the incident is in the **Open** group, and its page shows
-the record of what happened so far.
+One line of JSON: incident 1, `open`, on `server-1`, with the alert attached.
 
-!!! warning "Keep it local"
+Now open the console at <http://127.0.0.1:8080/ui>. The first time, it asks for the code from
+the log and lets you choose the admin password. Then the incident is there, in the **Open**
+group, and its page shows the record of what happened so far.
 
-    The console has no login here. On your own machine, bound to `127.0.0.1`, that is fine. On
-    a server it belongs behind a reverse proxy that authenticates, or it can ask for a password
-    itself (`ui.auth: local`): see [the console](console.md).
+Above the incidents, **Finish setting up** lists what is left, each with its button: connect a
+source (Prometheus, Grafana, uptime-kuma and others), and add a channel (ntfy, Telegram,
+e-mail and others) for the daily digest. Both are forms in the console, take effect at once
+and can be tested from there.
+
+!!! warning "Before it leaves your machine"
+
+    The password travels as you type it: put TLS in front of the console as soon as it is
+    reached from another machine, and prefer a reverse proxy that authenticates when several
+    people use it. See [the console](console.md).
 
 ## 6. Resolve it
 
@@ -98,7 +120,7 @@ was called and nothing was sent anywhere. From here, each step is a decision of 
 
 | You want | Go to |
 |---|---|
-| Your real alerts in it | [Connect your alerts](connect-alerts.md): uptime-kuma, Alertmanager, Grafana, OpenObserve, Gatus, Zabbix and others |
+| Your real alerts in it | **Sources** in the console, or [Connect your alerts](connect-alerts.md): uptime-kuma, Alertmanager, Grafana, OpenObserve, Gatus, Zabbix and others |
 | A model to say whether an alert is noise | `triage` in [Configuration](configuration.md): one cheap call per incident, in shadow mode |
 | A root cause with evidence on your phone | `investigation` in [Configuration](configuration.md), and what it sends in [Privacy and safety](privacy-and-safety.md) |
 | Paeon to fix things after your Go | [Acting](acting.md): a second process, a closed catalog, and a decision of yours |
@@ -110,5 +132,7 @@ was called and nothing was sent anywhere. From here, each step is a decision of 
 |---|---|
 | `paeon serve` exits at once | `PAEON_INGEST_TOKEN` is missing or shorter than 24 characters. The message says so. |
 | `curl` answers 401 | The token in this terminal is not the one the server started with: run the `set -a` line again. |
-| `/ui` answers 404 | `ui.enabled` is not set in the rules file Paeon reads: check `PAEON_CONFIG` in `.env`. |
+| `/ui` answers 404 | `PAEON_CONSOLE=local` is not in `.env`, or, with a rules file, `ui.enabled` is not set in it. |
+| The setup page refuses the code | A new code is printed at each start: use the one of the process that is running. After five wrong ones, wait a minute. |
+| You forgot the admin password | Set `PAEON_UI_ADMIN_PASSWORD` (12 characters or more) and restart: it takes over the one chosen in the browser. |
 | Port 8080 is taken | Add `PAEON_PORT=8090` to `.env` and use that port in the commands. |

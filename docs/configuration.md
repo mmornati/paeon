@@ -105,7 +105,8 @@ Every secret below also accepts `NAME_FILE=/path`.
 | `PAEON_HEARTBEAT_SECONDS` | `60` | How often it is called. 10 at least. |
 | `PAEON_EXECUTOR_TOKEN` | | How the core proves itself to the executor. Required with `actions.enabled`, 24 characters or more, the same as the executor's. |
 | `PAEON_UI_PROXY_SECRET` | | The value your proxy adds to each console request. Required with `ui.proxy_secret`, 24 characters or more. The name can be changed there. |
-| `PAEON_UI_ADMIN_PASSWORD` | | The console's own password. Required with `ui.auth: local`, 12 characters or more. |
+| `PAEON_CONSOLE` | none | `local`: with no `PAEON_CONFIG`, turns the console on with its own password and lets its admin add sources and channels. See [The console](console.md#with-no-rules-file-at-all). |
+| `PAEON_UI_ADMIN_PASSWORD` | | The console's own password with `ui.auth: local`, 12 characters or more. Without it, the password is chosen in the browser with a code from the log; with it, it takes over the chosen one. |
 | `PAEON_SECRET_KEY` | | Encrypts the secrets of channels added in the console and signs its sessions. Required with `ui.settings` or `ui.auth: local`, 32 characters or more. Changing it signs everyone out and sets those channels aside until they are saved again. |
 
 ### The executor (`paeon executor`)
