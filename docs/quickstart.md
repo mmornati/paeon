@@ -85,13 +85,18 @@ uv run paeon incidents
 One line of JSON: incident 1, `open`, on `server-1`, with the alert attached.
 
 Now open the console at <http://127.0.0.1:8080/ui>. The first time, it asks for the code from
-the log and lets you choose the admin password. Then the incident is there, in the **Open**
+the log and lets you choose the admin password.
+
+![The first-run page](assets/console/setup.webp)
+ Then the incident is there, in the **Open**
 group, and its page shows the record of what happened so far.
 
 Above the incidents, **Finish setting up** lists what is left, each with its button: connect a
 source (Prometheus, Grafana, uptime-kuma and others), and add a channel (ntfy, Telegram,
 e-mail and others) for the daily digest. Both are forms in the console, take effect at once
 and can be tested from there.
+
+![Finish setting up, on the incidents page](assets/console/getting-started.webp)
 
 !!! warning "Before it leaves your machine"
 

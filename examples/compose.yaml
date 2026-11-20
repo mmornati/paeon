@@ -20,6 +20,10 @@ services:
       PAEON_NTFY_TOKEN_FILE: /run/secrets/paeon_ntfy_token
       # Only with `actions.enabled`: how the core proves itself to the executor.
       PAEON_EXECUTOR_TOKEN_FILE: /run/secrets/paeon_executor_token
+      # Only with `ui.settings` or `ui.auth: local`: seals what the console stores and signs
+      # its sessions. Keep a copy apart from the volume: without it, the sources and channels
+      # added in the console are set aside until they are saved again.
+      # PAEON_SECRET_KEY_FILE: /run/secrets/paeon_secret_key
     volumes:
       - paeon-data:/data
       - ./paeon.yaml:/config/paeon.yaml:ro

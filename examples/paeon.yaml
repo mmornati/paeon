@@ -202,6 +202,19 @@ postmortems:
 # authenticates, and do not publish Paeon's port.
 ui:
   enabled: false
+  # `proxy` (default): a reverse proxy authenticates in front. `local`: the console asks for
+  # one password itself (PAEON_UI_ADMIN_PASSWORD, or chosen in the browser at first visit).
+  # auth: proxy
+  # A secret value only your proxy adds (PAEON_UI_PROXY_SECRET). Needed by `roles`.
+  # proxy_secret: {}
+  # Who may do what, from the groups your proxy names. Without it, everyone it lets in is an
+  # operator (rates triage, stops automation) and nobody is an admin.
+  # roles:
+  #   admin: [paeon-admins]
+  #   operator: [paeon-operators]
+  # Lets an admin add sources and notification channels in the console. They are kept in the
+  # database, never in this file, which wins on a name both define. Needs PAEON_SECRET_KEY.
+  # settings: true
   # A header the proxy sets after authentication. A request without it is refused.
   # require_header: X-authentik-username
   # Where you reach it. Notifications then open the incident's page.

@@ -2,34 +2,58 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.4.0
 
-Channels can be added in the console, by an admin, next to those of the rules file.
+Configure in the browser: an admin adds the sources alerts come from and the channels Paeon
+sends to, in the console, without a restart, next to the rules file and never in it. A first
+run needs no rules file at all, and the console has roles and, if you want, its own sign-in.
 
 A rules file and an environment of 0.3.0 work unchanged: everything below is off by default.
+One thing tightens if you turn it on: with `ui.roles`, rating triage and stopping automation
+take the operator role.
 
-### Console
+### Sources and channels in the console
 
-- `ui.settings`: an admin adds, changes, tests and removes notification channels on the
-  Channels page. They take effect at once, are kept in the database with their secrets
-  encrypted (`PAEON_SECRET_KEY`), and carry the digest and the analysis, never an approval.
-  The rules file is never written, wins on a name both define, and its channels are shown
-  locked. With `ui.settings` off, the file is all there is.
-- With `ui.settings`, an admin also adds sources on the Sources page. A source is connected
-  without a restart: it receives at `/ingest/<name>`, is polled if its service is, and offers
-  its tools to the next investigation. The same rules hold as for channels: the file wins on
-  a name, secrets are encrypted, and a change of server asks for them again.
-- `PAEON_CONSOLE=local`: a start with no rules file. The console is on, asks for a password
-  and lets its admin add sources and channels; the incidents page lists what is left to do.
-- With `ui.auth: local` and no `PAEON_UI_ADMIN_PASSWORD`, the password is chosen in the
-  browser the first time, with a code printed in the log. The quickstart now ends in the
-  console instead of a rules file.
-- `ui.roles`: viewer, operator and admin, from the groups header of the proxy. Without it,
+- `ui.settings`: an admin adds, tests, changes and removes **notification channels** (Channels
+  page) and **sources** (Sources page), for every service Paeon has. They take effect at
+  once: a channel carries the digest and the analysis from its next message; a source
+  receives at `/ingest/<name>`, is polled if its service is, and offers its tools to the next
+  investigation.
+- They live in the database, their secrets encrypted with `PAEON_SECRET_KEY` and never shown
+  again. Changing where a channel or a source sends asks for its secrets again.
+- The rules file is never written. Its entries are shown locked, win on a name both define,
+  and with `ui.settings` off the file is all there is.
+- A channel added in the console never carries an approval: the executor sends those from its
+  own rules file.
+- The forms come from the same schema as the rules file, so a key added to a service appears
+  in its form.
+
+### A first run in the browser
+
+- `PAEON_CONSOLE=local`, with no `PAEON_CONFIG`: the console is on, asks for a password and
+  lets its admin add sources and channels. The incidents page lists what is left to do until
+  it is done.
+- The admin password is chosen in the browser the first time, with a code Paeon prints in its
+  log at each start, or given as `PAEON_UI_ADMIN_PASSWORD`, which then takes over. Only a
+  salted scrypt hash of a chosen one is kept.
+- The quickstart now ends in the console instead of a rules file.
+
+### Roles and sign-in
+
+- `ui.roles`: viewer (reads), operator (rates triage, stops automation) and admin (sources and
+  channels), from the groups header of the proxy. It needs `proxy_secret`. Without it,
   everyone the proxy lets in is an operator, as before.
-- `ui.auth: local`: the console asks for one password itself (`PAEON_UI_ADMIN_PASSWORD`), for
-  a deployment with no authenticating proxy.
-- The log records sign-ins and every change to a channel, with who made it.
+- `ui.auth: local`: the console asks for one password itself, for a server with no
+  authenticating proxy. Signed HttpOnly session cookie; wrong passwords pause sign-in, per
+  address and from anywhere.
+- The log records sign-ins and every change to a source or a channel, with who made it and
+  without an address or a secret.
+
+### Also
+
 - New dependency: `cryptography`.
+- New screenshots of the Sources and Channels pages, the setup page and the getting-started
+  list in the docs, and a fourth video, "Set up in the browser".
 
 ## 0.3.0
 

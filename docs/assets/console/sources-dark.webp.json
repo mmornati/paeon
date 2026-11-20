@@ -1,0 +1,4 @@
+{
+  "prompt": "ORIGIN: not generated imagery. A screenshot of Paeon's own console (src/paeon/ui): the Sources page, with a source added in the console and tested, dark scheme. Rendered from the synthetic demo data in tests/ui_data.py and fictional sources and channels typed in by a script, answered by a mock transport; no real server, address, token or alert is shown. Captured headless with Playwright (desktop viewport, 1280x800 at 1.5x), converted with cwebp.",
+  "createdAt": "2026-11-20T06:57:42.000Z"
+}

@@ -96,12 +96,17 @@ git clone https://github.com/mmornati/paeon.git && cd paeon
 ```
 
 ```bash
-cp .env.example .env    # set PAEON_INGEST_TOKEN, and the OpenObserve variables if you use it
+printf 'PAEON_INGEST_TOKEN=%s\nPAEON_SECRET_KEY=%s\nPAEON_CONSOLE=local\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 32)" > .env
 ```
 
 ```bash
 uv sync && set -a && . ./.env && set +a && uv run paeon serve
 ```
+
+Open <http://127.0.0.1:8080/ui>. The first time, the console asks for a code Paeon printed in
+its log and lets you choose the admin password. Then it lists what is left to do: connect a
+source, send a first alert, add a notification channel. All three are forms in the browser,
+take effect at once, and can be tested from there. No rules file is needed for any of it.
 
 Send it a first alert:
 
@@ -116,7 +121,11 @@ uv run paeon incidents
 ```
 
 Without a rules file Paeon correlates with its defaults and calls no model. Nothing leaves your
-machine until you enable a stage.
+machine until you enable a stage. The [quickstart](docs/quickstart.md) walks through it.
+
+Configuring from git instead? Leave `PAEON_CONSOLE` out and write the rules file
+([Configure](#configure)): the file is then the whole configuration, and the console only
+shows it.
 
 Running Prometheus and Alertmanager? [docs/quickstart-prometheus.md](docs/quickstart-prometheus.md)
 takes you from nothing to a first investigated alert with a compose file you can copy.
@@ -266,13 +275,20 @@ content: no prompt, no answer, no tool input or result.
 
 ### Console
 
+Behind a reverse proxy that authenticates, with roles from its groups:
+
 ```yaml
 ui:
   enabled: true
-  require_header: X-authentik-username   # optional
+  proxy_secret: {}                        # the proxy adds PAEON_UI_PROXY_SECRET
+  settings: true                          # an admin adds sources and channels here
+  roles:
+    admin: [paeon-admins]
+    operator: [paeon-operators]
 ```
 
-Then open `http://paeon:8080/ui`.
+Or on its own, with one password (`auth: local`), as `PAEON_CONSOLE=local` sets up with no
+file at all. Then open `http://paeon:8080/ui`.
 
 | Page | |
 |---|---|
@@ -280,15 +296,30 @@ Then open `http://paeon:8080/ui`.
 | **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
 | **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
 | **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
-| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. Shown once a channel is configured. |
+| **Sources** | Every monitoring service, how its alerts arrive (its `/ingest/<name>` address, or polled), what an investigation may read in it, and what it sent. With `settings`, an admin adds, tests, edits and removes sources here. |
+| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. With `settings`, an admin adds, tests, edits and removes channels here. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
 | **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
 
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
-a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set. The console reads, apart from three things: saying whether triage was right, stopping
-automation, and, with `ui.settings` on, adding the channels the digest and the analysis go to.
-**It cannot approve a plan**, and it cannot resume what it stopped.
+a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set.
+
+The console reads, apart from three things: an operator says whether triage was right and
+stops automation, and, with `ui.settings` on, an admin adds the sources alerts come from and
+the channels the digest and the analysis go to. **It cannot approve a plan**, it cannot resume
+what it stopped, and nothing added in it can carry an approval.
+
+| Role | Can |
+|---|---|
+| viewer | Read every page. |
+| operator | Also rate triage and stop automation. |
+| admin | Also add, test, change and remove sources and channels. |
+
+Sources and channels added in the console live in the database, their secrets encrypted with
+`PAEON_SECRET_KEY` and never shown again. The rules file is never written: its entries are
+shown locked and win on a name both define, and with `settings` off the file is all there is.
+See [The console](docs/console.md).
 
 By default the console has **no login**. It is off until you enable it, and unless you set
 `ui.auth: local` (one password, for a server with no such proxy) it must sit behind a reverse
@@ -385,6 +416,7 @@ vulnerability) and in [§4 of the design](docs/llm-incident-response-architectur
 | 4. UI and MCP | Console (board, incident, log, ledger, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
 | 5. Earned autonomy | Promotion proposals, `auto`, Undo, automatic demotion | ✅ built, not yet proven in use |
 | 6. Release | Docs, threat model, a Prometheus and Docker quick start | ✅ written; the "stranger in under an hour" test is still to be run |
+| 7. Configure in the browser | Roles, a local sign-in, sources and channels added in the console without a restart, a first run with no rules file | ✅ built |
 
 "Built" means written and covered by tests. The exit criteria of the
 [design](docs/llm-incident-response-architecture.md#9-roadmap) are about use (ten approved fixes
@@ -426,7 +458,10 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 - **Recorder** (`paeon.recorder`): turns repeated observations into state changes, so an alert
   that is evaluated every five minutes for two hours is one `alert.firing` and one
   `alert.resolved`.
-- **Sources** (`paeon.sources`): the OpenObserve pull adapter and the webhook endpoints.
+- **Sources** (`paeon.sources`): one adapter per monitoring service, behind allow-lists.
+- **Console settings** (`paeon.channels`, `paeon.console_sources`, `paeon.vault`,
+  `paeon.ui.access`): sources and channels added in the browser, laid over the rules file and
+  swapped in while Paeon runs; their secrets sealed; roles and the local sign-in.
 - **Correlation** (`paeon.correlation`): the same alert firing again within a window is the same
   incident; alerts on the same host within a few minutes join the open incident. Flapping and
   maintenance windows are flags on the incident. Nothing is dropped.
