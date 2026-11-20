@@ -2,7 +2,7 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.5.0
 
 What a person does from the console, and an analysis that says what becomes of its plan.
 
