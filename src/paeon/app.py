@@ -627,15 +627,25 @@ def create_app(
         """What a source can say about one of its alerts right now, if it can."""
         if source_name == "openobserve" and search_client is not None:
             return openobserve_checker(search_client.search, _now)
+        # By the kind of the source, then its own tool by its exact name: a tool of another
+        # kind that happens to share a prefix is never asked.
         one = connected.get(source_name)
-        tools = list(one.tools) if one is not None else []
-        if source_name == "uptime-kuma" and toolbox is not None:
-            found = toolbox.find("monitor_status")
-            tools += [found] if found is not None else []
+        if one is None:
+            return None
+        wanted = {"alertmanager": "active_alerts", "uptime_kuma": "monitor_status"}.get(one.kind)
+        if wanted is None:
+            return None
+        names = {sources.tool_name(wanted, source_name)}
+        if source_name == "uptime-kuma":  # the built-in webhook: the investigation's own tool
+            names.add("monitor_status")
+        tools = [*one.tools]
+        if toolbox is not None:
+            tools += [found for name in names if (found := toolbox.find(name)) is not None]
         for tool in tools:
-            for prefix, kind in (("active_alerts", "alertmanager"), ("monitor_status", "kuma")):
-                if tool.spec.name.startswith(prefix):
-                    return tool_checker(tool.run, kind)
+            if tool.spec.name in names:
+                return tool_checker(
+                    tool.run, "alertmanager" if one.kind == "alertmanager" else "kuma"
+                )
         return None
 
     operations = Incidents(store, recorder, checker, _now)

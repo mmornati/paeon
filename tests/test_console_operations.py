@@ -349,11 +349,15 @@ def test_kuma_and_alertmanager_answer_through_their_own_tools() -> None:
         lambda args: {"monitors": [{"name": "horae daily-brief", "status": "up"}]}, "kuma"
     )
     assert kuma("96", "horae daily-brief") == ("resolved", "uptime-kuma says up")
-    am = tool_checker(
-        lambda args: {"alerts": [{"fingerprint": "abc", "state": "active"}]}, "alertmanager"
-    )
+    listed = {"alerts": [{"fingerprint": "abc", "state": "active"}], "count": 1}
+    am = tool_checker(lambda args: listed, "alertmanager")
     assert am("abc", "x")[0] == "firing"
     assert am("zzz", "x") == ("resolved", "Alertmanager no longer lists it")
+    # A list cut short, or an answer of another shape, says nothing about absence.
+    assert tool_checker(lambda args: {**listed, "count": 150}, "alertmanager")("zzz", "x")[0] == (
+        "unknown"
+    )
+    assert tool_checker(lambda args: {"error": "x"}, "alertmanager")("zzz", "x")[0] == "unknown"
 
 
 def test_an_operator_closes_an_incident_from_the_console(

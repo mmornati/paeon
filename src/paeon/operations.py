@@ -222,10 +222,18 @@ def tool_checker(run: Callable[[dict[str, Any]], Any], kind: str) -> Checker:
 
     def check(fingerprint: str, title: str) -> tuple[Answer, str]:
         if kind == "alertmanager":
-            alerts = (run({}) or {}).get("alerts") or []
+            # Narrowed by the alert's name, then read whole: "absent" means resolved only when
+            # nothing was cut from the list and the answer has the expected shape.
+            found = run({"text": title.lower()})
+            alerts = found.get("alerts") if isinstance(found, dict) else None
+            count = found.get("count") if isinstance(found, dict) else None
+            if not isinstance(alerts, list) or not isinstance(count, int):
+                return "unknown", "Alertmanager's answer was not the expected list"
             for entry in alerts:
-                if entry.get("fingerprint") == fingerprint:
+                if isinstance(entry, dict) and entry.get("fingerprint") == fingerprint:
                     return "firing", f"Alertmanager lists it as {entry.get('state') or 'active'}"
+            if count > len(alerts):
+                return "unknown", "Alertmanager lists more alerts of that name than were read"
             return "resolved", "Alertmanager no longer lists it"
         monitors = (run({"text": title.lower()}) or {}).get("monitors") or []
         for monitor in monitors:
