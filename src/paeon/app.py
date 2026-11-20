@@ -36,6 +36,7 @@ from paeon.correlation import Correlator
 from paeon.guard import BodyGuard
 from paeon.investigation import Investigator
 from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
+from paeon.operations import Checker, Incidents, openobserve_checker, tool_checker
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.remediation import ExecutorApi, ExecutorClient, Remediator, pending_approvals
@@ -620,6 +621,25 @@ def create_app(
             ],
         }
 
+    search_client = client
+
+    def checker(source_name: str) -> Checker | None:
+        """What a source can say about one of its alerts right now, if it can."""
+        if source_name == "openobserve" and search_client is not None:
+            return openobserve_checker(search_client.search, _now)
+        one = connected.get(source_name)
+        tools = list(one.tools) if one is not None else []
+        if source_name == "uptime-kuma" and toolbox is not None:
+            found = toolbox.find("monitor_status")
+            tools += [found] if found is not None else []
+        for tool in tools:
+            for prefix, kind in (("active_alerts", "alertmanager"), ("monitor_status", "kuma")):
+                if tool.spec.name.startswith(prefix):
+                    return tool_checker(tool.run, kind)
+        return None
+
+    operations = Incidents(store, recorder, checker, _now)
+
     if rules.ui.enabled:
         mount_ui(
             app,
@@ -631,6 +651,9 @@ def create_app(
             sources=lambda: _sources_shown(connected, source),
             channels=console_channels,
             source_book=console_sources,
+            writer=writer,
+            incidents=operations,
+            answer=None if remediator is None else remediator.answer,
             sessions=(
                 Sessions(settings.secret_key, Passwords(store, settings.ui_admin_password))
                 if rules.ui.auth == "local" and settings.secret_key
@@ -639,6 +662,7 @@ def create_app(
         )
 
     app.state.sources = connected
+    app.state.incidents = operations
     app.state.channels = console_channels
     app.state.console_sources = console_sources
     app.state.exporter = exporter

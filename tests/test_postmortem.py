@@ -175,7 +175,8 @@ def test_draft_is_still_written_when_the_model_fails(store: Store, tmp_path: Pat
     assert f"## Summary\n\n{TODO}" in text
     assert "## Timeline\n\n- 20" in text
     errors = [e.payload.get("error") for e in store.events(kind="model.call")]
-    assert errors == ["HTTP 529", "invalid_output"]
+    # An invalid answer is asked again once, with what was wrong with it.
+    assert errors == ["HTTP 529", "invalid_output", "invalid_output"]
     assert [e.payload["narrative"] for e in store.events(kind="postmortem.drafted")] == [
         False,
         False,

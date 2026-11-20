@@ -127,7 +127,9 @@ stores webhook payloads as they came: treat the database and its backups as sens
 *An attacker gets code execution in the core, through a dependency or a parser.*
 
 - The core cannot mint an approval: the key is the executor's (`PAEON_SIGNING_KEY`), and the
-  executor refuses to start with a key equal to the token it shares with the core.
+  executor refuses to start with a key equal to the token it shares with the core. The one
+  exception is opt-in: with `actions.console_approval` in the executor's rules, the core may
+  answer a plan that already waits (see [The console and the API](#the-console-and-the-api)).
 - The Go link goes from the executor to the approval channels to the phone. The core never
   sees it, and does not read those channels' secrets.
 - The level is computed by the executor from its own rules. Nothing in a proposal can raise it.
@@ -248,7 +250,20 @@ allows. An approval is exactly as strong as its channel.
   allow-lists are the admin's, and a change of server asks for its secrets again.
   **Residual risk:** what an admin allows in a source is what an investigation may send to
   the model provider, and a source's server may be any address Paeon can reach.
-- The console can stop automation. It cannot approve and cannot resume.
+- The console can stop automation, and cannot resume. It answers a plan only with
+  `actions.console_approval: true` in the **executor's** rules: the executor then takes Go or
+  No-go from the core, over the bearer token, for a plan it is already waiting on, and records
+  who the core says answered. **Residual risk:** with it on, a subverted core can approve a
+  plan that waits, so the line "the core cannot approve its own plan" no longer holds for
+  those plans. What runs is still only what the catalog allows and the policies set to
+  `approve`, within `max_per_hour`. Leave it off if Go on the phone is enough.
+- An operator can close an incident by hand and re-check one. A close is a person's word,
+  recorded with their name; it cannot hide an alert that fires again, which opens a new
+  incident. A re-check asks the sources through their read-only clients; the OpenObserve query
+  takes only an alert id of letters, digits, `-` and `_`.
+- An operator can edit and review a postmortem. A reviewed postmortem is read by triage on later
+  incidents, so whoever can edit one can shape what the cheap model is told. The console refuses
+  to edit a file that holds something looking like a secret, since it would have to show it.
 - The MCP server speaks on stdio, reads the database file, and has no tool that writes.
 
 ## What Paeon does not defend against

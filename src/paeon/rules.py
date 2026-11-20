@@ -1072,6 +1072,13 @@ class Actions(_Rule):
         le=24 * 60,
         description="How long a Go link works. After it the plan expires and nothing runs.",
     )
+    console_approval: bool = Field(
+        default=False,
+        description="Lets an operator of the console say Go or No-go to a plan that waits for"
+        " one. Read by the executor from its own copy of this file, never the core's: with"
+        " it on, whoever holds the core's executor token can approve a plan that is already"
+        " waiting (still within the catalog and the policies). Off: Go is a signed link only.",
+    )
     buttons: Literal["one_tap", "page"] = Field(
         default="one_tap",
         description="What a button in a notification does. `one_tap`: the phone sends the"
@@ -1149,14 +1156,18 @@ class Actions(_Rule):
         return None
 
     def level_for(self, alert: str, action: str, target: str) -> Level:
+        return self.policy_for(alert, action, target)[0]
+
+    def policy_for(self, alert: str, action: str, target: str) -> tuple[Level, Policy | None]:
+        """The level for a step, and the policy line that gave it (None: the default)."""
         for policy in self.policies:
             if (
                 re.fullmatch(policy.alert, alert) is not None
                 and policy.action in ("*", action)
                 and fnmatch.fnmatchcase(target, policy.target)
             ):
-                return policy.level
-        return self.default_level
+                return policy.level, policy
+        return self.default_level, None
 
     def runbook_for(self, alert: Alert) -> Runbook | None:
         if not self.enabled:

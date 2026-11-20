@@ -264,7 +264,8 @@ def test_a_failed_commit_keeps_the_draft(store: Store, tmp_path: Path) -> None:
         T0 + timedelta(hours=2)
     )
     assert next(store.events(kind="postmortem.commit_failed")).payload == {
-        "step": "commit (FileNotFoundError)"
+        "step": "commit (FileNotFoundError)",
+        "path": "2026-11-18-api-down.md",
     }
     assert (tmp_path / "2026-11-18-api-down.md").exists()
     assert store.incident(1).postmortem is StageState.DONE  # type: ignore[union-attr]
@@ -272,7 +273,7 @@ def test_a_failed_commit_keeps_the_draft(store: Store, tmp_path: Path) -> None:
     off = writer_rules(tmp_path / "off", commit=False)
     assert off.postmortems.git is not None
     writer = PostmortemWriter(store, off, Writer("x"), run=run)
-    writer._commit(store.incident(1), tmp_path / "x.md")  # type: ignore[arg-type]
+    writer.commit(tmp_path / "x.md", "Postmortem draft: incident 1", 1)
     assert len(list(store.events(kind="postmortem.commit_failed"))) == 1
 
 

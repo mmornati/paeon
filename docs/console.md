@@ -90,7 +90,7 @@ ui:
 | Role | Can |
 |---|---|
 | viewer | Read every page. Anyone the proxy lets in who is in no listed group. |
-| operator | Also say whether triage was right, and stop automation. |
+| operator | Also say whether triage was right, re-check or close an incident, review and edit postmortems, stop automation, and answer a waiting plan where the executor allows it. |
 | admin | Also add, change, test and remove channels, when `settings` is on. |
 
 `roles` needs `proxy_secret`: a groups header anyone on the network can send would prove
@@ -189,8 +189,44 @@ says so.
 
 ![The investigation: findings, evidence tied to tool calls, a suggested plan](assets/console/investigation.webp)
 
-With actions on, the plan says what was proposed, at which level, and what became of it. While
-it waits, the console tells you where the Go is: on your phone.
+With actions on, the plan says what was proposed, at which level, and what became of it. A plan
+held under `approve` says what held it: a policy line (`a policy sets it to observe`), the default
+level, the kill switch, the hourly limit. The analysis on your phone says the same, so a plan
+that is only recorded never reads like one waiting for a Go. While it waits, the console tells
+you where the Go is: on your phone, and, if the executor allows it, here.
+
+### Go and No-go in the console
+
+Off by default. In the **executor's** copy of the rules file:
+
+```yaml
+actions:
+  console_approval: true
+```
+
+Put the same line in the core's copy, so that the console shows the buttons. An operator then
+sees **Go: run it** and **No-go** on a plan that waits for an answer. It is the same answer as
+the buttons on your phone: the first one counts, the phone is told it was given in the
+console, and the record keeps who gave it. Only a plan the executor is already waiting on can
+be answered, within the catalog and the policies: a plan recorded at `observe` or `suggest` has
+no button, and changing that is a change of policy. The executor decides from its own copy of
+the file, so the core's copy alone cannot turn it on. What it costs is in the
+[threat model](threat-model.md#the-console-and-the-api).
+
+### Still open?
+
+An incident closes by itself when its alerts resolve. Some sources never send that: OpenObserve
+writes a `normal` row only when it evaluates a healthy alert, and uptime-kuma notifies a change
+of state and nothing else. An open incident whose alerts were not seen for two days is marked
+**quiet** on the board, and its page has a **Still open?** box for an operator:
+
+- **Re-check now** asks each source that can answer what the alert is right now: OpenObserve
+  (its alert's latest evaluation), Alertmanager and uptime-kuma when they have a `url` (their
+  own read-only tools). An alert back to normal resolves the incident the usual way. Each
+  answer is listed, with what was asked.
+- **Close by hand** takes one line of why. Every alert still firing is marked resolved, the
+  incident resolves, and the record keeps your name and the line. If an alert fires again, it
+  opens an incident again.
 
 ![A plan waiting for Go](assets/console/plan-waiting.webp)
 
@@ -208,7 +244,24 @@ The ledger shows what the model calls cost, by day, stage and model, against the
 ## Postmortems
 
 A draft is shown rendered, with its markdown source one click away. A `mermaid` block is drawn
-as a diagram.
+as a diagram. The navigation counts the drafts nobody has reviewed yet.
+
+**Triage reads a postmortem only once a person has marked it reviewed**; the investigation can
+read drafts too, labelled as unreviewed. An operator reviews one from its page:
+
+- **Mark reviewed** sets `status: reviewed` in the file, and nothing else. **Set back to draft**
+  undoes it.
+- **Edit the text** opens the whole file, front matter included. A front matter that does not
+  parse, a status other than `draft` or `reviewed`, or a changed incident number is refused, and
+  what you typed stays on the page. A file holding something that looks like a secret is not
+  edited in the console: the page would have to show it.
+- **Write the prose again** appears on a draft whose model sections are still empty (the model
+  failed, or the day's budget was spent). It asks the model again and writes the draft over.
+  An invalid answer is also asked again once, with what was wrong with it, when the draft is
+  first written.
+
+Each change is in the incident's record, with who made it, and is committed and pushed like
+the drafts when `postmortems.git` is set.
 
 ![A rendered postmortem with a sequence diagram](assets/console/postmortem.webp)
 
@@ -229,9 +282,10 @@ system's light or dark setting unless you use the switch.
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
 a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set.
 
-The console reads, apart from three things: an operator says whether triage was right and
-stops automation, and with `settings` on an admin manages the channels the digest and the
-analysis go to. **It cannot approve a plan**, it cannot resume what it stopped, and nothing it
-configures can carry an approval.
+The console reads, apart from what a person decides. An operator says whether triage was right,
+re-checks or closes an incident, reviews and edits postmortems, stops automation, and, where the
+executor allows it, answers a plan that waits for a Go. With `settings` on an admin manages
+sources and channels. It cannot resume what it stopped, it cannot run anything the executor is
+not already waiting on, and nothing it configures can carry an approval.
 
 Everything shown is redacted again first, and pages load nothing from another host.

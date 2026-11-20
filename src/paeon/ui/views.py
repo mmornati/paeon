@@ -59,6 +59,15 @@ _CODE_KINDS = {
     "investigation.fallback",
 }
 
+# What a person did, rather than code or a model.
+_PERSON_KINDS = {
+    "feedback.recorded",
+    "incident.rechecked",
+    "incident.closed",
+    "postmortem.reviewed",
+    "postmortem.edited",
+}
+
 # The filters of the log page: the question each one answers, and the kinds behind it.
 FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "in": (
@@ -124,7 +133,18 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
             "postmortem.commit_failed",
         ),
     ),
-    "feedback": ("Your feedback", ("feedback.recorded",)),
+    "feedback": (
+        "What you did",
+        (
+            "feedback.recorded",
+            "incident.rechecked",
+            "incident.closed",
+            "postmortem.reviewed",
+            "postmortem.edited",
+            "approval.granted",
+            "approval.declined",
+        ),
+    ),
 }
 
 BAYS: tuple[tuple[str, str, str], ...] = (
@@ -260,7 +280,13 @@ def describe(event: Event) -> str:
             return f"Digest sent: {_text(p.get('incidents'), '0')} incidents"
         case "postmortem.drafted":
             prose = "" if p.get("narrative") else ", without the model's prose"
-            return f"Postmortem draft written to {_text(p.get('path'))}{prose}"
+            again = f", again, at the request of {_text(p.get('by'))}" if p.get("rewritten") else ""
+            return f"Postmortem draft written to {_text(p.get('path'))}{prose}{again}"
+        case "postmortem.reviewed":
+            verb = "marked reviewed" if p.get("status") == "reviewed" else "set back to draft"
+            return f"Postmortem {_text(p.get('path'))} {verb} by {_text(p.get('by'))}"
+        case "postmortem.edited":
+            return f"Postmortem {_text(p.get('path'))} edited by {_text(p.get('by'))}"
         case "postmortem.failed":
             return f"Postmortem draft not written ({_text(p.get('error'))})"
         case "feedback.recorded":
@@ -277,7 +303,7 @@ def describe(event: Event) -> str:
             )
         case "postmortem.committed":
             pushed = " and pushed" if p.get("pushed") else ""
-            return f"Postmortem draft committed{pushed}"
+            return f"Postmortem {_text(p.get('path'))} committed{pushed}"
         case "postmortem.commit_failed":
             return f"Postmortem draft not committed (git {_text(p.get('step'))} failed)"
         case "runbook.matched":
@@ -309,8 +335,12 @@ def describe(event: Event) -> str:
         case "approval.requested":
             return "Go or No-go asked on your phone"
         case "approval.granted":
+            if p.get("via") == "console":
+                return f"{_text(p.get('by'))} said Go, in the console"
             return "You said Go"
         case "approval.declined":
+            if p.get("via") == "console":
+                return f"{_text(p.get('by'))} said No-go, in the console"
             return "You said No-go"
         case "approval.expired":
             return "No answer in time: nothing was run"
@@ -351,6 +381,19 @@ def describe(event: Event) -> str:
             return f"Channel {_text(p.get('name'))} removed in the console by {_text(p.get('by'))}"
         case "console.setup":
             return "The console's admin password was chosen"
+        case "incident.rechecked":
+            listed = p.get("alerts")
+            alerts: list[Any] = listed if isinstance(listed, list) else []
+            said = "; ".join(
+                f"{_text(a.get('title'))}: {_text(a.get('answer'))}"
+                for a in alerts
+                if isinstance(a, dict)
+            )
+            return f"Re-checked by {_text(p.get('by'))}: {said or 'nothing was firing'}"
+        case "incident.closed":
+            return f"Closed by hand by {_text(p.get('by'))}: {_text(p.get('note'))}"
+        case "approval.refused":
+            return f"Go from the console refused by the executor: {_text(p.get('reason'))}"
         case "console.signin":
             return "Signed in to the console"
         case "console.signin_locked":
@@ -387,13 +430,18 @@ class Row:
     detail: str | None = None
     call: str | None = None  # the citation id of a tool call (c1, c2…)
     pen: bool = False  # the line is the model's own words; a fact about a call is not
+    via: str = ""  # where a person answered: link or console
     note: str = ""  # what code observed about it, printed after the model's words
 
     @property
     def tag(self) -> str:
         if self.kind == "tool.call":
             return "tool"
-        if self.kind == "feedback.recorded" or self.kind.startswith("console."):
+        if (
+            self.kind in _PERSON_KINDS
+            or self.kind.startswith("console.")
+            or (self.kind in ("approval.granted", "approval.declined") and self.via == "console")
+        ):
             return "you"
         return "sent" if self.voice == "out" else self.voice
 
@@ -421,6 +469,7 @@ def row_of(event: Event, *, detail: bool = False) -> Row:
         note="the tool answered with an error"
         if event.kind == "tool.call" and p.get("is_error")
         else "",
+        via=_text(p.get("via"), ""),
         pen=event.kind == "tool.call"
         or (event.kind == "triage.verdict" and not p.get("fail_open")),
     )
@@ -524,6 +573,7 @@ class PlanView:
     state: str  # one word, for a board strip
     story: str  # one sentence, for the incident page
     waiting: bool = False
+    proposal: int | None = None  # the executor's number for it, when it reached the executor
 
 
 _AFTER_PLAN = (
@@ -568,14 +618,23 @@ def plan_of(events: Sequence[Event]) -> PlanView | None:
         and e.kind in _AFTER_PLAN
         and e.payload.get("proposal") == p.get("proposal")
     }
-    state, story, waiting = "recorded", "Recorded only: nothing was sent and nothing ran.", False
+    state, waiting = "recorded", False
+    story = (
+        f"Recorded only, at level {level}: nothing was asked and nothing ran."
+        if level == "observe"
+        else "Recorded only: nothing was sent and nothing ran."
+    )
     if level == "suggest":
         state, story = "suggested", "Suggested only: it is in the analysis, with no button."
     if "approval.requested" in later:
         state, waiting = "waiting", True
         story = "Waiting for your Go or No-go, on the notification sent to your phone."
     if "approval.declined" in later:
-        state, story, waiting = "declined", "You said No-go. Nothing ran.", False
+        state, story, waiting = (
+            "declined",
+            f"{_who(later['approval.declined'])} No-go. Nothing ran.",
+            False,
+        )
     if "approval.expired" in later:
         state, story, waiting = "expired", "Nobody answered in time. Nothing ran.", False
     if "plan.cancelled" in later:
@@ -590,7 +649,11 @@ def plan_of(events: Sequence[Event]) -> PlanView | None:
         reason = _text(later["change.failed"].payload.get("reason"))
         state, story, waiting = "failed", f"The change could not be proposed: {reason}.", False
     elif "approval.granted" in later or level == "auto":
-        how = "You said Go." if "approval.granted" in later else "It ran without asking (auto)."
+        how = (
+            f"{_who(later['approval.granted'])} Go."
+            if "approval.granted" in later
+            else "It ran without asking (auto)."
+        )
         state, story, waiting = "running", f"{how} The executor is running it.", False
         done = later.get("plan.completed")
         if done is not None and done.payload.get("outcome") == "verified":
@@ -600,7 +663,25 @@ def plan_of(events: Sequence[Event]) -> PlanView | None:
             story = f"{how} It ran and did not work: {_text(done.payload.get('reason'))}."
         if "action.undone" in later:
             state, story = "undone", f"{how} It ran, and you undid it."
-    return PlanView(steps, origin, level, held, state, story, waiting)
+    number = p.get("proposal")
+    return PlanView(
+        steps,
+        origin,
+        level,
+        held,
+        state,
+        story,
+        waiting,
+        number if isinstance(number, int) else None,
+    )
+
+
+def _who(event: Event) -> str:
+    """Who answered a plan, and where: a link on the phone, or the console."""
+    p = event.payload
+    if p.get("via") == "console":
+        return f"{_text(p.get('by'), 'An operator')} said, in the console,"
+    return "You said"
 
 
 def _plan_cells(plan: PlanView | None, acting: bool) -> tuple[Cell, Cell]:
@@ -637,7 +718,12 @@ def bay_of(incident: Incident, plan: PlanView | None = None) -> str:
 
 
 def strip_of(
-    incident: Incident, events: Sequence[Event], now: datetime, *, acting: bool = False
+    incident: Incident,
+    events: Sequence[Event],
+    now: datetime,
+    *,
+    acting: bool = False,
+    quiet: int | None = None,
 ) -> Strip:
     firing = sum(1 for alert in incident.alerts if alert.status is Status.FIRING)
     cost = sum(float(e.payload.get("cost") or 0) for e in events if e.kind == "model.call")
@@ -663,6 +749,8 @@ def strip_of(
         flags.append("flapping")
     if incident.maintenance:
         flags.append(f"maintenance: {incident.maintenance}")
+    if quiet is not None and quiet >= QUIET_DAYS:
+        flags.append(f"quiet {quiet} days")
     return Strip(
         incident=incident,
         bay=bay_of(incident, plan),
@@ -690,7 +778,8 @@ def board(store: Store, now: datetime, *, acting: bool = False) -> tuple[Bay, ..
     strips: dict[str, list[Strip]] = defaultdict(list)
     for incident in wanted.values():
         events = list(store.events(incident_id=incident.id))
-        strip = strip_of(incident, events, now, acting=acting)
+        quiet = quiet_days(store, incident, now)
+        strip = strip_of(incident, events, now, acting=acting, quiet=quiet)
         strips[strip.bay].append(strip)
     for found in strips.values():
         found.sort(key=lambda strip: strip.incident.last_activity_at, reverse=True)
@@ -726,6 +815,9 @@ class IncidentView:
     calls: frozenset[str]
     plan: PlanView | None = None
     changes: tuple[tuple[str, str | None], ...] = ()  # what was proposed, and the pull request
+    rechecked: dict[str, Any] | None = None  # the last re-check: who, when, each answer
+    closed: dict[str, Any] | None = None  # who closed it by hand, and why
+    quiet_days: int | None = None  # an open incident: days since any of its alerts was seen
 
 
 def incident_view(
@@ -754,7 +846,9 @@ def incident_view(
     if analysis is None and failed is not None:
         failure = str(redact(describe(failed), max_length=300))
     return IncidentView(
-        strip=strip_of(incident, events, now, acting=acting),
+        strip=strip_of(
+            incident, events, now, acting=acting, quiet=quiet_days(store, incident, now)
+        ),
         plan=plan_of([e for e in events if e.payload.get("kind") != "change"] or events),
         changes=tuple(
             (_steps(e.payload), _link(e.payload.get("url")))
@@ -770,7 +864,35 @@ def incident_view(
         postmortem=None if drafted is None else _text(drafted.payload.get("path")),
         cost=sum(float(e.payload.get("cost") or 0) for e in events if e.kind == "model.call"),
         calls=frozenset(str(e.payload.get("call")) for e in events if e.kind == "tool.call"),
+        rechecked=_with_time(_last(events, "incident.rechecked")),
+        closed=_with_time(_last(events, "incident.closed")),
+        quiet_days=quiet_days(store, incident, now),
     )
+
+
+def _with_time(event: Event | None) -> dict[str, Any] | None:
+    if event is None:
+        return None
+    return {**redact(event.payload, max_length=1000), "at": event.recorded_at}
+
+
+QUIET_DAYS = 2  # an open incident none of whose alerts was seen for this long is marked quiet
+
+
+def quiet_days(store: Store, incident: Incident, now: datetime) -> int | None:
+    """Whole days since any alert of an open incident was last seen. None when resolved, or
+    when one was seen in the last day."""
+    if incident.status is IncidentStatus.RESOLVED or not incident.alerts:
+        return None
+    seen = [
+        state.last_seen
+        for alert in incident.alerts
+        if (state := store.alert_state(alert.source, alert.fingerprint)) is not None
+    ]
+    if not seen:
+        return None
+    days = (now - max(seen)).days
+    return days if days >= 1 else None
 
 
 # --- the ledger -----------------------------------------------------------------------------

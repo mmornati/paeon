@@ -40,7 +40,8 @@ class FakeExecutor:
         self.proposed: list[Proposal] = []
         self.cancelled: list[tuple[int, str]] = []
         self.entries: list[dict[str, Any]] = []
-        self.answer: dict[str, Any] = {"status": "pending", "proposal": 1, "level": "approve"}
+        self.reply: dict[str, Any] = {"status": "pending", "proposal": 1, "level": "approve"}
+        self.answers: list[tuple[int, str, str]] = []
         self.down = False
         self.killed = False
 
@@ -51,7 +52,7 @@ class FakeExecutor:
     def propose(self, proposal: Proposal) -> dict[str, Any]:
         self._check()
         self.proposed.append(proposal)
-        return self.answer
+        return self.reply
 
     def cancel(self, proposal_id: int, reason: str) -> None:
         self._check()
@@ -70,6 +71,11 @@ class FakeExecutor:
     def vote_links(self, incident_id: int, about: str) -> dict[str, str]:
         self._check()
         return {"up": f"https://act.example.org/act/up{incident_id}", "down": "https://x/down"}
+
+    def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]:
+        self._check()
+        self.answers.append((proposal_id, answer, by))
+        return {"ok": True, "message": "Approved. The plan is running; the result follows."}
 
     def add(self, kind: str, incident_id: int | None = 1, **payload: Any) -> None:
         self.entries.append(
@@ -188,7 +194,7 @@ def test_a_runbook_that_cannot_run_hands_over_to_the_investigator(store: Store) 
     # Refused by the executor (its rules differ): the same hand-over.
     recorder.observe(alert(Status.FIRING, 60, "b", title="worker_stalled", labels={"host": "b"}))
     fake.down = False
-    fake.answer = {"status": "refused", "reason": "not a runbook of the executor"}
+    fake.reply = {"status": "refused", "reason": "not a runbook of the executor"}
     remediator.run_pending(T0 + timedelta(minutes=70))
     assert store.incident(2).investigation is StageState.PENDING  # type: ignore[union-attr]
 
@@ -197,7 +203,7 @@ def test_a_runbook_that_cannot_run_hands_over_to_the_investigator(store: Store) 
 def test_a_runbook_whose_plan_will_not_run_hands_over_too(store: Store, level: str) -> None:
     recorder, remediator, fake = setup(store)
     recorder.observe(alert(Status.FIRING, 0, title="worker_stalled"))
-    fake.answer = {"status": "recorded", "proposal": 1, "level": level}
+    fake.reply = {"status": "recorded", "proposal": 1, "level": level}
     assert remediator.run_pending(LATER) == 1
     assert next(store.events(kind="runbook.skipped")).payload == {
         "reason": f"its plan is at level {level}: recorded, not run"

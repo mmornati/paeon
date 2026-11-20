@@ -92,6 +92,7 @@ code { background: var(--surface-2); border: 1px solid var(--border); border-rad
 .nav::-webkit-scrollbar { display: none; }
 .nav a { display: flex; align-items: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.75rem; border-radius: var(--radius-s); color: var(--text-2); font-weight: 500; font-size: 0.875rem; white-space: nowrap; }
 .nav a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
+.nav-count { margin-left: auto; min-width: 1.375rem; padding: 0 0.375rem; border-radius: 999px; background: var(--warn-bg); color: var(--warn); font-size: 0.75rem; font-weight: 600; line-height: 1.375rem; text-align: center; }
 .nav a[aria-current] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
 
 .sys { border-top: 1px solid var(--border); padding: 0.5rem var(--gutter); }
@@ -253,6 +254,7 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .inc-head.sev-warning { border-top-color: var(--warn); }
 .inc-head.sev-info { border-top-color: var(--info); }
 .inc-head h1 { margin-top: 0.625rem; }
+.inc-head + .block, .inc-head + .banner { margin-top: 1rem; }
 .inc-head h1 .inc-id { font-size: 1.125rem; margin-right: 0.25rem; }
 .inc-head .kv { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 
@@ -348,6 +350,9 @@ input, select, textarea { accent-color: var(--accent); caret-color: var(--accent
 .check-inline { border: 0; padding: 0.25rem 0; gap: 0.5rem; width: fit-content; }
 .check-inline:has(input:checked) { background: none; }
 .check-inline > span { font-size: 0.8125rem; color: var(--text-2); }
+.form-actions.form-actions-top { border-top: 0; padding-top: 0; }
+.field-wide { max-width: none; }
+.editor { width: 100%; min-height: 32rem; padding: 0.75rem !important; font: 0.8125rem/1.6 var(--mono) !important; tab-size: 2; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 
 .confirm summary { width: fit-content; list-style: none; }
@@ -543,6 +548,19 @@ a.typed { color: var(--accent); font-weight: 600; }
 .empty p:first-child { color: var(--text); font-weight: 600; font-size: 1rem; }
 
 .banner { display: flex; gap: 0.625rem; align-items: flex-start; padding: 0.75rem 1rem; border-radius: var(--radius-s); background: var(--crit-bg); color: var(--crit); font-weight: 500; }
+/* Still open? An incident a person can ask again, or close. */
+.status-block.is-quiet { border-color: var(--warn); }
+.status-block .alerts { margin-top: 0.25rem; }
+.checked h3 { margin-top: 0; margin-bottom: 0.5rem; }
+.state-unknown { background: var(--surface-2); color: var(--text-2); }
+.status-actions { display: grid; gap: 0.75rem; padding-top: 0.875rem; border-top: 1px solid var(--border); }
+.status-actions form > .facts { margin-top: 0.375rem; }
+.close-form[open] summary { display: none; }
+.close-form .vote { border-top: 0; padding-top: 0; margin-top: 0; }
+/* Go from the console: the one control that runs something. Green, and only on a waiting plan. */
+.answer { display: grid; gap: 0.5rem; padding: 0.875rem; border: 1px solid var(--ok); border-radius: var(--radius-s); background: var(--ok-bg); }
+.btn-go { background: var(--ok); border-color: var(--ok); color: var(--accent-ink); }
+.btn-go:hover { background: color-mix(in srgb, var(--ok) 88%, var(--text)); }
 .banner-ok { background: var(--ok-bg); color: var(--ok); }
 .page > .banner { margin-bottom: 1rem; display: block; }
 .banner .typed { color: var(--text); }

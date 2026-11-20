@@ -64,6 +64,13 @@ class Cancel(BaseModel):
     reason: str = Field(default="cancelled by the core", max_length=200)
 
 
+class Answer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    answer: Literal["go", "nogo"]
+    by: str = Field(default="", max_length=80)
+
+
 class VoteLinks(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -213,6 +220,15 @@ def create_executor_app(settings: ExecutorSettings, executor: Executor) -> FastA
         """Engage only. Releasing takes `paeon resume`, next to the executor."""
         executor.engage_kill("core")
         return {"kill_switch": True}
+
+    @app.post("/proposals/{proposal_id}/answer", dependencies=[Depends(core)])
+    def answer(proposal_id: int, body: Answer) -> dict[str, Any]:
+        """Go or No-go from the console. Refused unless this executor's rules allow it."""
+        try:
+            outcome = executor.answer(proposal_id, body.answer, by=body.by, now=_now())
+        except LinkError as exc:
+            return {"ok": False, "message": str(exc)}
+        return {"ok": outcome.ok, "message": outcome.message}
 
     @app.post("/links/vote", dependencies=[Depends(core)])
     def vote_links(body: VoteLinks) -> dict[str, str]:

@@ -19,7 +19,7 @@ import json
 import logging
 import re
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -287,7 +287,7 @@ class Investigator:
         notifiers: Iterable[Notifier] = (),
         fallback: ModelClient | None = None,
         extras: Callable[[Incident], Extras] | None = None,
-        after: Callable[[Incident, Findings], None] | None = None,
+        after: Callable[[Incident, Findings], Sequence[Mapping[str, Any]] | None] | None = None,
     ) -> None:
         self._store = store
         self._rules = rules
@@ -427,12 +427,16 @@ class Investigator:
             len(calls),
             findings.root_cause.confidence,
         )
-        self._notify(incident, findings)
+        # The plan is handed over first, so that the analysis can say what became of it: a
+        # plan that only gets recorded must not read like one waiting for a Go.
+        outcomes: Sequence[Mapping[str, Any]] = ()
         if self._after is not None:
             try:
-                self._after(incident, findings)
-            except Exception:  # the analysis is recorded and sent: a failed hand-over is not fatal
+                outcomes = self._after(incident, findings) or ()
+            except Exception:  # a failed hand-over is not fatal: the analysis still goes out
                 log.exception("incident %d: the plan was not handed over", incident.id)
+                outcomes = ({"status": "not_sent", "reason": "the hand-over failed"},)
+        self._notify(incident, findings, outcomes)
         return findings
 
     def _loop(
@@ -635,7 +639,12 @@ class Investigator:
 
     # --- notification -------------------------------------------------------------------------
 
-    def _notify(self, incident: Incident, findings: Findings) -> None:
+    def _notify(
+        self,
+        incident: Incident,
+        findings: Findings,
+        outcomes: Sequence[Mapping[str, Any]] = (),
+    ) -> None:
         if not self._notifiers:
             return
         extras = Extras()
@@ -646,7 +655,7 @@ class Investigator:
                 log.exception("incident %d: the notification has no buttons", incident.id)
         message = Message(
             title=f"Incident #{incident.id}: {incident.title}",
-            text=render(findings),
+            text=render(findings, outcomes),
             priority=3,
             tags=("mag",),
             click=extras.click,
@@ -667,7 +676,28 @@ def _problems(exc: Exception) -> str:
     return f"invalid findings: {exc}"
 
 
-def render(findings: Findings) -> str:
+_OUTCOME = {
+    "pending": "Waiting for your Go: it comes in its own message, with Go and No-go.",
+    "approved": "Approved by the policies: it runs now, then you get the result.",
+    "recorded": "Recorded only: nothing will run and nothing will be asked.",
+    "refused": "Refused by the executor: nothing will run.",
+    "not_sent": "Not sent to the executor: nothing will run.",
+}
+
+
+def outcome_line(outcome: Mapping[str, Any]) -> str:
+    """What became of one plan, in a sentence, with what held it back."""
+    status = str(outcome.get("status", ""))
+    line = _OUTCOME.get(status, f"The plan is {status or 'unknown'}.")
+    if status in ("pending", "approved", "recorded") and outcome.get("level"):
+        line = f"Level {outcome['level']}. " + line
+    why = [str(r) for r in outcome.get("held_back_by") or ()]
+    if outcome.get("reason"):
+        why.append(str(outcome["reason"]))
+    return line + (f" Why: {'; '.join(why)}." if why else "")
+
+
+def render(findings: Findings, outcomes: Sequence[Mapping[str, Any]] = ()) -> str:
     """The analysis as plain text, for a notification."""
     cause = findings.root_cause
     parts = [
@@ -683,6 +713,9 @@ def render(findings: Findings) -> str:
             + (f" (Paeon can do it: {step.catalog_action} on {step.target})" if step.typed else "")
             for number, step in enumerate(findings.plan, 1)
         ]
+    if outcomes:
+        parts += ["", "What Paeon does with it:"]
+        parts += [outcome_line(outcome) for outcome in outcomes]
     unverified = sum(1 for item in findings.evidence if not item.verified)
     parts += ["", f"Evidence: {len(findings.evidence)} claims, {unverified} without a tool call."]
     return "\n".join(parts)

@@ -124,6 +124,8 @@ Start with `approve` on one alert and one container.
    A button gives no sign of its own that the tap arrived, so every tap is answered: "Go
    received" at once, before the result, and for a button that no longer works a message
    saying why it did nothing (once per button). A forged link gets no answer.
+   With `console_approval: true` in the executor's rules, an operator can also answer in the
+   console ([The console](console.md#go-and-no-go-in-the-console)).
    That answer is a notification, so it is only as prompt as your phone's push. If yours is
    slow or unreliable (ntfy on iOS with a self-hosted server depends on a relay), set
    `actions.buttons: page`: a button then opens that page in the browser, Confirm applies it,
@@ -272,7 +274,8 @@ docker compose exec paeon-executor paeon resume
   you named.
 - Apply a change to configuration, delete data, touch a secret or a firewall. A change to a
   value is proposed as a pull request; anything else is said in words, for you.
-- Approve from the console. A configuration change is approved by merging it on the forge;
-  nothing riskier exists.
+- Approve from the console, unless the executor's own rules say `console_approval: true`; even
+  then, only a plan it already waits on. A configuration change is approved by merging it on the
+  forge; nothing riskier exists.
 - Re-run the alert's own query to confirm a fix. The container's health decides; the incident
   resolving, minutes or an hour later, is the confirmation, and it is in the record.

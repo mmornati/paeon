@@ -48,4 +48,5 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
   channel added in the console has been tested against mock services, not live ones.
 - The console's own sign-in is one account. For several people, put a proxy in front and use
   roles. There is no TLS in Paeon.
-- The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.
+- The console approves only with `actions.console_approval` in the executor's rules, and only a
+  plan already waiting. Tier 2 is approved by merging on the forge; nothing riskier exists.

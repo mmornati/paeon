@@ -706,6 +706,15 @@ that fades from one colour to another is not used anywhere.
   with a lock (`secret`, or `kept` once stored) and is never printed back. What is wrong is
   said in red under its field and counted in a banner above the form. A choice with a
   consequence is a bordered row with its checkbox, tinted with the accent when ticked.
+- **Go** (`.btn-go`, solid green, on a green-tinted `.answer` box): the one control in the
+  console that runs something. It appears only on a plan the executor waits on, beside a
+  neutral No-go, with a line saying what will run and in which order.
+- **Still open?** (`#status` block): the alerts still firing with whether their source can be
+  asked, the last re-check's answers as state badges, Re-check (filled) and Close by hand
+  (behind a disclosure that asks for one line of why). A quiet incident's block has a warning
+  border and a `quiet N days` tag, also shown on its board card.
+- **Nav count** (`.nav-count`): a small warning pill after a navigation item, for what waits
+  for a person (postmortems to review).
 - **Pick list** (`.pick`): rows on one card, each a whole-row link: a name, one line on what
   it is, a chevron. Used to choose the service of a new channel.
 - **Banner**: red for what failed, green (`.banner-ok`) for what was just saved, sent or

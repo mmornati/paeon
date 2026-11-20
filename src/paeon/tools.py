@@ -80,6 +80,9 @@ class Toolbox:
         added = {tool.spec.name: tool for tool in tools if tool.spec.name not in self._base}
         self._tools = {**self._base, **added}  # swapped at once: a run under way keeps its own
 
+    def find(self, name: str) -> Tool | None:
+        return self._tools.get(name)
+
     @property
     def specs(self) -> list[ToolSpec]:
         return [tool.spec for tool in self._tools.values()]

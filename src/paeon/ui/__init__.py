@@ -1,10 +1,11 @@
 """The console under `/ui`: the event log rendered for a person.
 
-It reads, and changes three things. An operator says whether triage was right and stops
-automation (the kill switch, which the console can engage and cannot release). An admin, when
-`ui.settings` is on, adds and changes the channels the digest and the analysis go to. It shows
-plans, approvals and what the executor did; it cannot approve anything, and no channel added
-here carries an approval: a Go is a signed link, sent by the executor from its own rules file.
+It reads, and records what a person decides. An operator says whether triage was right,
+re-checks or closes an incident, reviews and edits postmortems, and stops automation (the kill
+switch, which the console can engage and cannot release). An admin, when `ui.settings` is on,
+adds sources and channels. A plan is answered here only when the executor's own rules allow it
+(`actions.console_approval`), and only one it already waits on; no channel added here carries
+an approval.
 
 It is mounted only when `ui.enabled` is set. By default it has no login and expects a reverse
 proxy that authenticates in front of it (Traefik with forward-auth, for example);
@@ -37,6 +38,7 @@ from paeon import __version__
 from paeon import postmortem as postmortems
 from paeon.channels import SERVICES, STAGES, ChannelError, Channels, Service, read_form
 from paeon.console_sources import SOURCE_SERVICES, Sources
+from paeon.operations import Incidents, OperationError
 from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.store import Store
@@ -109,6 +111,9 @@ def mount_ui(
     channels: Channels | None = None,
     source_book: Sources | None = None,
     sessions: Sessions | None = None,
+    writer: postmortems.PostmortemWriter | None = None,
+    incidents: Incidents | None = None,
+    answer: Callable[[int, str, str], tuple[bool, str]] | None = None,
 ) -> None:
     local = rules.ui.auth == "local"
     if local and sessions is None:
@@ -220,6 +225,10 @@ def mount_ui(
             "role": role,
             "can_operate": allows(role, "operator"),
             "can_admin": allows(role, "admin"),
+            # What waits for a person, in the navigation: drafts nobody has reviewed yet.
+            "to_review": sum(1 for d in views.postmortems_view(rules) if d.status == "draft")
+            if keeps
+            else 0,
         }
         return templates.TemplateResponse(
             request, template, context, status_code=status_code, headers=HEADERS
@@ -355,7 +364,80 @@ def mount_ui(
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
         view = views.incident_view(store, found, clock(), acting=acting)
-        return page(request, "incident.html", view=view, here="board")
+        askable = (
+            {}
+            if incidents is None
+            else {a.source: incidents.can_check(a.source) for a in found.alerts}
+        )
+        return page(
+            request,
+            "incident.html",
+            view=view,
+            here="board",
+            askable=askable,
+            operable=incidents is not None,
+            answerable=answer is not None and rules.actions.console_approval,
+            done=request.query_params.get("done"),
+        )
+
+    def asked(request: Request, incident_id: int, what: str) -> Response:
+        return back(f"/ui/incidents/{incident_id}?done={what}#status")
+
+    if incidents is not None:
+        book_of_incidents = incidents
+
+        @router.post(
+            "/incidents/{incident_id}/recheck",
+            dependencies=[Depends(_same_origin), Depends(need("operator"))],
+        )
+        def incident_recheck(request: Request, incident_id: int) -> Response:
+            try:
+                book_of_incidents.recheck(incident_id, by=who(request))
+            except OperationError as exc:
+                raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+            return asked(request, incident_id, "rechecked")
+
+        @router.post(
+            "/incidents/{incident_id}/close",
+            dependencies=[Depends(_same_origin), Depends(need("operator"))],
+        )
+        def incident_close(
+            request: Request,
+            incident_id: int,
+            note: Annotated[str, Form(min_length=1, max_length=1000)],
+        ) -> Response:
+            try:
+                book_of_incidents.close(incident_id, by=who(request), note=note)
+            except OperationError as exc:
+                raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+            return asked(request, incident_id, "closed")
+
+    if answer is not None and rules.actions.console_approval:
+        answering = answer
+
+        @router.post(
+            "/incidents/{incident_id}/answer",
+            dependencies=[Depends(_same_origin), Depends(need("operator"))],
+        )
+        def incident_answer(
+            request: Request,
+            incident_id: int,
+            proposal: Annotated[int, Form(ge=1)],
+            reply: Annotated[Literal["go", "nogo"], Form()],
+        ) -> Response:
+            found = store.incident(incident_id)
+            plan = views.plan_of(list(store.events(incident_id=incident_id)))
+            if found is None or plan is None or plan.proposal != proposal or not plan.waiting:
+                raise HTTPException(status.HTTP_409_CONFLICT, "this plan is not waiting for a Go")
+            ok, message = answering(proposal, reply, who(request))
+            what = ("go" if reply == "go" else "nogo") if ok else "refused"
+            if not ok:
+                store.append(
+                    "approval.refused",
+                    {"proposal": proposal, "by": who(request), "reason": message[:300]},
+                    incident_id=incident_id,
+                )
+            return asked(request, incident_id, what)
 
     @router.post(
         "/incidents/{incident_id}/feedback",
@@ -831,27 +913,138 @@ def mount_ui(
         drafts = views.postmortems_view(rules)
         return page(request, "postmortems.html", drafts=drafts, here="postmortems")
 
-    @router.get("/postmortems/{name}", response_class=HTMLResponse)
-    def postmortem(request: Request, name: str) -> Response:
+    def find_draft(name: str) -> tuple[postmortems.Draft, str]:
         found = postmortems.read_draft(rules.postmortems.dir, name) if keeps else None
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
+        return found
+
+    @router.get("/postmortems/{name}", response_class=HTMLResponse)
+    def postmortem(
+        request: Request,
+        name: str,
+        done: Annotated[str | None, Query(max_length=20)] = None,
+    ) -> Response:
+        draft, raw = find_draft(name)
         # Masked before it is rendered: the rendered page does not pass through `shown`.
-        text = redact_text(found[1], max_length=views.DETAIL_LIMIT * 30)
+        text = redact_text(raw, max_length=views.DETAIL_LIMIT * 30)
         body = markdown.render(text)
         diagrams = markdown.DIAGRAM in body
+        role = request.state.role
         return templates.TemplateResponse(
             request,
             "postmortem.html",
             {
-                "draft": found[0],
+                "draft": draft,
                 "text": text,
                 "body": body,
                 "diagrams": diagrams,
                 "here": "postmortems",
+                "role": role,
+                "can_operate": allows(role, "operator"),
+                "can_admin": allows(role, "admin"),
+                "to_review": 0,
+                "editable": text == raw,
+                "can_rewrite": writer is not None
+                and draft.status == "draft"
+                and draft.incident is not None
+                and postmortems.missing_prose(raw),
+                "done": done,
             },
             headers=DIAGRAM_HEADERS if diagrams else HEADERS,
         )
+
+    operate = [Depends(_same_origin), Depends(need("operator"))]
+
+    def committed(draft: postmortems.Draft, message: str) -> None:
+        if writer is not None:
+            path = Path(rules.postmortems.dir) / draft.name
+            writer.commit(path, message, draft.incident)
+
+    @router.post("/postmortems/{name}/status", dependencies=operate)
+    def postmortem_status(
+        request: Request,
+        name: str,
+        to: Annotated[Literal["draft", "reviewed"], Form()],
+    ) -> Response:
+        find_draft(name)
+        try:
+            draft = postmortems.set_status(rules.postmortems.dir, name, to)
+        except postmortems.DraftError as exc:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from None
+        store.append(
+            "postmortem.reviewed",
+            {"path": name, "status": to, "by": who(request)},
+            incident_id=draft.incident,
+        )
+        committed(draft, f"Postmortem {to}: {name}")
+        return back(f"/ui/postmortems/{quote(name)}?done={to}")
+
+    @router.get(
+        "/postmortems/{name}/edit",
+        response_class=HTMLResponse,
+        dependencies=[Depends(need("operator"))],
+    )
+    def postmortem_edit(request: Request, name: str) -> Response:
+        draft, raw = find_draft(name)
+        if redact_text(raw, max_length=views.DETAIL_LIMIT * 30) != raw:
+            # The page would have to show something the console masks: edit the file itself.
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "this file holds what looks like a secret"
+            )
+        return page(
+            request, "postmortem_edit.html", draft=draft, text=raw, problem="", here="postmortems"
+        )
+
+    @router.post("/postmortems/{name}/edit", dependencies=operate)
+    def postmortem_save(
+        request: Request,
+        name: str,
+        text: Annotated[str, Form(max_length=postmortems.MAX_BYTES)],
+    ) -> Response:
+        draft, raw = find_draft(name)
+        if redact_text(raw, max_length=views.DETAIL_LIMIT * 30) != raw:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "this file holds what looks like a secret"
+            )
+        try:
+            saved = postmortems.save_text(rules.postmortems.dir, name, text)
+        except postmortems.DraftError as exc:
+            return page(
+                request,
+                "postmortem_edit.html",
+                422,
+                draft=draft,
+                text=text,
+                problem=str(exc),
+                here="postmortems",
+            )
+        store.append(
+            "postmortem.edited",
+            {"path": name, "status": saved.status, "by": who(request)},
+            incident_id=saved.incident,
+        )
+        committed(saved, f"Postmortem edited: {name}")
+        return back(f"/ui/postmortems/{quote(name)}?done=saved")
+
+    @router.post("/postmortems/{name}/rewrite", dependencies=operate)
+    def postmortem_rewrite(request: Request, name: str) -> Response:
+        draft, raw = find_draft(name)
+        incident = None if draft.incident is None else store.incident(draft.incident)
+        if (
+            writer is None
+            or incident is None
+            or draft.status != "draft"
+            or not postmortems.missing_prose(raw)
+        ):
+            raise HTTPException(
+                status.HTTP_409_CONFLICT, "only a draft without its prose is written again"
+            )
+        path = Path(rules.postmortems.dir) / name
+        writer.draft(incident, clock(), replace=path, by=who(request))
+        again = postmortems.read_draft(rules.postmortems.dir, name)
+        done = "rewritten" if again and not postmortems.missing_prose(again[1]) else "still-missing"
+        return back(f"/ui/postmortems/{quote(name)}?done={done}")
 
     @app.get("/", include_in_schema=False, dependencies=[Depends(proxied)])
     def home() -> Response:

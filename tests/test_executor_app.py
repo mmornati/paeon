@@ -53,7 +53,12 @@ def test_propose_approve_by_link_and_mirror(tmp_path: Path) -> None:
     bench = Bench(tmp_path)
     with app(bench) as client:
         answer = client.post("/proposals", json=proposal().model_dump(mode="json"), headers=AUTH)
-        assert answer.json() == {"status": "pending", "proposal": 1, "level": "approve"}
+        assert answer.json() == {
+            "status": "pending",
+            "proposal": 1,
+            "level": "approve",
+            "held_back_by": [],
+        }
         assert client.get("/state", headers=AUTH).json()["pending"][0]["incident"] == 1
         # A plan with an unknown field, or a target that is not a name, never gets in.
         bad = {**proposal().model_dump(mode="json"), "steps": [{"action": "x", "target": "a b"}]}
