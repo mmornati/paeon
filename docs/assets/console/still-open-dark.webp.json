@@ -1,0 +1,4 @@
+{
+  "prompt": "ORIGIN: not generated imagery. A screenshot of Paeon's own console (src/paeon/ui, 0.5.0): the Still open? block of a quiet incident, with the close-by-hand form open, dark scheme. Rendered from the synthetic demo data in tests/ui_data.py and a fictional postmortem, with a stand-in executor; no real server, alert or answer is shown. Captured headless with Playwright (desktop viewport, 1280x900 at 1.5x), converted with cwebp.",
+  "createdAt": "2026-11-20T10:46:11.000Z"
+}

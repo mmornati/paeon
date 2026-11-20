@@ -213,6 +213,8 @@ no button, and changing that is a change of policy. The executor decides from it
 the file, so the core's copy alone cannot turn it on. What it costs is in the
 [threat model](threat-model.md#the-console-and-the-api).
 
+![A plan waiting for a Go, with Go and No-go in the console](assets/console/plan-console-go.webp)
+
 ### Still open?
 
 An incident closes by itself when its alerts resolve. Some sources never send that: OpenObserve
@@ -227,6 +229,17 @@ of state and nothing else. An open incident whose alerts were not seen for two d
 - **Close by hand** takes one line of why. Every alert still firing is marked resolved, the
   incident resolves, and the record keeps your name and the line. If an alert fires again, it
   opens an incident again.
+
+![An incident marked quiet for three days, on the board](assets/console/board-quiet.webp)
+
+![Still open?: the alerts still firing, whether their source can be asked, and the close form](assets/console/still-open.webp)
+
+![The same incident once closed by hand: who, when and why](assets/console/closed-by-hand.webp)
+
+Everything a person did (rating triage, re-checking, closing, reviewing, answering a plan) is in
+the log under **What you did**.
+
+![The log, filtered on what a person did](assets/console/log-what-you-did.webp)
 
 ![A plan waiting for Go](assets/console/plan-waiting.webp)
 
@@ -263,6 +276,10 @@ read drafts too, labelled as unreviewed. An operator reviews one from its page:
 Each change is in the incident's record, with who made it, and is committed and pushed like
 the drafts when `postmortems.git` is set.
 
+![A draft with its Review block: mark reviewed, edit the text, write the prose again](assets/console/postmortem-review.webp)
+
+![The editor: the whole file, front matter included](assets/console/postmortem-edit.webp)
+
 ![A rendered postmortem with a sequence diagram](assets/console/postmortem.webp)
 
 ## On a phone, in the dark
@@ -275,6 +292,7 @@ system's light or dark setting unless you use the switch.
 ![The board on a phone, dark](assets/console/phone-board-dark.webp){ width="300" }
 ![What is left to set up, on a phone](assets/console/phone-getting-started.webp){ width="300" }
 ![A new ntfy channel, on a phone](assets/console/phone-channel-form.webp){ width="300" }
+![Reviewing a postmortem, on a phone](assets/console/phone-postmortem-review.webp){ width="300" }
 </div>
 
 ## What it can and cannot do

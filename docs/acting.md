@@ -268,6 +268,18 @@ Only you can release it, next to the executor. Neither the console nor the core 
 docker compose exec paeon-executor paeon resume
 ```
 
+## When nothing ran
+
+A plan can be held under `approve` on purpose. The analysis says so in its last lines, and the
+incident page says the same under **Plan and action**:
+
+| It says | What it means | What to do |
+|---|---|---|
+| Waiting for your Go | The executor asked; Go and No-go are on your phone, and in the console with `console_approval`. | Answer, or let it expire. |
+| Recorded only, level `observe`, *a policy sets it to observe* | A policy line pins this action or this container to `observe`. Nothing is asked. | If you want to be asked, change that line to `approve` in the executor's rules. |
+| Suggested only, *no policy matches, the default level is suggest* | No policy covers this alert, action and container. | Add a policy line for it. |
+| Not sent to the executor | The core could not reach it. | The record says why; nothing ran. |
+
 ## What it cannot do
 
 - Act on anything but containers of the Docker host its proxy reaches and the Coolify resources

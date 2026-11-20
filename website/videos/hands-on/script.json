@@ -1,0 +1,33 @@
+{
+  "langs": ["en"],
+  "voices": {"kokoro": {"en": {"voice": "am_michael"}}},
+  "scenes": [
+    {"id": "ran", "min": 9, "lead": 0.8, "chapter": {"en": "Nothing ran"},
+     "en": ["An analysis reached your phone, with a plan.",
+            "Then nothing happened. Why?"]},
+    {"id": "fate", "min": 14, "chapter": {"en": "What becomes of a plan"},
+     "en": ["Every analysis now ends with what becomes of its plan.",
+            "Waiting for your Go. Run by the policies. Or recorded only.",
+            "And it names the line that decided: here, a policy that pins this container to observe."]},
+    {"id": "go", "min": 13, "chapter": {"en": "Go in the console"},
+     "en": ["When a plan waits for you, an operator can now answer in the console as well.",
+            "Only if the executor's own rules allow it: the core cannot turn that on by itself."]},
+    {"id": "same", "min": 9, "chapter": {"en": "The same answer"},
+     "en": ["It is the same answer as on your phone.",
+            "The first one counts, the phone is told, and the log keeps your name."]},
+    {"id": "quiet", "min": 11, "chapter": {"en": "Still open?"},
+     "en": ["Some sources never send the recovery, so an incident can stay open for days.",
+            "One that was not seen for two days is now marked quiet."]},
+    {"id": "recheck", "min": 14, "chapter": {"en": "Re-check, or close"},
+     "en": ["Re-check asks the source what the alert is right now.",
+            "Back to normal, and the incident resolves the usual way.",
+            "Otherwise, close it by hand, with one line of why. If it fires again, it opens again."]},
+    {"id": "review", "min": 14, "chapter": {"en": "Postmortems"},
+     "en": ["Triage reads a postmortem only once a person has reviewed it.",
+            "Mark it reviewed, edit it, or have the model write a missing prose again.",
+            "Every change is in the record, with your name."]},
+    {"id": "outro", "min": 8, "tail": 1.8, "chapter": {"en": "Your call"},
+     "en": ["Models think. Code does.",
+            "And the calls in between are yours, from the phone or the console."]}
+  ]
+}

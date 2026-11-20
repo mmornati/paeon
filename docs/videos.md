@@ -38,3 +38,13 @@ sources and channels added in the console, the roles, and the rules file that al
 <div class="video" markdown>
 <iframe src="../../videos/setup-in-the-browser/?embed=1&lang=en" title="Set up in the browser" loading="lazy" allow="fullscreen; autoplay" allowfullscreen></iframe>
 </div>
+
+## Your hands on it
+
+New in 0.5: an analysis that says what becomes of its plan and why, Go and No-go in the
+console where the executor allows it, re-checking or closing an incident whose source never
+sent the recovery, and reviewing a postmortem so that triage can read it.
+
+<div class="video" markdown>
+<iframe src="../../videos/hands-on/?embed=1&lang=en" title="Your hands on it" loading="lazy" allow="fullscreen; autoplay" allowfullscreen></iframe>
+</div>
