@@ -30,7 +30,7 @@
     <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>{{ icon("autonomy") }}Autonomy</a>{% endif %}
     <a href="/ui/sources"{% if here == "sources" %} aria-current="page"{% endif %}>{{ icon("sources") }}Sources</a>
     {% if notifies %}<a href="/ui/channels"{% if here == "channels" %} aria-current="page"{% endif %}>{{ icon("channels") }}Channels</a>{% endif %}
-    {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>{{ icon("postmortems") }}Postmortems</a>{% endif %}
+    {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>{{ icon("postmortems") }}Postmortems{% if to_review %}<span class="nav-count" title="{{ to_review }} to review">{{ to_review }}<span class="sr"> to review</span></span>{% endif %}</a>{% endif %}
   </nav>
   <section class="sys" aria-labelledby="h-stages">
     <h2 class="sys-title" id="h-stages">Stages</h2>

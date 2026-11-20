@@ -2,6 +2,41 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+What a person does from the console, and an analysis that says what becomes of its plan.
+
+A rules file and an environment of 0.4.0 work unchanged. Go from the console is off until the
+executor's own rules turn it on.
+
+### Plans
+
+- The analysis on your phone says what became of the plan: waiting for your Go, run by the
+  policies, or recorded only, with what held it (`a policy sets it to observe`, the default
+  level, the kill switch). It used to be sent before the executor had decided, so a recorded
+  plan read like one waiting for a Go.
+- `actions.console_approval`: an operator answers Go or No-go in the console, for a plan the
+  executor already waits on. Read by the executor from its own copy of the rules file; the
+  phone is told, and the record keeps who answered. Off by default; the threat model says what
+  it costs.
+
+### Incidents
+
+- **Re-check now** asks each source that can answer what an alert is right now (OpenObserve's
+  latest evaluation; Alertmanager and uptime-kuma through their tools when they have a `url`).
+  An alert back to normal resolves the incident the usual way.
+- **Close by hand**, with one line of why, for an incident whose source never sends the
+  recovery. The record keeps who; an alert that fires again opens an incident again.
+- An open incident whose alerts were not seen for two days is marked quiet on the board.
+
+### Postmortems
+
+- Reviewed from the console: mark reviewed (triage reads reviewed postmortems only), set back
+  to draft, edit the whole file with its front matter checked, or have the model write a
+  missing prose again. Each change is recorded and committed like the drafts.
+- A model answer that is not valid JSON is asked again once, with what was wrong with it.
+- The navigation counts the postmortems left to review.
+
 ## 0.4.0
 
 Configure in the browser: an admin adds the sources alerts come from and the channels Paeon

@@ -12,6 +12,7 @@ falls back to investigation, and the analysis of an investigation has already be
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -88,6 +89,8 @@ class ExecutorApi(Protocol):
 
     def vote_links(self, incident_id: int, about: str) -> dict[str, str]: ...
 
+    def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]: ...
+
 
 class ExecutorClient:
     def __init__(
@@ -137,6 +140,12 @@ class ExecutorClient:
         )
         return {k: str(v) for k, v in answer.items()} if isinstance(answer, dict) else {}
 
+    def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]:
+        found = self._call(
+            "POST", f"/proposals/{proposal_id}/answer", json={"answer": answer, "by": by}
+        )
+        return found if isinstance(found, dict) else {}
+
     def close(self) -> None:
         self._http.close()
 
@@ -152,12 +161,14 @@ class Remediator:
     def _alerts(self, incident: Incident) -> tuple[str, ...]:
         return tuple(dict.fromkeys(alert.title for alert in incident.alerts)) or (incident.title,)
 
-    def on_findings(self, incident: Incident, findings: Findings) -> None:
+    def on_findings(self, incident: Incident, findings: Findings) -> list[dict[str, Any]]:
         """Hand the typed steps of an analysis to the executor. The rest stays advice.
 
         Configuration changes go first and on their own: they become a pull request, while
         the actions wait for a Go. The plan of actions is then the incident's latest plan.
+        Returns what became of each plan, for the analysis to say so.
         """
+        outcomes: list[dict[str, Any]] = []
         steps = [
             Step(action=step.catalog_action, target=step.target, params=step.params)
             for step in findings.plan
@@ -168,7 +179,7 @@ class Remediator:
             [step for step in steps if step.tier < 2],
         ):
             if group:
-                self._propose(
+                answer = self._propose(
                     Proposal(
                         incident_id=incident.id,
                         title=incident.title[:300],
@@ -179,6 +190,8 @@ class Remediator:
                         steps=tuple(group[:10]),
                     )
                 )
+                outcomes.append(answer or {"status": "not_sent"})
+        return outcomes
 
     def _propose(self, proposal: Proposal) -> dict[str, Any] | None:
         try:
@@ -189,8 +202,19 @@ class Remediator:
                 {"reason": str(exc), "steps": [step.label for step in proposal.steps]},
                 incident_id=proposal.incident_id,
             )
-            return None
+            return {"status": "not_sent", "reason": str(exc)}
         return answer
+
+    def answer(self, proposal_id: int, answer: str, by: str) -> tuple[bool, str]:
+        """Go or No-go from the console, through the executor, which decides whether it may.
+        The journal is read right after, so that the page shows what became of the plan."""
+        try:
+            found = self._executor.answer(proposal_id, answer, by)
+        except ExecutorError as exc:
+            return False, f"the executor did not answer ({exc})"
+        with contextlib.suppress(ExecutorError):  # the next tick reads it
+            self.mirror()
+        return bool(found.get("ok")), str(found.get("message") or "")
 
     def page(self, incident_id: int) -> str | None:
         base = self._rules.ui.public_url

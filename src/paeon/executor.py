@@ -7,7 +7,9 @@ is checked again, against this process's own copy of the catalog and of the poli
 - an action that is not in the catalog, or a target the catalog does not allow, is refused;
 - the autonomy level comes from the policies of this process, never from the request;
 - an approval is a signed link that only this process can mint, sent straight to the owner's
-  phone: the core never sees it, so it cannot approve its own plan;
+  phone: the core never sees it, so it cannot approve its own plan. The one exception is
+  opt-in, in this process's rules (`console_approval`): the core may then answer a plan that
+  already waits, on behalf of the console's operator;
 - before anything is applied, the world is checked again (does the container exist, is it in
   the state the action expects), under a lock that other repairers can share;
 - after it is applied, the result is verified, rolled back where the action has an inverse,
@@ -408,7 +410,13 @@ class Executor:
         for known in earlier:
             if known.hash == proposal.hash and known.status not in ("cancelled", "expired"):
                 # The core retries: the same plan for the same incident is the same proposal.
-                return {"status": known.status, "proposal": known.id, "level": known.level}
+                held = self._held_back(known.id)
+                return {
+                    "status": known.status,
+                    "proposal": known.id,
+                    "level": known.level,
+                    "held_back_by": held,
+                }
         # A change (a pull request) and a plan of actions live side by side for one incident:
         # each supersedes, and is limited by, only its own kind.
         earlier = [known for known in earlier if known.proposal.changes == proposal.changes]
@@ -456,7 +464,14 @@ class Executor:
             self._ask(proposal_id, proposal, expires, now)
         elif level == "auto":
             self._spawn(lambda: self.execute(proposal_id, "auto"))
-        return {"status": status, "proposal": proposal_id, "level": level}
+        return {"status": status, "proposal": proposal_id, "level": level, "held_back_by": reasons}
+
+    def _held_back(self, proposal_id: int) -> list[str]:
+        """What held a known plan back, as its `plan.proposed` entry said."""
+        for event in self._store.events(kinds=("plan.proposed",)):
+            if event.payload.get("proposal") == proposal_id:
+                return [str(reason) for reason in event.payload.get("held_back_by") or ()]
+        return []
 
     def _refusal(self, proposal: Proposal) -> str | None:
         """Why a plan cannot even be considered. Checked against this process's catalog."""
@@ -505,7 +520,15 @@ class Executor:
         levels: list[Level] = []
         reasons: list[str] = []
         for alert, action, target in self._tuples(proposal, proposal.steps):
-            level = actions.level_for(alert, action, target)
+            level, policy = actions.policy_for(alert, action, target)
+            if autonomy.RANK[level] < autonomy.RANK["approve"]:
+                # Said in the analysis: why this plan will not ask for a Go.
+                reasons.append(
+                    f"{action}({target}): no policy matches, the default level is {level}"
+                    if policy is None
+                    else f"{action}({target}): a policy sets it to {level}"
+                    + (f" (target {policy.target})" if policy.target != "*" else "")
+                )
             if level == "auto" and (alert, action, target) in demoted:
                 level = "approve"
                 reasons.append(f"{action}({target}) is demoted: {demoted[(alert, action, target)]}")
@@ -784,6 +807,51 @@ class Executor:
         )
         self._demote(plan.proposal, plan.proposal.steps, "you said the action was wrong")
         return Outcome(True, "Recorded as wrong. These actions ask for approval from now on.")
+
+    def answer(self, proposal_id: int, answer: str, *, by: str, now: datetime) -> Outcome:
+        """Go or No-go from the console, for a plan that waits for one. Allowed only when
+        this executor's own rules say `console_approval`; the person is named by the core."""
+        if not self._actions.console_approval:
+            raise LinkError("answering from the console is not enabled on the executor")
+        found = self._store.proposals(proposal_id=proposal_id)
+        if not found:
+            raise LinkError("no such plan")
+        plan = found[0]
+        if plan.expires_at is not None and plan.expires_at <= now:
+            raise LinkError("this plan is no longer waiting (its approval expired)")
+        who = by.strip()[:80] or "an operator"
+        incident = plan.incident_id
+        if answer == "go":
+            if self.killed():
+                raise LinkError("automation is stopped: nothing was run")
+            if not self._store.move(plan.id, to="approved", only_from=("pending",)):
+                raise LinkError(f"this plan is no longer waiting (it is {plan.status})")
+            self._journal(
+                "approval.granted", {"proposal": plan.id, "via": "console", "by": who}, incident
+            )
+            outcome = Outcome(True, "Approved. The plan is running; the result follows.")
+        elif answer == "nogo":
+            if not self._store.move(plan.id, to="declined", only_from=("pending",)):
+                raise LinkError(f"this plan is no longer waiting (it is {plan.status})")
+            self._journal(
+                "approval.declined", {"proposal": plan.id, "via": "console", "by": who}, incident
+            )
+            outcome = Outcome(True, "Declined. Nothing was run.")
+        else:
+            raise LinkError("the answer is go or nogo")
+        # The phone still shows the question: say it was answered, and by whom.
+        self._notify(
+            incident,
+            "acknowledgement",
+            title=f"Incident #{incident}: {'Go' if answer == 'go' else 'No-go'} from the console",
+            message=f"{who} answered in the console. The buttons of the question no longer work.",
+            actions=[],
+            priority=2,
+            tags=("white_check_mark" if answer == "go" else "no_entry",),
+        )
+        if answer == "go":  # after the acknowledgement: the result comes second on the phone
+            self._spawn(lambda: self.execute(plan.id, "approve"))
+        return outcome
 
     def cancel(self, proposal_id: int, reason: str) -> bool:
         found = self._store.proposals(proposal_id=proposal_id)

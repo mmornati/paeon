@@ -18,11 +18,19 @@
   {{ cells(s, open=true) }}
 </header>
 
+{% if done == "rechecked" %}<p class="banner banner-ok" role="status">Re-checked. What each source answered is below{% if resolved %}: every alert is back to normal, so the incident is resolved{% endif %}.</p>
+{% elif done == "closed" %}<p class="banner banner-ok" role="status">Closed. If one of its alerts fires again, it opens an incident again.</p>
+{% elif done == "go" %}<p class="banner banner-ok" role="status">Go sent to the executor. It runs the plan, verifies it, and the result follows here and on your phone.</p>
+{% elif done == "nogo" %}<p class="banner banner-ok" role="status">No-go sent to the executor. Nothing runs.</p>
+{% elif done == "refused" %}<p class="banner" role="alert">The executor did not take the answer. Why is in the record below.</p>
+{% endif %}
+
 <nav class="tabs" aria-label="Sections">
   <a href="#alerts">Alerts <span class="count">{{ i.alerts|length }}</span></a>
   <a href="#triage">Triage</a>
   <a href="#investigation">Investigation</a>
   {% if acting or view.plan %}<a href="#plan">Plan</a>{% endif %}
+  {% if operable and (not resolved or view.closed) %}<a href="#status">{% if resolved %}Closed{% else %}Still open?{% endif %}{% if view.quiet_days %} <span class="count">quiet</span>{% endif %}</a>{% endif %}
   <a href="#record">Record <span class="count">{{ view.rows|length }}</span></a>
 </nav>
 
@@ -144,7 +152,17 @@
     </ol>
     {% endif %}
     <p class="facts">From the {{ p.origin }}. Level {{ p.level }}{% if p.held_back_by %}, held back because {{ p.held_back_by|join("; ") }}{% endif %}.</p>
-    <p class="note">The executor checked this plan against its own catalog and policies. {% if p.waiting %}The console cannot approve it: Go is a signed link on your phone.{% else %}Each step it took is in the record below.{% endif %}</p>
+    {% if p.waiting and answerable and can_operate and p.proposal %}
+    <div class="answer">
+      <p class="vote-ask">The executor waits for your answer. It runs these steps, in this order, then checks each one worked.</p>
+      <div class="vote-buttons">
+        <form method="post" action="/ui/incidents/{{ i.id }}/answer"><input type="hidden" name="proposal" value="{{ p.proposal }}"><input type="hidden" name="reply" value="go"><button class="btn btn-go">Go: run it</button></form>
+        <form method="post" action="/ui/incidents/{{ i.id }}/answer"><input type="hidden" name="proposal" value="{{ p.proposal }}"><input type="hidden" name="reply" value="nogo"><button class="btn">No-go</button></form>
+      </div>
+      <p class="facts">The same as the buttons on your phone: the first answer counts, and the log keeps your name.</p>
+    </div>
+    {% endif %}
+    <p class="note">The executor checked this plan against its own catalog and policies. {% if p.waiting and not answerable %}Go is a signed link on your phone: answering in the console is off, see <code>actions.console_approval</code>.{% elif p.waiting %}It answers the console only because its own rules allow it.{% else %}Each step it took is in the record below.{% endif %}</p>
   {% else %}
     <p class="lead">No plan: nothing in the analysis was a catalog action, and no runbook matched.</p>
   {% endif %}
@@ -156,6 +174,54 @@
     {% endfor -%}
   </ul>
   <p class="note">A change is never applied by Paeon. Merging the pull request is your approval.</p>
+  {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if operable and (not resolved or view.closed) %}
+<section class="block status-block{% if view.quiet_days %} is-quiet{% endif %}" id="status" aria-labelledby="h-status">
+  <div class="block-head"><h2 id="h-status">{% if resolved %}Closed by hand{% else %}Still open?{% endif %}</h2>{% if view.quiet_days %}<span class="tag">quiet {{ view.quiet_days }} day{{ "" if view.quiet_days == 1 else "s" }}</span>{% endif %}</div>
+  <div class="block-body">
+  {% if resolved %}
+    <p>{{ view.closed.by }} closed it on {{ view.closed.at|stamp }}: <q>{{ view.closed.note }}</q>.</p>
+  {% else %}
+    <p>An incident closes by itself when its alerts resolve. {% if view.quiet_days %}None of its alerts was seen for {{ view.quiet_days }} day{{ "" if view.quiet_days == 1 else "s" }}: its source may never send the resolution.{% else %}Some sources never send that resolution.{% endif %}</p>
+    <ul class="alerts">
+      {% for alert in i.alerts if alert.status.value == "firing" -%}
+      <li class="alert-line"><span class="state state-firing">firing</span> <span>{{ alert.title }}</span> <span class="dim">{{ alert.source }} · {{ "can be asked" if askable.get(alert.source) else "cannot be asked" }}</span></li>
+      {% endfor -%}
+    </ul>
+    {% if view.rechecked %}
+    <div class="checked">
+      <h3>Last re-check, {{ view.rechecked.at|stamp }}, by {{ view.rechecked.by }}</h3>
+      <ul class="evidence">
+        {% for a in view.rechecked.alerts -%}
+        <li><span><span class="state state-{{ "resolved" if a.answer == "resolved" else "firing" if a.answer == "firing" else "unknown" }}">{{ a.answer }}</span> {{ a.title }}</span> <span class="dim">{{ a.detail }}</span></li>
+        {% endfor -%}
+      </ul>
+    </div>
+    {% endif %}
+    {% if can_operate %}
+    <div class="status-actions">
+      {% if askable.values()|select|list %}
+      <form method="post" action="/ui/incidents/{{ i.id }}/recheck">
+        <button class="btn btn-primary">Re-check now</button>
+        <p class="facts">Asks each source that can answer what the alert is now. An alert back to normal resolves the incident the usual way.</p>
+      </form>
+      {% endif %}
+      <details class="confirm close-form">
+        <summary class="btn">Close by hand…</summary>
+        <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/close">
+          <label class="field field-wide"><span>Why it is over</span><input type="text" name="note" required maxlength="1000" autocomplete="off" placeholder="Fixed by restarting the box; uptime-kuma never sent the recovery"></label>
+          <p class="facts">The log keeps your name and this line. If an alert fires again, it opens an incident again.</p>
+          <div class="vote-buttons"><button class="btn">Close the incident</button></div>
+        </form>
+      </details>
+    </div>
+    {% else %}
+    <p class="facts">Re-checking and closing take the operator role.</p>
+    {% endif %}
   {% endif %}
   </div>
 </section>

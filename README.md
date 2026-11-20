@@ -300,20 +300,22 @@ file at all. Then open `http://paeon:8080/ui`.
 | **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. With `settings`, an admin adds, tests, edits and removes channels here. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
-| **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
+| **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. An operator marks it reviewed (triage reads reviewed postmortems only), edits it, or has the model write a missing prose again. |
 
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
 a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set.
 
-The console reads, apart from three things: an operator says whether triage was right and
-stops automation, and, with `ui.settings` on, an admin adds the sources alerts come from and
-the channels the digest and the analysis go to. **It cannot approve a plan**, it cannot resume
-what it stopped, and nothing added in it can carry an approval.
+The console reads, apart from what a person decides. An operator rates triage, re-checks or
+closes an incident whose source never sent the recovery, reviews and edits postmortems, and
+stops automation; with `ui.settings` on, an admin adds the sources alerts come from and the
+channels the digest and the analysis go to. It answers a plan only where the executor's own
+rules allow it (`actions.console_approval`), it cannot resume what it stopped, and nothing
+added in it can carry an approval.
 
 | Role | Can |
 |---|---|
 | viewer | Read every page. |
-| operator | Also rate triage and stop automation. |
+| operator | Also rate triage, re-check or close an incident, review and edit postmortems, stop automation, and answer a waiting plan where the executor allows it. |
 | admin | Also add, test, change and remove sources and channels. |
 
 Sources and channels added in the console live in the database, their secrets encrypted with
@@ -444,7 +446,8 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
   servers; the others were tested against each service's documented request, not the live
   service. A tap cannot be answered from inside a chat: a button
   opens the executor's page.
-- The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.
+- The console approves only with `actions.console_approval` in the executor's rules, and only a
+  plan already waiting. Tier 2 is approved by merging on the forge; nothing riskier exists.
 
 </details>
 

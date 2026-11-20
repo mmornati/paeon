@@ -577,6 +577,7 @@ Stage 3 and 4: the catalog, who may approve what, and where the executor is. The
 | `docker_read_url` | text |  | Executor only: where it lists and inspects containers, when the proxy above allows nothing but the actions. Defaults to `docker_url`. |
 | `lock_dir` | text | `locks` | One lock file per container, shared with other repairers. |
 | `approval_minutes` | number | `30` | How long a Go link works. After it the plan expires and nothing runs. From 0 to 1440. |
+| `console_approval` | boolean | `false` | Lets an operator of the console say Go or No-go to a plan that waits for one. Read by the executor from its own copy of this file, never the core's: with it on, whoever holds the core's executor token can approve a plan that is already waiting (still within the catalog and the policies). Off: Go is a signed link only. |
 | `buttons` | `one_tap` \| `page` | `one_tap` | What a button in a notification does. `one_tap`: the phone sends the link in the background, and the only answer is the next notification. `page`: it opens the executor's page, which says what the link does, asks to confirm, and then shows what happened. Two taps, and an answer that needs no notification. |
 | `settle_seconds` | number | `30` | A runbook waits this long: the alert may clear by itself. |
 | `max_per_hour` | integer | `6` | Plans executed per hour, at most. |

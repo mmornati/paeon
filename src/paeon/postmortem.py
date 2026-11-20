@@ -181,7 +181,11 @@ class PostmortemWriter:
             written += 1
         return written
 
-    def draft(self, incident: Incident, now: datetime) -> Path | None:
+    def draft(
+        self, incident: Incident, now: datetime, *, replace: Path | None = None, by: str = ""
+    ) -> Path | None:
+        """Write the draft of an incident. With `replace`, write it again over that file: only
+        the console does, for a draft nobody reviewed, when the model's prose is missing."""
         events = list(self._store.events(incident_id=incident.id))
         findings = next(
             (
@@ -201,12 +205,16 @@ class PostmortemWriter:
         directory = Path(self._rules.postmortems.dir)
         try:
             directory.mkdir(parents=True, exist_ok=True)
-            base = f"{incident.opened_at.date().isoformat()}-{_slug(incident.title)}"
-            path = directory / f"{base}.md"
-            if path.exists():  # never overwrite: it may have been reviewed
-                path = directory / f"{base}-{incident.id}.md"
-            with path.open("x", encoding="utf-8") as file:
-                file.write(text)
+            if replace is not None:
+                path = replace
+                _write(path, text)
+            else:
+                base = f"{incident.opened_at.date().isoformat()}-{_slug(incident.title)}"
+                path = directory / f"{base}.md"
+                if path.exists():  # never overwrite: it may have been reviewed
+                    path = directory / f"{base}-{incident.id}.md"
+                with path.open("x", encoding="utf-8") as file:
+                    file.write(text)
         except OSError as exc:
             self._store.append(
                 "postmortem.failed", {"error": type(exc).__name__}, incident_id=incident.id
@@ -214,18 +222,21 @@ class PostmortemWriter:
             self._store.set_stage(incident.id, "postmortem", StageState.FAILED)
             log.warning("incident %d: postmortem not written (%s)", incident.id, type(exc).__name__)
             return None
-        self._store.append(
-            "postmortem.drafted",
-            {"path": path.name, "model": model, "narrative": narrative is not None},
-            incident_id=incident.id,
-        )
+        payload: dict[str, Any] = {
+            "path": path.name,
+            "model": model,
+            "narrative": narrative is not None,
+        }
+        if replace is not None:
+            payload |= {"rewritten": True, "by": by}
+        self._store.append("postmortem.drafted", payload, incident_id=incident.id)
         self._store.set_stage(incident.id, "postmortem", StageState.DONE)
         log.info("incident %d: postmortem draft written to %s", incident.id, path.name)
-        self._commit(incident, path)
+        self.commit(path, f"Postmortem draft: incident {incident.id}", incident.id)
         return path
 
-    def _commit(self, incident: Incident, path: Path) -> None:
-        """Commit the draft, and push it, in the working copy that holds the directory."""
+    def commit(self, path: Path, message: str, incident_id: int | None) -> None:
+        """Commit the file, and push it, in the working copy that holds the directory."""
         config = self._rules.postmortems.git
         if config is None or not config.commit:
             return
@@ -242,7 +253,7 @@ class PostmortemWriter:
         git = [*proc.GIT, "-C", str(path.parent)]
         steps = [
             [*git, "add", "--", path.name],
-            [*git, "commit", "--quiet", "-m", f"Postmortem draft: incident {incident.id}"],
+            [*git, "commit", "--quiet", "-m", message],
         ]
         if config.push:
             steps.append([*git, "push", "--quiet"])
@@ -255,14 +266,16 @@ class PostmortemWriter:
             if code != 0:
                 # The file is written either way: a failed commit is noted, the draft is not lost.
                 self._store.append(
-                    "postmortem.commit_failed", {"step": verb}, incident_id=incident.id
+                    "postmortem.commit_failed",
+                    {"step": verb, "path": path.name},
+                    incident_id=incident_id,
                 )
-                log.warning("incident %d: git %s failed", incident.id, verb)
+                log.warning("postmortem %s: git %s failed", path.name, verb)
                 return
         self._store.append(
             "postmortem.committed",
             {"path": path.name, "pushed": config.push},
-            incident_id=incident.id,
+            incident_id=incident_id,
         )
 
     def _narrative(
@@ -285,36 +298,51 @@ class PostmortemWriter:
             "model_requested": alias.model,
             "prompt_version": PROMPT_VERSION,
         }
-        started = time.monotonic()
-        try:
-            reply = complete(
-                self._client,
-                system=SYSTEM_PROMPT,
-                user=json.dumps(record_in, indent=1, sort_keys=True),
+        user = json.dumps(record_in, indent=1, sort_keys=True)
+        problem = ""
+        model: str | None = None
+        # Two tries: a long answer sometimes carries an unescaped quote, and the model fixes
+        # it when it is told where. Each call is one entry of the ledger.
+        for attempt in (1, 2):
+            started = time.monotonic()
+            entry = {**record, "attempt": attempt}
+            prompt = (
+                user
+                if not problem
+                else (
+                    user
+                    + "\n\nYour previous answer was not valid JSON for the schema: "
+                    + problem
+                    + ". Answer again with the whole JSON object only."
+                )
             )
-        except ModelError as exc:
-            record |= {"error": str(exc), "cost": 0.0}
-            return None, None
-        else:
-            record |= {
-                "model": reply.model,
-                "input_tokens": reply.input_tokens,
-                "output_tokens": reply.output_tokens,
-                "cached_tokens": reply.cached_tokens,
-                "cost": cost_of(reply, alias),
-                "output": reply.text,
-            }
-            start, end = reply.text.find("{"), reply.text.rfind("}")
             try:
-                return Narrative.model_validate(
-                    json.loads(reply.text[start : end + 1])
-                ), reply.model
-            except (ValueError, ValidationError):
-                record["error"] = "invalid_output"
-                return None, reply.model
-        finally:
-            record["duration_ms"] = round((time.monotonic() - started) * 1000)
-            self._store.append("model.call", record, incident_id=incident.id)
+                reply = complete(self._client, system=SYSTEM_PROMPT, user=prompt)
+            except ModelError as exc:
+                entry |= {"error": str(exc), "cost": 0.0}
+                return None, model
+            else:
+                model = reply.model
+                entry |= {
+                    "model": reply.model,
+                    "input_tokens": reply.input_tokens,
+                    "output_tokens": reply.output_tokens,
+                    "cached_tokens": reply.cached_tokens,
+                    "cost": cost_of(reply, alias),
+                    "output": reply.text,
+                }
+                start, end = reply.text.find("{"), reply.text.rfind("}")
+                try:
+                    return Narrative.model_validate(
+                        json.loads(reply.text[start : end + 1])
+                    ), reply.model
+                except (ValueError, ValidationError) as exc:
+                    entry["error"] = "invalid_output"
+                    problem = _parse_problem(exc)
+            finally:
+                entry["duration_ms"] = round((time.monotonic() - started) * 1000)
+                self._store.append("model.call", entry, incident_id=incident.id)
+        return None, model
 
     def render(
         self, incident: Incident, events: list[Event], findings: Any, narrative: Narrative | None
@@ -403,6 +431,16 @@ class PostmortemWriter:
         return "\n\n".join(sections) + "\n"
 
 
+def _parse_problem(exc: Exception) -> str:
+    """What was wrong with an answer, short enough to send back."""
+    if isinstance(exc, ValidationError):
+        return "; ".join(
+            f"{'.'.join(str(p) for p in error['loc'])}: {error['msg']}"
+            for error in exc.errors()[:5]
+        )
+    return str(exc)[:300]
+
+
 # --- reading them back ------------------------------------------------------------------------
 
 
@@ -480,3 +518,91 @@ def drafts(directory: Path | str) -> list[Draft]:
         if read is not None:
             found.append(read[0])
     return found
+
+
+# --- changing them, from the console ----------------------------------------------------------
+
+STATUSES = ("draft", "reviewed")
+MAX_BYTES = 512_000
+
+
+class DraftError(ValueError):
+    """A postmortem cannot be saved as given. The text says why, for the person."""
+
+
+def _write(path: Path, text: str) -> None:
+    """Replace a file in one step: a reader sees the old text or the new, never half."""
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(text, encoding="utf-8")
+    temporary.replace(path)
+
+
+def _split(text: str) -> tuple[dict[str, Any], str]:
+    """The front matter and the body. Raises DraftError when the front matter is broken."""
+    if not text.startswith("---\n"):
+        raise DraftError("The file must start with its front matter, between two --- lines.")
+    head, found, body = text[4:].partition("\n---")
+    if not found:
+        raise DraftError("The front matter has no closing --- line.")
+    try:
+        front = yaml.safe_load(head)
+    except yaml.YAMLError as exc:
+        raise DraftError(
+            f"The front matter is not valid YAML: {str(exc).splitlines()[0]}"
+        ) from None
+    if not isinstance(front, dict):
+        raise DraftError("The front matter must be a list of key: value lines.")
+    return front, body
+
+
+def save_text(directory: Path | str, name: str, text: str) -> Draft:
+    """Replace a postmortem's text with what a person wrote. Its name and its incident stay."""
+    found = read_draft(directory, name)
+    if found is None:
+        raise DraftError("This postmortem no longer exists.")
+    text = text.replace("\r\n", "\n")
+    if not text.endswith("\n"):
+        text += "\n"
+    if len(text.encode()) > MAX_BYTES:
+        raise DraftError("The text is longer than 500 KB.")
+    front, _ = _split(text)
+    status = str(front.get("status") or "")
+    if status not in STATUSES:
+        raise DraftError(f"status must be one of {', '.join(STATUSES)}.")
+    if front.get("incident") != found[0].incident:
+        raise DraftError("The incident of a postmortem cannot be changed.")
+    _write(Path(directory) / name, text)
+    return _reread(directory, name)
+
+
+def set_status(directory: Path | str, name: str, status: str) -> Draft:
+    """Set the `status:` of a postmortem's front matter, and touch nothing else."""
+    if status not in STATUSES:
+        raise DraftError(f"status must be one of {', '.join(STATUSES)}.")
+    found = read_draft(directory, name)
+    if found is None:
+        raise DraftError("This postmortem no longer exists.")
+    text = found[1]
+    _split(text)  # a broken front matter is refused, not patched
+    end = text.index("\n---", 4)
+    head = text[4:end]
+    line = re.compile(r"^status:.*$", re.MULTILINE)
+    head = (
+        line.sub(f"status: {status}", head, count=1)
+        if line.search(head)
+        else (f"{head}\nstatus: {status}")
+    )
+    _write(Path(directory) / name, f"---\n{head}{text[end:]}")
+    return _reread(directory, name)
+
+
+def _reread(directory: Path | str, name: str) -> Draft:
+    saved = read_draft(directory, name)
+    if saved is None:  # pragma: no cover - it was written just before
+        raise DraftError("The postmortem could not be read back.")
+    return saved[0]
+
+
+def missing_prose(text: str) -> bool:
+    """The model's sections were never written: the draft still says they are to be."""
+    return f"## Summary\n\n{TODO}" in text

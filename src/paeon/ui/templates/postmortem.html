@@ -17,14 +17,49 @@
     <div class="kv-item"><dt>File</dt><dd class="mono">{{ draft.name }}</dd></div>
     {% if draft.incident %}<div class="kv-item"><dt>Incident</dt><dd><a href="/ui/incidents/{{ draft.incident }}">#{{ draft.incident }}</a></dd></div>{% endif %}
     <div class="kv-item{% if draft.open_items %} tone-warn{% else %} tone-good{% endif %}"><dt>Action items</dt><dd>{{ draft.open_items|length }} open</dd></div>
+    <div class="kv-item{% if draft.status == "reviewed" %} tone-good{% else %} tone-mute{% endif %}"><dt>Triage reads it</dt><dd>{{ "yes" if draft.status == "reviewed" else "not yet" }}</dd></div>
   </dl>
 </header>
+
+{% if done == "reviewed" %}<p class="banner banner-ok" role="status">Marked reviewed. Triage reads it from now on, and the investigation no longer calls it an unreviewed draft.</p>
+{% elif done == "draft" %}<p class="banner banner-ok" role="status">Set back to draft. Triage no longer reads it.</p>
+{% elif done == "saved" %}<p class="banner banner-ok" role="status">Saved.</p>
+{% elif done == "rewritten" %}<p class="banner banner-ok" role="status">Written again, with the model's prose this time. Read it before you mark it reviewed.</p>
+{% elif done == "still-missing" %}<p class="banner" role="alert">Written again, and the model's prose is still missing: the model failed or the day's budget is spent. The log of the incident says which.</p>
+{% endif %}
+
+<section class="block review" aria-labelledby="h-review">
+  <div class="block-head"><h2 id="h-review">Review</h2><span class="outcome outcome-{{ draft.status }}">{{ draft.status }}</span></div>
+  <div class="block-body">
+    {% if draft.status == "draft" %}
+    <p>A draft is the model's account of the incident, written from the event log. Triage reads a postmortem only once a person has marked it reviewed: correct what is wrong, then mark it.</p>
+    {% else %}
+    <p>Reviewed: triage reads it when a new incident looks like this one, and the investigation can quote it.</p>
+    {% endif %}
+    {% if can_rewrite %}<p class="note">The model's prose is missing from this draft. Paeon can ask the model again and write the draft over; nothing a person wrote is lost, since nobody has reviewed it.</p>{% endif %}
+    {% if can_operate %}
+    <div class="form-actions form-actions-top">
+      {% if draft.status == "draft" %}
+      <form method="post" action="/ui/postmortems/{{ draft.name }}/status"><input type="hidden" name="to" value="reviewed"><button class="btn btn-primary">Mark reviewed</button></form>
+      {% endif %}
+      {% if editable %}<a class="btn" href="/ui/postmortems/{{ draft.name }}/edit">Edit the text</a>{% endif %}
+      {% if can_rewrite %}<form method="post" action="/ui/postmortems/{{ draft.name }}/rewrite"><button class="btn">Write the prose again</button></form>{% endif %}
+      {% if draft.status == "reviewed" %}
+      <form method="post" action="/ui/postmortems/{{ draft.name }}/status"><input type="hidden" name="to" value="draft"><button class="btn btn-quiet">Set back to draft</button></form>
+      {% endif %}
+    </div>
+    {% if not editable %}<p class="facts">This file holds something that looks like a secret, which the console masks: edit the file itself.</p>{% endif %}
+    {% else %}
+    <p class="facts">Reviewing and editing take the operator role.</p>
+    {% endif %}
+  </div>
+</section>
 <article class="md sheet">
 {{ body }}
 </article>
 <details class="source">
   <summary>Markdown source</summary>
-  <p class="facts">The file as written, with secrets masked. To change the postmortem, edit the file itself.</p>
+  <p class="facts">The file as written, with secrets masked.</p>
   <pre class="payload-open" tabindex="0">{{ text }}</pre>
 </details>
 {% endblock %}

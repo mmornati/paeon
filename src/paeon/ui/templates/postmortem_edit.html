@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ draft.title }}{% endblock %}
+{% block main %}
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/ui/postmortems">Postmortems</a><a href="/ui/postmortems/{{ draft.name }}">{{ draft.title }}</a><span>Edit</span></nav>
+<div class="head">
+  <div>
+    <h1>Edit the postmortem</h1>
+    <p class="sub">The whole file, front matter included. Keep the lines between the two <code>---</code>: they say which incident this is and whether it was reviewed.</p>
+  </div>
+</div>
+{% if problem %}<p class="banner" role="alert">Not saved: {{ problem }}</p>{% endif %}
+<form class="block form" method="post" action="/ui/postmortems/{{ draft.name }}/edit">
+  <div class="block-body">
+    <div class="field field-wide">
+      <label for="f-text"><span>{{ draft.name }}</span></label>
+      <textarea id="f-text" class="editor" name="text" rows="28" spellcheck="true" aria-describedby="help-text">{{ text }}</textarea>
+      <small id="help-text">Markdown. <code>status:</code> is <code>draft</code> or <code>reviewed</code>; an action item is a line <code>- [ ] what to do</code>, ticked as <code>- [x]</code>.</small>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary">Save</button>
+      <a class="btn btn-quiet" href="/ui/postmortems/{{ draft.name }}">Cancel</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

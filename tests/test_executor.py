@@ -47,7 +47,14 @@ def test_a_runbook_must_be_one_of_the_executors_own(tmp_path: Path) -> None:
 def test_default_level_only_records_a_suggestion(tmp_path: Path) -> None:
     bench = Bench(tmp_path)
     answer = bench.executor.propose(proposal(alert="something_else"), T0)
-    assert answer == {"status": "recorded", "proposal": 1, "level": "suggest"}
+    assert answer == {
+        "status": "recorded",
+        "proposal": 1,
+        "level": "suggest",
+        "held_back_by": [
+            "restart_container(worker): no policy matches, the default level is suggest"
+        ],
+    }
     assert bench.kinds() == ["plan.proposed"]
     assert bench.sent == []
     assert bench.docker.posts == []
@@ -58,7 +65,7 @@ def test_default_level_only_records_a_suggestion(tmp_path: Path) -> None:
 def test_approve_asks_and_go_runs_verifies_and_reports(tmp_path: Path) -> None:
     bench = Bench(tmp_path)
     answer = bench.executor.propose(proposal(), T0)
-    assert answer == {"status": "pending", "proposal": 1, "level": "approve"}
+    assert answer == {"status": "pending", "proposal": 1, "level": "approve", "held_back_by": []}
     assert bench.docker.posts == []  # nothing runs without Go
     asked = bench.sent[0]
     assert asked["title"] == "Incident #1: run this fix?"

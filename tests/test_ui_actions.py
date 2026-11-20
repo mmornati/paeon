@@ -28,6 +28,7 @@ class Switch:
     def __init__(self) -> None:
         self.stopped = 0
         self.down = False
+        self.answers: list[tuple[int, str, str]] = []
 
     def kill(self) -> None:
         if self.down:
@@ -45,6 +46,10 @@ class Switch:
 
     def vote_links(self, incident_id: int, about: str) -> dict[str, str]:  # pragma: no cover
         return {}
+
+    def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]:
+        self.answers.append((proposal_id, answer, by))
+        return {"ok": True, "message": "Approved. The plan is running; the result follows."}
 
 
 @pytest.fixture
@@ -110,9 +115,9 @@ def test_the_incident_page_tells_the_plan_and_cannot_approve(
     page = http.get(f"/ui/incidents/{seeded['media']}").text
     assert "Plan and action" in page
     assert "Waiting for your Go or No-go, on the notification sent to your phone." in page
-    assert "The console cannot approve it: Go is a signed link on your phone." in page
+    assert "Go is a signed link on your phone: answering in the console is off" in page
     assert "/act/" not in page  # no link to approve from here
-    assert page.count("<form") == 1  # the triage vote, and nothing that runs anything
+    assert "/answer" not in page  # console_approval is off: nothing here runs anything
 
     worker = http.get(f"/ui/incidents/{seeded['worker']}").text
     assert "It ran without asking (auto). It ran, and the result was verified." in worker

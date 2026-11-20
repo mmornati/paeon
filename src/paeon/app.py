@@ -36,6 +36,7 @@ from paeon.correlation import Correlator
 from paeon.guard import BodyGuard
 from paeon.investigation import Investigator
 from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
+from paeon.operations import Checker, Incidents, openobserve_checker, tool_checker
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.remediation import ExecutorApi, ExecutorClient, Remediator, pending_approvals
@@ -620,6 +621,35 @@ def create_app(
             ],
         }
 
+    search_client = client
+
+    def checker(source_name: str) -> Checker | None:
+        """What a source can say about one of its alerts right now, if it can."""
+        if source_name == "openobserve" and search_client is not None:
+            return openobserve_checker(search_client.search, _now)
+        # By the kind of the source, then its own tool by its exact name: a tool of another
+        # kind that happens to share a prefix is never asked.
+        one = connected.get(source_name)
+        if one is None:
+            return None
+        wanted = {"alertmanager": "active_alerts", "uptime_kuma": "monitor_status"}.get(one.kind)
+        if wanted is None:
+            return None
+        names = {sources.tool_name(wanted, source_name)}
+        if source_name == "uptime-kuma":  # the built-in webhook: the investigation's own tool
+            names.add("monitor_status")
+        tools = [*one.tools]
+        if toolbox is not None:
+            tools += [found for name in names if (found := toolbox.find(name)) is not None]
+        for tool in tools:
+            if tool.spec.name in names:
+                return tool_checker(
+                    tool.run, "alertmanager" if one.kind == "alertmanager" else "kuma"
+                )
+        return None
+
+    operations = Incidents(store, recorder, checker, _now)
+
     if rules.ui.enabled:
         mount_ui(
             app,
@@ -631,6 +661,9 @@ def create_app(
             sources=lambda: _sources_shown(connected, source),
             channels=console_channels,
             source_book=console_sources,
+            writer=writer,
+            incidents=operations,
+            answer=None if remediator is None else remediator.answer,
             sessions=(
                 Sessions(settings.secret_key, Passwords(store, settings.ui_admin_password))
                 if rules.ui.auth == "local" and settings.secret_key
@@ -639,6 +672,7 @@ def create_app(
         )
 
     app.state.sources = connected
+    app.state.incidents = operations
     app.state.channels = console_channels
     app.state.console_sources = console_sources
     app.state.exporter = exporter
