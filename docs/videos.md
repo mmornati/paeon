@@ -29,3 +29,12 @@ How an action goes from "ask me every time" to running on its own, and what take
 <div class="video" markdown>
 <iframe src="../../videos/earning-autonomy/?embed=1&lang=en" title="Earning autonomy" loading="lazy" allow="fullscreen; autoplay" allowfullscreen></iframe>
 </div>
+
+## Set up in the browser
+
+New in 0.4: three variables to start, a code from the log to choose the password, then the
+sources and channels added in the console, the roles, and the rules file that always wins.
+
+<div class="video" markdown>
+<iframe src="../../videos/setup-in-the-browser/?embed=1&lang=en" title="Set up in the browser" loading="lazy" allow="fullscreen; autoplay" allowfullscreen></iframe>
+</div>
