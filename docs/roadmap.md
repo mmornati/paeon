@@ -9,6 +9,7 @@
 | 4. UI and MCP | Console (board, incident, log, ledger, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
 | 5. Earned autonomy | Promotion proposals, `auto`, Undo, automatic demotion | ✅ built, not yet proven in use |
 | 6. Release | Docs, threat model, a Prometheus and Docker quick start | ✅ written; the "stranger in under an hour" test is still to be run |
+| 7. Configure in the browser | Roles, a local sign-in, sources and channels added in the console without a restart, a first run with no rules file | ✅ built |
 
 "Built" means written and covered by tests. The exit criteria of the
 [design](llm-incident-response-architecture.md#9-roadmap) are about use (ten approved fixes
@@ -42,4 +43,9 @@ without a manual cleanup, a month of `auto` with no bad action): those take a se
 - A Prometheus without Alertmanager has no way in yet: its alerts are not polled. Netdata
   Cloud's notifications are not read. For logs in Loki and VictoriaLogs the model gives words
   to look for, not a query.
+- In the console, an admin adds sources and notification channels. Models, the stages that
+  call them, and everything about acting are configured in the rules file only. A source or a
+  channel added in the console has been tested against mock services, not live ones.
+- The console's own sign-in is one account. For several people, put a proxy in front and use
+  roles. There is no TLS in Paeon.
 - The console cannot approve. Tier 2 is approved by merging on the forge; nothing riskier exists.

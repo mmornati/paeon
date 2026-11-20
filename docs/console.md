@@ -60,6 +60,8 @@ ui:
   auth: local
 ```
 
+![The first-run page: the code from the log, then the password, twice](assets/console/setup.webp)
+
 Set `PAEON_SECRET_KEY` (32 characters or more, any long random value). The password is chosen
 in the browser the first time: Paeon prints a code in its log at each start until a password
 exists, and `/ui/setup` asks for that code, so that only someone who can read the log of this
@@ -103,7 +105,9 @@ PAEON_CONSOLE=local
 
 With no `PAEON_CONFIG`, this variable alone turns the console on with `auth: local` and
 `settings: true`: start Paeon, open `/ui`, choose the password, and add your sources and
-channels there. The incidents page lists what is left to do until it is done. Stages that call
+channels there. The incidents page lists what is left to do until it is done.
+
+![Finish setting up: connect a source, send a first alert, add a channel](assets/console/getting-started.webp) Stages that call
 a model, and everything about acting, are still configured in a rules file; when you write
 one, remove `PAEON_CONSOLE` and set `ui` in the file. What you added in the console stays, as
 long as the file keeps `settings: true`.
@@ -119,6 +123,10 @@ ui:
 
 With `settings` on, an admin adds notification channels on the Channels page: choose the
 service, name the channel, fill in its settings, choose what it carries, and send a test.
+
+![The Channels page: a channel of the rules file, locked, and one added here, just tested](assets/console/channels.webp)
+
+![A channel added in the console: its token is kept and never shown again](assets/console/channel-edit.webp)
 A channel added there takes effect at once, without a restart. This also needs
 `PAEON_SECRET_KEY`.
 
@@ -136,6 +144,8 @@ A channel added there takes effect at once, without a restart. This also needs
 - **The log says who changed what**: the service, what the channel carries and who saved it.
   It holds neither an address nor a secret.
 ### Sources
+
+![The Sources page: a source of the rules file, Paeon's own webhooks, and a Prometheus added here](assets/console/sources.webp)
 
 The Sources page works the same way, for the monitoring services of
 [Sources](sources.md): choose the service, name the source, give its server and what an
@@ -161,8 +171,8 @@ secrets again.
 | **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
 | **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
 | **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
-| **Sources** | Every monitoring service: how its alerts arrive (with the address it posts to), the tools it offers an investigation, how many alerts it fired in the last 30 days, and whether a polled one has gone stale. Never its address or its secret. |
-| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. Shown once a channel is configured. |
+| **Sources** | Every monitoring service: how its alerts arrive (with the address it posts to), the tools it offers an investigation, how many alerts it fired in the last 30 days, and whether a polled one has gone stale. Never its address or its secret. With `settings`, an admin adds, tests, edits and removes sources here. |
+| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. Shown once a channel is configured, or always with `settings`, where an admin adds, tests, edits and removes channels. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
 | **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
@@ -210,6 +220,8 @@ system's light or dark setting unless you use the switch.
 <div class="shots" markdown>
 ![The board on a phone](assets/console/phone-board.webp){ width="300" }
 ![The board on a phone, dark](assets/console/phone-board-dark.webp){ width="300" }
+![What is left to set up, on a phone](assets/console/phone-getting-started.webp){ width="300" }
+![A new ntfy channel, on a phone](assets/console/phone-channel-form.webp){ width="300" }
 </div>
 
 ## What it can and cannot do

@@ -22,7 +22,7 @@ awake enough to ask it.
 
 | | |
 |---|---|
-| [Quickstart](quickstart.md) | One machine, no model key, six steps: an alert in, an incident out, the console open. |
+| [Quickstart](quickstart.md) | One machine, no model key, no file to write, six steps: an alert in, an incident out, the rest finished in the console. |
 | [Prometheus quickstart](quickstart-prometheus.md) | A compose project you can throw away: break a service, read the investigation. |
 | [How it works](how-it-works.md) | The pipeline, the stages, and why the part that thinks cannot act. |
 | [Videos](videos.md) | Paeon explained, and one incident followed from the alert to the fix. |

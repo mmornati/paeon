@@ -1,0 +1,11 @@
+{
+  "_doc": "Pronunciation fixes, applied to the spoken text only (subtitles keep the original). Keys are whole words, case-sensitive. A [[…]] value is raw IPA (Kokoro, Azure). 'triage' is IPA because Kokoro says 'treelage' otherwise.",
+  "en": {
+    "Paeon": "[[pˈiːɑːn]]",
+    "Traefik": "traffic",
+    "uptime-kuma": "uptime kooma",
+    "OpenObserve": "Open Observe",
+    "ntfy": "notify",
+    "triage": "[[tɹiˈɑːʒ]]"
+  }
+}
