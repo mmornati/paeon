@@ -623,11 +623,27 @@ a.typed { color: var(--accent); font-weight: 600; }
 
 /* --- log filters ------------------------------------------------------------------------ */
 
-.chips { display: flex; gap: 0.375rem; overflow-x: auto; margin: 0 calc(var(--gutter) * -1) 1rem; padding: 0.125rem var(--gutter); scrollbar-width: none; }
+.chips { display: flex; gap: 0.375rem; overflow-x: auto; margin: 0 calc(var(--gutter) * -1) 0.75rem; padding: 0.125rem var(--gutter); scrollbar-width: none; }
+@media (min-width: 60rem) { .chips { flex-wrap: wrap; overflow: visible; margin-inline: 0; padding-inline: 0; } }
 .chips::-webkit-scrollbar { display: none; }
-.chips a { display: inline-flex; align-items: center; height: 2.125rem; padding: 0 0.8125rem; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--surface); color: var(--text-2); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
+.chips a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text-2); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
 .chips a:hover { color: var(--text); border-color: var(--text-3); text-decoration: none; }
-.chips a[aria-current] { background: var(--text); border-color: var(--text); color: var(--bg); }
+.chips a[aria-current] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.token { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-bg); color: var(--accent); font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
+.token:hover { text-decoration: none; filter: brightness(0.97); }
+.scan-note { margin-top: 0.5rem; }
+
+/* The log, one event to a line on a desk: time, voice, what happened, its kind and figures,
+   and where to go from it. */
+.row-only { color: var(--text-3); font-weight: 400; }
+@media (min-width: 60rem) {
+  .record-dense .row { grid-template-columns: 4.5rem 3.5rem minmax(0, 1fr); padding-block: 0.4375rem; }
+  .record-dense .row-main { grid-column: 3; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; column-gap: 1.25rem; }
+  .record-dense .row-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .record-dense .row-note { grid-column: 1 / -1; grid-row: 2; }
+  .record-dense .row-meta { white-space: nowrap; }
+  .record-dense .row-links { white-space: nowrap; justify-content: flex-end; min-width: 11rem; }
+}
 
 /* --- stats, tables, meters, chart ------------------------------------------------------- */
 

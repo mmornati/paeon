@@ -467,6 +467,68 @@ def row_of(event: Event, *, detail: bool = False) -> Row:
     )
 
 
+@dataclass(frozen=True)
+class LogPage:
+    rows: tuple[Row, ...]
+    older: int | None  # the id to read before, for the next page
+    scanned: int  # events read to find these rows
+    exhausted: bool  # a search stopped at its reading budget before filling the page
+
+
+LOG_SCAN = 5000  # events a search reads at most for one page
+
+
+def log_page(
+    store: Store,
+    *,
+    kinds: Sequence[str] | None = None,
+    before: int | None = None,
+    incident_id: int | None = None,
+    text: str = "",
+    limit: int = 100,
+) -> LogPage:
+    """A page of the log, newest first. A search matches what the page shows, after
+    redaction, never the payload as stored: a secret cannot be found by guessing it."""
+    words = [w for w in text.lower().split() if w]
+    if not words:
+        events = list(
+            store.events(
+                kinds=kinds,
+                before_id=before,
+                incident_id=incident_id,
+                newest_first=True,
+                limit=limit + 1,
+            )
+        )
+        rows = tuple(row_of(e) for e in events[:limit])
+        return LogPage(rows, rows[-1].id if len(events) > limit else None, len(events), False)
+    found: list[Row] = []
+    scanned = 0
+    cursor = before
+    while scanned < LOG_SCAN:
+        chunk = list(
+            store.events(
+                kinds=kinds,
+                before_id=cursor,
+                incident_id=incident_id,
+                newest_first=True,
+                limit=500,
+            )
+        )
+        if not chunk:
+            return LogPage(tuple(found), None, scanned, False)
+        for event in chunk:
+            scanned += 1
+            cursor = event.id
+            row = row_of(event)
+            haystack = f"{row.text} {row.kind} {row.note}".lower()
+            if all(word in haystack for word in words):
+                found.append(row)
+                if len(found) > limit:
+                    return LogPage(tuple(found[:limit]), found[limit - 1].id, scanned, False)
+    return LogPage(tuple(found), cursor, scanned, True)
+
+
 _TONES: dict[str, str] = {
     **dict.fromkeys(("off", "none", "skipped", "recorded", "suggested", "not sent"), "mute"),
     **dict.fromkeys(("waiting", "queued", "running", "proposed"), "active"),
