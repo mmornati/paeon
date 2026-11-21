@@ -2,6 +2,54 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## 0.6.0
+
+The console, redesigned as an incident explorer: it stays readable with hundreds of incidents.
+
+A rules file and an environment of 0.5.0 work unchanged. Links to `/ui`, `/ui/log`,
+`/ui/ledger` and every incident page still open; the pages take new, optional query parameters.
+
+### Incidents
+
+- One dense table instead of a card per incident under stage sections. A search box (title,
+  host or `#42`), a time range (24 h, 7 d, 30 d, all), status tabs with counts (All, Needs you,
+  Open, Resolved), incidents opened per hour, day or week by severity, and filters with counts
+  (severity, triage, investigation, host).
+- Each row carries a five-square stage track: triage, investigation, plan, action, postmortem,
+  each answered by a model, done by code, failed, waiting, skipped or off.
+- Paged by the server, 50 at a time, by the position of the last row: an incident that opens
+  while you read does not shift the next page. Every filter is in the URL, so a view can be
+  bookmarked; the live refresh keeps it. `j` and `k` move through the rows, `/` searches.
+- The store reads a page's events in one query, where the board read each incident's in its
+  own every ten seconds.
+
+### Incident page
+
+- The header shows the five stages with what came of each, then the investigation's
+  conclusion. Facts, alerts and the triage review sit in a side column on a desk.
+- The record is folded until asked for; a cited tool call opens it at that call. The section
+  tabs show where you are.
+
+### Log, Spend and the rest
+
+- Log: one event to a line on a desk, a search that matches what the line says after
+  redaction (never the stored payload, so a secret cannot be found by guessing it), and one
+  incident at a time.
+- The ledger is called Spend: 7, 14 or 30 days, each day's cost stacked by stage on a labelled
+  scale, and a word that costs are in the currency of your model prices.
+- Postmortems: tabs for those to review and those reviewed. A reviewed postmortem no longer
+  shows the notice that it is a draft.
+- Actions: Stop automation asks for its confirmation behind an outlined button.
+
+### Navigation and accessibility
+
+- Destinations grouped as Respond, Review and Configure, a bar that says what each stage does,
+  and on a phone a tab bar at the bottom with the rest under More. Incidents shows how many are
+  open.
+- Controls have a 3:1 edge in both schemes, muted text passes 4.5:1, table headers name their
+  columns, the live status no longer interrupts a screen reader every ten seconds, and links
+  get finger-sized targets on a touch screen.
+
 ## 0.5.0
 
 What a person does from the console, and an analysis that says what becomes of its plan.
