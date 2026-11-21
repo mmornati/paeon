@@ -395,6 +395,15 @@ class Store:
                 params.append(value)
         return self._incidents(sql, params)
 
+    def count_incidents(self, *, status: IncidentStatus | None = None) -> int:
+        sql = "SELECT COUNT(*) FROM incidents"
+        params: list[Any] = []
+        if status is not None:
+            sql += " WHERE status = ?"
+            params.append(status.value)
+        with self._lock:
+            return int(self._db.execute(sql, params).fetchone()[0])
+
     def _incidents(self, sql: str, params: list[Any]) -> list[Incident]:
         with self._lock:
             rows = self._db.execute(sql + " ORDER BY id", params).fetchall()
