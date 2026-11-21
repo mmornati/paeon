@@ -1,0 +1,101 @@
+{#- The part of the incident explorer the live refresh replaces: tabs, chart, filters, rows. -#}
+{% set q = ex.query %}
+<nav class="tabs-status" aria-label="Status">
+  {% for key, label, count, url, current in ex.tabs -%}
+  <a href="{{ url }}" class="ts ts-{{ key }}{% if key == 'needs' and count %} is-hot{% endif %}"{% if current %} aria-current="true"{% endif %}>{{ label }}<span class="ts-count">{{ count }}</span></a>
+  {%- endfor %}
+</nav>
+{% if ex.chart and ex.chart.total %}{% set c = ex.chart %}
+<figure class="panel chart-ex">
+  <figcaption class="chart-ex-top"><span>Incidents opened per {{ c.unit }}{% if q.status != "all" or q.filtered %}, as filtered{% endif %}</span>
+    <span class="chart-key">{% for s in c.severities %}<span><i class="sw sw-{{ s }}"></i>{{ s }}</span>{% endfor %}</span></figcaption>
+  <div class="chart-ex-plot">
+    <div class="chart-ex-y" aria-hidden="true"><span>{{ c.top }}</span><span>{{ (c.top // 2) if c.top % 2 == 0 else "" }}</span><span>0</span></div>
+    <svg class="chart-ex-bars" viewBox="0 0 {{ c.buckets|length * 10 }} 60" preserveAspectRatio="none" role="img" aria-label="{{ c.total }} incidents opened, {{ c.buckets|first|attr('label') }} to {{ c.buckets|last|attr('label') }}">
+      <line class="grid" x1="0" x2="{{ c.buckets|length * 10 }}" y1="0.5" y2="0.5"/>
+      <line class="grid" x1="0" x2="{{ c.buckets|length * 10 }}" y1="30" y2="30"/>
+      {% for b in c.buckets -%}
+      {% set ns = namespace(y=60) -%}
+      {% set bx = loop.index0 * 10 -%}
+      <g><title>{{ b.label }}: {% if b.total %}{% for s in c.severities if b.counts.get(s) %}{{ b.counts[s] }} {{ s }}{% if not loop.last %}, {% endif %}{% endfor %}{% else %}none{% endif %}</title>
+        <rect class="hit" x="{{ bx }}" y="0" width="10" height="60"/>
+        {% for s in c.severities|reverse if b.counts.get(s) -%}
+        {% set h = b.counts[s] / c.top * 60 -%}
+        {% set ns.y = ns.y - h -%}
+        <rect class="bar bar-{{ s }}" x="{{ bx + 1 }}" y="{{ '%.2f'|format(ns.y) }}" width="8" height="{{ '%.2f'|format(h) }}"/>
+        {%- endfor %}
+      </g>
+      {%- endfor %}
+    </svg>
+    <div class="chart-ex-x" aria-hidden="true"><span>{{ c.buckets[0].label }}</span><span>{{ c.buckets[c.buckets|length // 2].label }}</span><span>{{ c.buckets[-1].label }}</span></div>
+  </div>
+</figure>
+{% endif %}
+<div class="ex-body{% if ex.facets %} has-facets{% endif %}">
+  {% if ex.facets %}
+  <details class="facets" open data-facets>
+    <summary class="facets-toggle">Filters{% set chosen = q.severity|length + q.host|length + q.triage|length + q.investigation|length %}{% if chosen %} <span class="ts-count">{{ chosen }}</span>{% endif %}</summary>
+    <div class="facets-body">
+    {% for f in ex.facets -%}
+    <section class="facet" aria-labelledby="facet-{{ f.name }}">
+      <h2 class="facet-title" id="facet-{{ f.name }}">{{ f.title }}</h2>
+      <ul>
+        {% for o in f.options -%}
+        <li><a class="facet-opt{% if f.name == 'severity' %} sev-opt-{{ o.value }}{% endif %}" href="{{ o.url }}" role="checkbox" aria-checked="{{ 'true' if o.chosen else 'false' }}"><span class="box" aria-hidden="true"></span><span class="facet-label">{{ o.label }}</span><span class="facet-count">{{ o.count }}</span></a></li>
+        {%- endfor %}
+      </ul>
+    </section>
+    {%- endfor %}
+    {% if q.filtered %}<a class="btn facets-clear" href="{{ q.with_(severity=(), host=(), triage=(), investigation=(), q='').url() }}">Clear filters</a>{% endif %}
+    </div>
+  </details>
+  {% endif %}
+  <div class="ex-main">
+    {% if ex.rows %}
+    <div class="table-ex">
+    <table class="ex-table">
+      <caption class="sr">Incidents{% if q.status != "all" %}, {{ q.status }}{% endif %}, newest activity first</caption>
+      <thead>
+        <tr><th scope="col" class="c-sev">Severity</th><th scope="col" class="c-id">#</th><th scope="col" class="c-title">Incident</th><th scope="col" class="c-host">Host</th><th scope="col" class="c-track">Stages</th><th scope="col" class="c-verdict">Triage</th><th scope="col" class="c-when">Opened</th><th scope="col" class="c-dur">Lasted</th><th scope="col" class="c-cost">Cost</th></tr>
+      </thead>
+      <tbody>
+        {% set ns = namespace(group="") -%}
+        {% for r in ex.rows -%}
+        {% set i = r.incident -%}
+        {% set group = "Open" if r.open else "Resolved · " ~ (i.last_activity_at|day) -%}
+        {% if group != ns.group %}{% set ns.group = group %}<tr class="ex-group"><th scope="colgroup" colspan="9">{{ group }}</th></tr>{% endif %}
+        <tr class="ex-row{% if not r.open %} is-resolved{% endif %}{% if r.waiting %} is-waiting{% endif %}" data-id="{{ i.id }}" data-rev="{{ r.rev }}">
+          <td class="c-sev"><span class="sev sev-{{ i.severity.value }}">{{ i.severity.value }}</span></td>
+          <td class="c-id">{{ i.id }}</td>
+          <td class="c-title"><a class="ex-title" href="/ui/incidents/{{ i.id }}" title="{{ i.title }}"><span class="sr">Incident {{ i.id }}: </span>{{ i.title }}</a>{% if r.waiting %} <span class="tag tag-answer">needs your answer</span>{% endif %}{% for flag in r.flags %} <span class="tag" title="{{ flag }}">{{ flag.split(":")[0] }}</span>{% endfor %}</td>
+          <td class="c-host">{% if i.host %}{{ i.host }}{% else %}<span class="dim">none</span>{% endif %}</td>
+          <td class="c-track"><span class="track" role="img" aria-label="{% for s in r.track %}{{ s.label }}{% if not loop.last %}; {% endif %}{% endfor %}">{% for s in r.track %}<i class="st st-{{ s.state }}" title="{{ s.label }}"></i>{% endfor %}</span></td>
+          <td class="c-verdict"><span class="verdict tone-{{ r.verdict.tone }}{% if r.verdict.pen %} pen{% endif %}" title="{{ r.verdict.full }}">{{ r.verdict.value }}</span></td>
+          <td class="c-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ i.opened_at|brief }}</time></td>
+          <td class="c-dur">{{ r.standing }}</td>
+          <td class="c-cost{% if r.cost == '0' %} dim{% endif %}">{{ r.cost }}</td>
+        </tr>
+        {%- endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% if ex.newer or ex.older %}
+    <nav class="pager" aria-label="Pages">
+      {% if ex.newer %}<a class="btn" href="{{ ex.newer }}">Newest</a>{% endif %}
+      {% if ex.older %}<a class="btn" href="{{ ex.older }}">Older</a>{% endif %}
+    </nav>
+    {% endif %}
+    {% elif not ex.ever %}
+    <div class="empty">
+      <p>No incident yet: nothing has fired.</p>
+      <p>Alerts from your sources open incidents here. The <a href="/ui/log">log</a> shows everything that reached Paeon.</p>
+    </div>
+    {% elif q.status == "needs" %}
+    <div class="empty"><p>Nothing is waiting for your answer. A plan that needs your Go shows up here and on your phone.</p></div>
+    {% elif q.filtered or q.status != "all" or q.after %}
+    <div class="empty"><p>No incident matches{% if q.range != "all" %} in this range{% endif %}. <a href="{{ q.with_(severity=(), host=(), triage=(), investigation=(), q='', status='all').url() }}">Clear the filters</a>{% if q.range != "all" %} or <a href="{{ q.with_(range='all').url() }}">look at all time</a>{% endif %}.</p></div>
+    {% else %}
+    <div class="empty"><p>Nothing opened or changed in this range. <a href="{{ q.with_(range='all').url() }}">Look at all time</a>.</p></div>
+    {% endif %}
+  </div>
+</div>

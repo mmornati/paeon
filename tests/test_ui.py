@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,6 +16,7 @@ from paeon.rules import RulesError, parse_rules
 from paeon.schema import Severity, StageState, Status
 from paeon.store import Event, Store
 from paeon.ui import views
+from paeon.ui.explorer import Query, explore
 from ui_data import populate
 
 TOKEN = "t" * 32
@@ -53,43 +55,47 @@ def test_unknown_ui_key_is_refused() -> None:
         parse_rules({"ui": {"enabled": True, "password": "x"}})
 
 
-def test_board_puts_each_incident_in_its_bay(store: Store, seeded: dict[str, int]) -> None:
-    bays = {bay.key: bay for bay in views.board(store, datetime.now(UTC))}
-    where = {bay.key: [s.incident.id for s in bay.strips] for bay in bays.values()}
-    assert where["triage"] == [seeded["load"]]
-    assert where["investigation"] == [seeded["vpn"]]
-    assert where["open"] == [seeded["media"]]
-    assert set(where["resolved"]) == {seeded["late"], seeded["stale"]}
+def strip(store: Store, incident_id: int) -> views.Strip:
+    incident = store.incident(incident_id)
+    assert incident is not None
+    return views.strip_of(incident, list(store.events(incident_id=incident_id)), datetime.now(UTC))
 
-    media = {cell.label: cell for cell in bays["open"].strips[0].cells}
+
+def test_each_incident_says_where_it_stands(store: Store, seeded: dict[str, int]) -> None:
+    page = explore(store, Query(), datetime.now(UTC), ZoneInfo("UTC"))
+    rows = {row.incident.id: row for row in page.rows}
+    assert [r.incident.id for r in page.rows if r.open] == sorted(
+        (seeded["load"], seeded["vpn"], seeded["media"]),
+        key=lambda i: rows[i].incident.last_activity_at,
+        reverse=True,
+    )
+    assert {seeded["late"], seeded["stale"]} <= set(rows)
+    assert rows[seeded["load"]].track[0].state == "waiting"  # waiting for triage
+    assert rows[seeded["vpn"]].track[1].state == "waiting"  # being investigated
+    assert rows[seeded["load"]].flags == ("flapping",)
+
+    media = {cell.label: cell for cell in strip(store, seeded["media"]).cells}
     assert (media["Triage"].value, media["Triage"].pen) == ("real 86%", True)
     assert (media["Investigation"].value, media["Investigation"].full) == (
         "78%, 3 calls",
         "78% sure, 3 calls",
     )
-    assert [cell.label for cell in bays["open"].strips[0].cells] == [
-        "Host",
-        "Alerts",
-        "Triage",
-        "Investigation",
-        "Postmortem",
-        "Cost",
-    ]
+    assert list(media) == ["Host", "Alerts", "Triage", "Investigation", "Postmortem", "Cost"]
     assert media["Alerts"].value == "2 of 2 firing"
     assert media["Cost"].value == "0.21"
+    assert rows[seeded["media"]].cost == "0.21"
 
-    vpn = {cell.label: cell for cell in bays["investigation"].strips[0].cells}
+    vpn = {cell.label: cell for cell in strip(store, seeded["vpn"]).cells}
     assert (vpn["Triage"].value, vpn["Triage"].pen) == ("skipped", False)
     assert vpn["Triage"].full == "skipped (page level)"
     assert vpn["Investigation"].value == "running"
 
-    stale = next(s for s in bays["resolved"].strips if s.incident.id == seeded["stale"])
-    cells = {cell.label: cell for cell in stale.cells}
+    cells = {cell.label: cell for cell in strip(store, seeded["stale"]).cells}
     assert cells["Triage"].value == "failed open"
     assert cells["Triage"].full == "real, failed open (low confidence)"
     assert cells["Triage"].pen is False  # code decided, not the model
     assert cells["Investigation"].full == "failed (model error)"
-    assert bays["triage"].strips[0].flags == ("flapping",)
+    assert rows[seeded["stale"]].verdict.value == "failed open"
 
 
 def test_board_page_and_fragment(store: Store, seeded: dict[str, int]) -> None:
@@ -110,9 +116,9 @@ def test_board_page_and_fragment(store: Store, seeded: dict[str, int]) -> None:
     assert http.get("/ui/static/theme.js").status_code == 200
 
 
-def test_empty_board_says_what_each_bay_is_for(store: Store) -> None:
+def test_empty_pages_say_what_will_appear(store: Store) -> None:
     text = client(store).get("/ui").text
-    assert "No incident is waiting for a verdict." in text
+    assert "No incident yet: nothing has fired." in text
     assert "The log is empty" in client(store).get("/ui/log").text
     assert "No model was called" in client(store).get("/ui/ledger").text
 
@@ -459,3 +465,17 @@ def test_channels_page_lists_each_channel_and_how_it_went(store: Store) -> None:
     assert "ntfy answered HTTP 403" in page
     assert "nothing sent yet" in page
     assert 'href="/ui/channels" aria-current="page"' in page
+
+
+def test_explorer_page_keeps_its_filters_in_every_link(
+    store: Store, seeded: dict[str, int]
+) -> None:
+    http = client(store)
+    page = http.get("/ui?severity=critical&range=all").text
+    assert 'data-live="/ui/board?range=all&amp;severity=critical"' in page
+    assert 'href="/ui?range=24h&amp;severity=critical"' in page  # the range keeps the filter
+    assert 'aria-checked="true"' in page
+    fragment = http.get("/ui/board?severity=critical&range=all").text
+    assert f'data-id="{seeded["stale"]}"' in fragment  # critical
+    assert f'data-id="{seeded["media"]}"' not in fragment  # warning
+    assert "<html" not in fragment

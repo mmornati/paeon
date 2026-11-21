@@ -43,7 +43,7 @@ from paeon.redact import redact_text
 from paeon.rules import Rules
 from paeon.schema import IncidentStatus
 from paeon.store import Store
-from paeon.ui import markdown, views
+from paeon.ui import explorer, markdown, views
 from paeon.ui.access import COOKIE, SESSION_SECONDS, Role, Sessions, allows, role_from_groups
 
 _HERE = Path(__file__).parent
@@ -344,21 +344,27 @@ def mount_ui(
             response.delete_cookie(COOKIE, path="/ui")
             return response
 
+    def explorer_of(request: Request) -> explorer.Explorer:
+        params: dict[str, list[str]] = {}
+        for key, value in request.query_params.multi_items():
+            params.setdefault(key, []).append(value)
+        query = explorer.Query.read(params)
+        return explorer.explore(store, query, clock(), zone, acting=acting)
+
     @router.get("", response_class=HTMLResponse)
     def board(request: Request) -> Response:
-        bays = views.board(store, clock(), acting=acting)
         steps = None
         if (channels is not None or source_book is not None) and allows(
             request.state.role, "admin"
         ):
             current = rules if channels is None else channels.rules
             steps = views.setup_steps(store, current, channels, source_book)
-        return page(request, "board.html", bays=bays, here="board", steps=steps)
+        return page(request, "incidents.html", ex=explorer_of(request), here="board", steps=steps)
 
     @router.get("/board", response_class=HTMLResponse)
     def board_fragment(request: Request) -> Response:
-        """The bays alone, for the live refresh."""
-        return page(request, "_bays.html", bays=views.board(store, clock(), acting=acting))
+        """The explorer below its query bar, for the live refresh: same filters, same page."""
+        return page(request, "_explorer.html", ex=explorer_of(request))
 
     @router.get("/incidents/{incident_id}", response_class=HTMLResponse)
     def incident(request: Request, incident_id: int) -> Response:

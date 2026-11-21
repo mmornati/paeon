@@ -1,5 +1,5 @@
-// Nothing here is needed to read the console: without this script the board is a page you
-// reload, the filter box does nothing and the scheme follows the system.
+// Nothing here is needed to read the console: without this script the incidents are a page you
+// reload, every filter is a link and the scheme follows the system.
 
 // The "More" menu of the phone's tab bar closes on Escape and on a tap elsewhere.
 (() => {
@@ -38,43 +38,61 @@
   });
 })();
 
-// The filter box: hides what does not match, on this page only. "/" goes to it.
-const filter = (() => {
-  const input = document.querySelector("[data-filter]");
-  if (!input) return () => {};
-  const scope = document.querySelector(input.dataset.filterIn) || document;
-  const none = document.querySelector("[data-filter-none]");
-  function apply() {
-    const words = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    let shown = 0;
-    for (const item of scope.querySelectorAll(input.dataset.filter)) {
-      const text = item.textContent.toLowerCase();
-      item.hidden = !words.every((word) => text.includes(word));
-      if (!item.hidden) shown += 1;
-    }
-    for (const group of scope.querySelectorAll("[data-bay]")) {
-      group.hidden = words.length > 0 && !group.querySelector(`${input.dataset.filter}:not([hidden])`);
-    }
-    if (none) none.hidden = words.length === 0 || shown > 0;
-  }
-  input.addEventListener("input", apply);
+// The explorer's search box: "/" goes to it, Escape clears it and shows everything again.
+(() => {
+  const input = document.querySelector("[data-search]");
+  if (!input) return;
   input.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    input.value = "";
-    apply();
-    input.blur();
+    if (input.value) {
+      input.value = "";
+      input.form.requestSubmit();
+    } else input.blur();
   });
   document.addEventListener("keydown", (event) => {
     const typing = event.target.closest?.("input, textarea, select, [contenteditable]");
     if (event.key !== "/" || typing || event.metaKey || event.ctrlKey || event.altKey) return;
     event.preventDefault();
     input.focus();
+    input.select();
   });
-  return apply;
 })();
 
-// The board refreshes itself. An incident that moved to another stage slides there, and one
-// that changed keeps an "updated" tag until it is touched.
+// j and k move through the incidents, Enter opens one.
+(() => {
+  if (!document.querySelector("[data-live]")) return;
+  document.addEventListener("keydown", (event) => {
+    const typing = event.target.closest?.("input, textarea, select, [contenteditable]");
+    if (typing || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (event.key !== "j" && event.key !== "k") return;
+    const links = [...document.querySelectorAll(".ex-title")];
+    if (!links.length) return;
+    const at = links.indexOf(document.activeElement);
+    const next = event.key === "j" ? Math.min(at + 1, links.length - 1) : Math.max(at - 1, 0);
+    event.preventDefault();
+    links[at === -1 ? 0 : next].focus();
+    links[at === -1 ? 0 : next].closest("tr")?.scrollIntoView({ block: "nearest" });
+  });
+})();
+
+// On a phone the filters start folded: the rows come first.
+function foldFilters(root) {
+  if (matchMedia("(min-width: 60rem)").matches) return;
+  for (const details of root.querySelectorAll("[data-facets]")) {
+    if (!details.dataset.touched) details.open = false;
+  }
+}
+foldFilters(document);
+document.addEventListener(
+  "toggle",
+  (event) => {
+    if (event.target.matches?.("[data-facets]")) event.target.dataset.touched = "1";
+  },
+  true,
+);
+
+// The explorer refreshes itself with the same filters. A row that changed is marked until it
+// is touched; the status line says when it last refreshed, without announcing it each time.
 (() => {
   const board = document.querySelector("[data-live]");
   if (!board) return;
@@ -84,40 +102,39 @@ const filter = (() => {
   const EVERY_MS = 10000;
   let shown = null;
 
-  const items = () => [...board.querySelectorAll(".inc")];
-  const state = () =>
-    new Map(items().map((s) => [s.dataset.id, `${s.dataset.rev}@${s.closest("[data-bay]").dataset.bay}`]));
+  const rows = () => [...board.querySelectorAll(".ex-row")];
+  const state = () => new Map(rows().map((r) => [r.dataset.id, r.dataset.rev]));
 
   function dress() {
-    for (const item of items()) {
-      // Set from script: the page's policy refuses inline styles.
-      item.style.viewTransitionName = `inc-${item.dataset.id}`;
-      if (changed.has(item.dataset.id) && !item.querySelector(".changed")) {
-        item.classList.add("is-changed");
-        const tag = document.createElement("span");
-        tag.className = "tag changed";
-        tag.textContent = "updated";
-        item.querySelector(".inc-when").before(tag);
-      }
+    for (const row of rows()) {
+      if (!changed.has(row.dataset.id) || row.querySelector(".changed")) continue;
+      row.classList.add("is-changed");
+      const tag = document.createElement("span");
+      tag.className = "tag changed";
+      tag.textContent = "updated";
+      row.querySelector(".c-title").append(" ", tag);
     }
   }
 
   function seen(event) {
-    const item = event.target.closest?.(".inc");
-    if (!item) return;
-    changed.delete(item.dataset.id);
-    item.classList.remove("is-changed");
-    item.querySelector(".changed")?.remove();
+    const row = event.target.closest?.(".ex-row");
+    if (!row) return;
+    changed.delete(row.dataset.id);
+    row.classList.remove("is-changed");
+    row.querySelector(".changed")?.remove();
   }
 
   function say(text, stale) {
     if (!note) return;
     note.textContent = text;
     note.toggleAttribute("data-stale", stale);
+    // Only trouble is worth interrupting a screen reader for.
+    if (stale) note.setAttribute("role", "alert");
+    else note.removeAttribute("role");
   }
 
   async function refresh() {
-    // Not while hidden, and not under someone's focus: replacing the board would drop it.
+    // Not while hidden, and not under someone's focus: replacing the rows would drop it.
     if (document.hidden || board.contains(document.activeElement)) return;
     let html;
     try {
@@ -129,31 +146,28 @@ const filter = (() => {
       return;
     }
     const at = new Date().toLocaleTimeString([], { hour12: false });
-    say(`Live. Refreshed at ${at}.`, false);
+    say(`Live, ${at}`, false);
     if (html === shown) return;
     const before = state();
-    const swap = () => {
-      // Parsed as a document, never as markup of this page: nothing in it can run.
-      const parsed = new DOMParser().parseFromString(html, "text/html");
-      board.replaceChildren(...parsed.body.childNodes);
-      const first = shown === null;
-      shown = html;
-      for (const [id, now] of state()) {
-        if (!first && before.get(id) !== now) changed.add(id);
-      }
-      dress();
-      filter();
-    };
-    const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (document.startViewTransition && !calm) {
-      // A transition is skipped when the tab goes to the background: the swap still happened.
-      const moving = document.startViewTransition(swap);
-      moving.ready.catch(() => {});
-      moving.finished.catch(() => {});
-    } else swap();
+    const filters = board.querySelector("[data-facets]");
+    const keep = filters?.dataset.touched ? filters.open : null;
+    // Parsed as a document, never as markup of this page: nothing in it can run.
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    board.replaceChildren(...parsed.body.childNodes);
+    const swapped = board.querySelector("[data-facets]");
+    if (swapped && keep !== null) {
+      swapped.open = keep;
+      swapped.dataset.touched = "1";
+    } else foldFilters(board);
+    const first = shown === null;
+    shown = html;
+    for (const [id, rev] of state()) {
+      if (!first && before.has(id) && before.get(id) !== rev) changed.add(id);
+      if (!first && !before.has(id)) changed.add(id);
+    }
+    dress();
   }
 
-  dress();
   board.addEventListener("pointerover", seen);
   board.addEventListener("pointerdown", seen);
   board.addEventListener("focusin", seen);

@@ -5,18 +5,3 @@
   {% endfor -%}
 </dl>
 {% endmacro %}
-{% macro strip(s) %}
-{#- One incident as a row of the board: severity, title, when, and one box per stage. The
-    reasons behind a state are on the incident's own page. -#}
-{%- set i = s.incident -%}
-<article class="inc sev-{{ i.severity.value }}{% if i.status.value == "resolved" %} is-resolved{% endif %}" data-id="{{ i.id }}" data-rev="{{ s.rev }}">
-  <div class="inc-top">
-    <span class="sev-badge">{{ i.severity.value }}</span>
-    <span class="inc-id"><span class="sr">Incident </span>#{{ i.id }}</span>
-    <h3 class="inc-title"><a href="/ui/incidents/{{ i.id }}" title="{{ i.title }}">{{ i.title }}</a></h3>
-    {%- for flag in s.flags %} <span class="tag" title="{{ flag }}">{{ flag.split(":")[0] }}</span>{% endfor %}
-    <span class="inc-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ i.opened_at|brief }}</time> · {{ s.standing }}</span>
-  </div>
-  {{ cells(s) }}
-</article>
-{% endmacro %}

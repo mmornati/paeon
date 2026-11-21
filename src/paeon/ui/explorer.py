@@ -17,12 +17,14 @@ from zoneinfo import ZoneInfo
 from paeon.schema import Incident, IncidentStatus, Severity, StageState
 from paeon.store import Event, IncidentCursor, IncidentFilter, Store
 from paeon.ui.views import (
+    QUIET_DAYS,
     Cell,
     PlanView,
     _investigation_cell,
     _triage_cell,
     money,
     plan_of,
+    quiet_days,
     span,
 )
 
@@ -228,7 +230,7 @@ class Explorer:
     chart: Chart | None
     newer: str | None  # url of the first page, when this is not it
     older: str | None  # url of the next page
-    shown_from: int = 1
+    ever: int = 0  # incidents ever recorded, whatever the query
     tabs: tuple[tuple[str, str, int, str, bool], ...] = field(default=())
 
 
@@ -284,7 +286,14 @@ def _stage_state(state: StageState, *, failed: bool = False) -> str:
     }[state]
 
 
-def row_of(incident: Incident, events: Sequence[Event], now: datetime, *, acting: bool) -> Row:
+def row_of(
+    incident: Incident,
+    events: Sequence[Event],
+    now: datetime,
+    *,
+    acting: bool,
+    quiet: int | None = None,
+) -> Row:
     plan = plan_of(events)
     cost = sum(float(e.payload.get("cost") or 0) for e in events if e.kind == "model.call")
     if incident.resolved_at is not None:
@@ -296,6 +305,8 @@ def row_of(incident: Incident, events: Sequence[Event], now: datetime, *, acting
         flags.append("flapping")
     if incident.maintenance:
         flags.append(f"maintenance: {incident.maintenance}")
+    if quiet is not None and quiet >= QUIET_DAYS:
+        flags.append(f"quiet {quiet} days")
     return Row(
         incident=incident,
         track=track_of(incident, events, plan, acting=acting),
@@ -314,7 +325,10 @@ def _rows(store: Store, incidents: Sequence[Incident], now: datetime, *, acting:
     for event in store.events(incident_ids=[i.id for i in incidents]):
         if event.incident_id is not None:
             events[event.incident_id].append(event)
-    return [row_of(i, events[i.id], now, acting=acting) for i in incidents]
+    return [
+        row_of(i, events[i.id], now, acting=acting, quiet=quiet_days(store, i, now))
+        for i in incidents
+    ]
 
 
 def explore(
@@ -369,6 +383,7 @@ def explore(
         chart=_chart(store, query, now, zone),
         newer=query.with_().url() if query.after else None,
         older=older,
+        ever=store.count_incidents(),
         tabs=tabs,
     )
 
