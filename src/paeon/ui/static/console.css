@@ -12,7 +12,9 @@
   --border-strong: light-dark(#c9ced7, #353c4d);
   --text: light-dark(#141821, #e7eaf0);
   --text-2: light-dark(#4f596a, #a3acbd);
-  --text-3: light-dark(#667082, #7f899c);
+  --text-3: light-dark(#5f6a7c, #8590a3);
+  /* The edge of a control a hand can use: 3:1 against its surface in both schemes. */
+  --control: light-dark(#868fa0, #606a7e);
 
   --accent: light-dark(#3451d1, #8da2ff);
   --accent-bg: light-dark(#ecf0fe, #1a2142);
@@ -69,7 +71,7 @@ code { background: var(--surface-2); border: 1px solid var(--border); border-rad
 
 /* What a model said. Violet, and never the only sign: a Model badge or tag stands next to it. */
 .pen { color: var(--model); }
-.dim-pen { opacity: 0.8; font-size: 0.875rem; }
+.dim-pen { font-size: 0.875rem; }
 
 /* --- shell ------------------------------------------------------------------------------ */
 /* A rail of destinations grouped by what the operator came to do, a bar that says which stage
@@ -191,13 +193,13 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .query { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
 .query-box { position: relative; flex: 1 1 16rem; display: flex; align-items: center; }
 .query-box .icon { position: absolute; left: 0.625rem; width: 1rem; height: 1rem; color: var(--text-3); pointer-events: none; }
-.query-box input { width: 100%; height: 2.25rem; padding: 0 2.25rem 0 2rem; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text); font: 0.8125rem var(--mono); }
+.query-box input { width: 100%; height: 2.25rem; padding: 0 2.25rem 0 2rem; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); color: var(--text); font: 0.8125rem var(--mono); }
 .query-box input::placeholder { color: var(--text-3); font-family: var(--sans); }
 .query-box input:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .query-box kbd { position: absolute; right: 0.5rem; padding: 0 0.375rem; border: 1px solid var(--border); border-radius: var(--radius-s); color: var(--text-3); font-size: 0.6875rem; line-height: 1.25rem; pointer-events: none; }
 .query-box input:focus ~ kbd, .query-box input:not(:placeholder-shown) ~ kbd { display: none; }
 
-.seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.seg { display: inline-flex; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
 .seg a { display: inline-flex; align-items: center; padding: 0 0.75rem; min-height: 2.25rem; color: var(--text-2); font-size: 0.8125rem; font-weight: 500; border-right: 1px solid var(--border); }
 .seg a:last-child { border-right: 0; }
 .seg a:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
@@ -239,7 +241,7 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .facet ul { padding-bottom: 0.375rem; }
 .facet-opt { display: flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 0.5rem; border-radius: var(--radius-s); color: var(--text-2); font-size: 0.8125rem; }
 .facet-opt:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
-.facet-opt .box { flex: none; width: 0.875rem; height: 0.875rem; border: 1.5px solid var(--border-strong); border-radius: 3px; }
+.facet-opt .box { flex: none; width: 0.875rem; height: 0.875rem; border: 1.5px solid var(--control); border-radius: 3px; }
 .facet-opt[aria-checked="true"] { color: var(--text); font-weight: 600; }
 .facet-opt[aria-checked="true"] .box { background: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--surface); }
 .facet-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -272,6 +274,7 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .ex-title { color: var(--text); font-weight: 600; font-size: 0.875rem; overflow-wrap: anywhere; }
 .ex-title::after { content: ""; position: absolute; inset: 0; }
 .ex-title:focus-visible { outline: none; }
+@supports not selector(:has(*)) { .ex-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } }
 .ex-row:hover .ex-title { color: var(--accent); text-decoration: none; }
 .ex-row .tag { position: relative; z-index: 1; height: 1.125rem; font-size: 0.6875rem; vertical-align: 0.0625rem; }
 .tag-answer { background: var(--accent-bg); color: var(--accent); box-shadow: none; font-weight: 600; }
@@ -454,10 +457,10 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .vote-ask { font-weight: 500; font-size: 0.875rem; }
 .field { display: grid; gap: 0.25rem; max-width: 30rem; }
 .field span { font-size: 0.75rem; font-weight: 500; color: var(--text-2); }
-.field input { height: 2.5rem; padding: 0 0.75rem; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
+.field input { height: 2.5rem; padding: 0 0.75rem; border: 1px solid var(--control); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
 .field input:focus-visible { outline-offset: 0; border-color: var(--accent); }
 .vote-buttons, .pager { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.875rem; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: 600 0.875rem var(--sans); cursor: pointer; transition: background-color 0.15s, border-color 0.15s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.875rem; border: 1px solid var(--control); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: 600 0.875rem var(--sans); cursor: pointer; transition: background-color 0.15s, border-color 0.15s; }
 .btn:hover { background: var(--surface-2); text-decoration: none; }
 .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn-stop { background: var(--crit); border-color: var(--crit); color: var(--accent-ink); }
@@ -487,7 +490,7 @@ input, select, textarea { accent-color: var(--accent); caret-color: var(--accent
 .field .optional { font-weight: 400; }
 .field .tag { height: 1.25rem; font-size: 0.6875rem; }
 .tag .icon { width: 0.75rem; height: 0.75rem; }
-.field select, .field textarea { padding: 0 0.75rem; border: 1px solid var(--border-strong); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
+.field select, .field textarea { padding: 0 0.75rem; border: 1px solid var(--control); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; }
 .field select { height: 2.5rem; }
 .field textarea { padding-block: 0.5rem; font-family: var(--mono); font-size: 0.8125rem; line-height: 1.5; resize: vertical; min-height: 5rem; }
 .field input::placeholder, .field textarea::placeholder { color: var(--text-3); }
@@ -644,7 +647,7 @@ a.typed { color: var(--accent); font-weight: 600; }
 .chips { display: flex; gap: 0.375rem; overflow-x: auto; margin: 0 calc(var(--gutter) * -1) 0.75rem; padding: 0.125rem var(--gutter); scrollbar-width: none; }
 @media (min-width: 60rem) { .chips { flex-wrap: wrap; overflow: visible; margin-inline: 0; padding-inline: 0; } }
 .chips::-webkit-scrollbar { display: none; }
-.chips a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); color: var(--text-2); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
+.chips a { display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); color: var(--text-2); font-size: 0.8125rem; font-weight: 500; white-space: nowrap; }
 .chips a:hover { color: var(--text); border-color: var(--text-3); text-decoration: none; }
 .chips a[aria-current] { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .token { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-bg); color: var(--accent); font-size: 0.8125rem; font-weight: 600; white-space: nowrap; }
@@ -673,6 +676,7 @@ a.typed { color: var(--accent); font-weight: 600; }
 .stat.is-bad .stat-value { color: var(--crit); }
 
 .table-wrap { overflow-x: auto; }
+.table-wrap:focus-visible, .table-card:focus-visible { outline-offset: -2px; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
 .table th { text-align: left; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); white-space: nowrap; }
 .table th, .table td { padding: 0.5625rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
@@ -753,6 +757,13 @@ a.typed { color: var(--accent); font-weight: 600; }
 .page > .banner { margin-bottom: 1rem; display: block; }
 .banner .typed { color: var(--text); }
 .switch-state { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+
+/* On a touch screen, every small link gets a finger-sized target. */
+@media (pointer: coarse) {
+  .row-links a, .crumbs a, .payload summary, .facts-list a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+  .cite { min-height: 2rem; min-width: 2.5rem; }
+  .tabs a { min-height: 2.75rem; }
+}
 
 /* --- motion ----------------------------------------------------------------------------- */
 

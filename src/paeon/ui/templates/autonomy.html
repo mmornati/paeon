@@ -26,9 +26,9 @@
 <section class="block" aria-labelledby="h-matrix">
   <div class="block-head"><h2 id="h-matrix">Track record</h2></div>
   {% if view.records %}
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Action</th><th class="wide">Alert</th><th>Level</th><th class="num wide">Verified</th><th class="num wide">Failed</th><th class="num wide">Undone</th><th class="num wide">Wrong</th><th class="num">In a row</th></tr></thead>
+    <thead><tr><th scope="col">Action</th><th scope="col" class="wide">Alert</th><th scope="col">Level</th><th scope="col" class="num wide">Verified</th><th scope="col" class="num wide">Failed</th><th scope="col" class="num wide">Undone</th><th scope="col" class="num wide">Wrong</th><th scope="col" class="num">In a row</th></tr></thead>
     <tbody>
       {% for r in view.records -%}
       <tr><td class="subject">{{ r.action }}<wbr>({{ r.target }})</td><td class="wide keep">{{ r.alert }}</td><td>{{ r.effective }}{% if r.demoted is not none %} <span class="outcome outcome-failed">demoted</span>{% endif %}</td><td class="num wide">{{ r.verified }} of {{ r.runs }}</td><td class="num wide">{{ r.failed }}</td><td class="num wide">{{ r.undone }}</td><td class="num wide">{{ r.wrong }}</td><td class="num">{{ r.streak }}</td></tr>

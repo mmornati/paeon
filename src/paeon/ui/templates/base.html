@@ -40,8 +40,8 @@
 <nav class="rail" aria-label="Console">
   <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="24" height="24"><span>Paeon</span></a>
   {% for name, items in groups -%}
-  <h2 class="rail-group">{{ name }}</h2>
-  <ul class="rail-list">
+  <p class="rail-group" id="rail-{{ name|lower }}">{{ name }}</p>
+  <ul class="rail-list" aria-labelledby="rail-{{ name|lower }}">
     {% for item in items if item %}<li>{{ link(item) }}</li>{% endfor %}
   </ul>
   {% endfor -%}

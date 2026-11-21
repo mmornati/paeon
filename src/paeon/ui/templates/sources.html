@@ -18,9 +18,9 @@
 
 <section class="block" aria-labelledby="h-sources">
   <div class="block-head"><h2 id="h-sources">Monitoring services</h2></div>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Source</th><th>Service</th><th>Alerts arrive</th><th class="wide">An investigation may use</th><th class="num">Fired</th><th>Last</th>{% if settings and can_admin %}<th aria-label="Change"></th>{% endif %}</tr></thead>
+    <thead><tr><th scope="col">Source</th><th scope="col">Service</th><th scope="col">Alerts arrive</th><th scope="col" class="wide">An investigation may use</th><th scope="col" class="num">Fired</th><th scope="col">Last</th>{% if settings and can_admin %}<th scope="col" aria-label="Change"></th>{% endif %}</tr></thead>
     <tbody>
       {% for line in lines -%}
       <tr>

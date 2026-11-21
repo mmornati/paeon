@@ -70,9 +70,9 @@
   </div>
   <details class="days-table">
   <summary class="facts">Day by day, as a table</summary>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table table-days">
-    <thead><tr><th>Day, UTC</th><th class="num">Calls</th><th class="num">Cost</th><th><span class="sr">Share of the dearest day</span></th></tr></thead>
+    <thead><tr><th scope="col">Day, UTC</th><th scope="col" class="num">Calls</th><th scope="col" class="num">Cost</th><th scope="col"><span class="sr">Share of the dearest day</span></th></tr></thead>
     <tbody>
       {% for day, t, share in ledger.by_day -%}
       <tr><td>{{ day }}</td><td class="num">{{ t.calls }}</td><td class="num">{{ t.cost|money }}</td><td class="meter-cell">{{ bar(share) }}</td></tr>
@@ -87,9 +87,9 @@
 
 <section class="block" aria-labelledby="h-models">
   <div class="block-head"><h2 id="h-models">By stage and model, last {{ ledger.days }} days</h2></div>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th class="wide">Stage</th><th>Model that answered</th><th class="num">Calls</th><th class="num wide">Failed</th><th class="num wide">In</th><th class="num wide">Cached</th><th class="num wide">Out</th><th class="num">Cost</th></tr></thead>
+    <thead><tr><th scope="col" class="wide">Stage</th><th scope="col">Model that answered</th><th scope="col" class="num">Calls</th><th scope="col" class="num wide">Failed</th><th scope="col" class="num wide">In</th><th scope="col" class="num wide">Cached</th><th scope="col" class="num wide">Out</th><th scope="col" class="num">Cost</th></tr></thead>
     <tbody>
       {% for stage, model, t in ledger.by_model -%}
       <tr><td class="wide">{{ stage }}</td><td class="model" title="{{ model }}">{{ model }}</td><td class="num">{{ t.calls }}</td><td class="num wide">{{ t.errors }}</td><td class="num wide">{{ t.input_tokens }}</td><td class="num wide">{{ t.cached_tokens }}</td><td class="num wide">{{ t.output_tokens }}</td><td class="num">{{ t.cost|money }}</td></tr>
