@@ -731,7 +731,7 @@ def populate_history(store: Store, count: int = 80, now: datetime | None = None)
             calls = rng.randint(4, 16)
             store.append(
                 "model.call",
-                _model_call("investigation", "claude-opus-5-5", 0.1 + rng.random() * 0.3),
+                _model_call("investigate", "claude-opus-5-5", 0.1 + rng.random() * 0.3),
                 now=opened + timedelta(seconds=30),
                 incident_id=incident,
             )

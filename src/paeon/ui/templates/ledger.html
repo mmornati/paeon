@@ -2,12 +2,16 @@
 {% from "_rows.html" import rows as record %}
 {% block title %}Spend{% endblock %}
 {% macro bar(share) %}<svg class="meter" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="meter-track" width="100" height="6"/><rect class="meter-fill" width="{{ "%.1f"|format(share) }}" height="6"/></svg>{% endmacro %}
+{% block layout %}page page-wide{% endblock %}
 {% block main %}
 <div class="head">
   <div>
     <h1>Spend</h1>
-    <p class="sub">Every model call is an event with its tokens and its cost. Budgets are read from the same events.</p>
+    <p class="sub">Every model call is an event with its tokens and its cost. Costs are in the currency of your model prices; budgets are read from the same events.</p>
   </div>
+  <nav class="seg" aria-label="Period">
+    {% for d in spend_days %}<a href="/ui/ledger{% if d != 14 %}?days={{ d }}{% endif %}"{% if ledger.days == d %} aria-current="true"{% endif %}>{{ d }} d</a>{% endfor %}
+  </nav>
 </div>
 
 <dl class="stats">
@@ -43,15 +47,29 @@
 <section class="block" aria-labelledby="h-days">
   <div class="block-head"><h2 id="h-days">By day</h2><span class="facts">Cost per UTC day, last {{ ledger.days }} days</span></div>
   <div class="block-body">
-  {% set n = ledger.series|length %}
-  <svg class="chart" viewBox="0 0 {{ n * 10 }} 40" preserveAspectRatio="none" role="img" aria-label="Cost per day, last {{ ledger.days }} days">
-    {% for day, cost, share in ledger.series -%}
-    <rect class="chart-slot" x="{{ loop.index0 * 10 + 1 }}" y="0" width="8" height="40"/>
-    {% if cost %}<rect class="chart-bar" x="{{ loop.index0 * 10 + 1 }}" y="{{ "%.1f"|format(40 - [share * 0.4, 0.8]|max) }}" width="8" height="{{ "%.1f"|format([share * 0.4, 0.8]|max) }}"><title>{{ day }}: {{ cost|money }}</title></rect>{% endif %}
-    {% endfor -%}
-  </svg>
-  <p class="chart-axis" aria-hidden="true"><span>{{ ledger.series[0][0] }}</span><span>{{ ledger.series[-1][0] }}</span></p>
+  {% set n = ledger.stacks|length %}{% set top = ledger.top or 1 %}
+  <p class="chart-key">{% for stage in ledger.stages_seen %}<span><i class="sw sw-stage-{{ stage }}"></i>{{ stage }}</span>{% endfor %}</p>
+  <div class="chart-ex-plot chart-spend">
+    <div class="chart-ex-y" aria-hidden="true"><span>{{ top|money }}</span><span>{{ (top / 2)|money }}</span><span>0</span></div>
+    <svg class="chart-ex-bars" viewBox="0 0 {{ n * 10 }} 60" preserveAspectRatio="none" role="img" aria-label="Cost per day, last {{ ledger.days }} days: {{ ledger.total.cost|money }} in all">
+      <line class="grid" x1="0" x2="{{ n * 10 }}" y1="0.5" y2="0.5"/>
+      <line class="grid" x1="0" x2="{{ n * 10 }}" y1="30" y2="30"/>
+      {% for day, costs in ledger.stacks -%}
+      {% set ns = namespace(y=60) %}{% set bx = loop.index0 * 10 -%}
+      <g><title>{{ day }}: {% set spent = costs.values()|sum %}{% if spent %}{{ spent|money }}{% for stage in ledger.stages_seen if costs.get(stage) %}, {{ stage }} {{ costs[stage]|money }}{% endfor %}{% else %}nothing{% endif %}</title>
+        <rect class="hit" x="{{ bx }}" y="0" width="10" height="60"/>
+        {% for stage in ledger.stages_seen if costs.get(stage) -%}
+        {% set h = [costs[stage] / top * 60, 0.6]|max -%}{% set ns.y = ns.y - h -%}
+        <rect class="bar bar-stage-{{ stage }}" x="{{ bx + 1 }}" y="{{ '%.2f'|format(ns.y) }}" width="8" height="{{ '%.2f'|format(h) }}"/>
+        {%- endfor %}
+      </g>
+      {%- endfor %}
+    </svg>
+    <div class="chart-ex-x" aria-hidden="true"><span>{{ ledger.stacks[0][0] }}</span><span>{{ ledger.stacks[n // 2][0] }}</span><span>{{ ledger.stacks[-1][0] }}</span></div>
   </div>
+  </div>
+  <details class="days-table">
+  <summary class="facts">Day by day, as a table</summary>
   <div class="table-wrap">
   <table class="table table-days">
     <thead><tr><th>Day, UTC</th><th class="num">Calls</th><th class="num">Cost</th><th><span class="sr">Share of the dearest day</span></th></tr></thead>
@@ -62,6 +80,7 @@
     </tbody>
   </table>
   </div>
+  </details>
   {% set quiet = ledger.days - ledger.by_day|length %}
   {% if quiet %}<div class="block-body"><p class="facts">No model call on the other {{ quiet }} day{{ "" if quiet == 1 else "s" }} of the last {{ ledger.days }}.</p></div>{% endif %}
 </section>
@@ -87,12 +106,18 @@
   <div class="block-head"><h2 id="h-triage">Triage record, last {{ ledger.days }} days</h2></div>
   <div class="block-body">
   {% if ledger.verdicts or ledger.fail_open %}
+  {% set counted = ledger.verdicts|map(attribute=1)|sum + ledger.fail_open|map(attribute=1)|sum %}
+  <svg class="split" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    {% set ns = namespace(x=0) %}
+    {% for verdict, count in ledger.verdicts %}<rect class="split-model" x="{{ '%.2f'|format(ns.x) }}" width="{{ '%.2f'|format(count / counted * 100) }}" height="6"/>{% set ns.x = ns.x + count / counted * 100 %}{% endfor %}
+    {% for reason, count in ledger.fail_open %}<rect class="split-failed" x="{{ '%.2f'|format(ns.x) }}" width="{{ '%.2f'|format(count / counted * 100) }}" height="6"/>{% set ns.x = ns.x + count / counted * 100 %}{% endfor %}
+  </svg>
   <dl class="tally">
     {% for verdict, count in ledger.verdicts -%}
     <div><dt class="pen">{{ verdict }}</dt><dd>{{ count }}</dd></div>
     {% endfor -%}
     {% for reason, count in ledger.fail_open -%}
-    <div><dt>failed open ({{ reason }})</dt><dd>{{ count }}</dd></div>
+    <div class="tally-failed"><dt>failed open ({{ reason }})</dt><dd>{{ count }}</dd></div>
     {% endfor -%}
   </dl>
   <p class="facts">{% if ledger.rated %}You rated {{ ledger.rated }} incident{{ "" if ledger.rated == 1 else "s" }}: triage was right on {{ ledger.right }}.{% else %}You have rated no verdict yet. Open an incident to say whether triage was right.{% endif %}</p>
@@ -103,8 +128,8 @@
 </section>
 
 <section class="block" aria-labelledby="h-recent">
-  <div class="block-head"><h2 id="h-recent">Latest calls</h2></div>
-  {{ record(ledger.recent, linked=true) }}
+  <div class="block-head"><h2 id="h-recent">Latest calls</h2><a class="facts" href="/ui/log?show=model">Every model call in the log</a></div>
+  {{ record(ledger.recent, linked=true, dense=true) }}
 </section>
 {% else %}
 <div class="empty">

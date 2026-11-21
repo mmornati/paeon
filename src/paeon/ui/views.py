@@ -8,6 +8,7 @@ could be read.
 from __future__ import annotations
 
 import json
+import math
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, replace
@@ -977,6 +978,24 @@ class Ledger:
     right: int
     recent: tuple[Row, ...]
     series: tuple[tuple[str, float, float], ...] = ()  # every day, oldest first, for the chart
+    stacks: tuple[tuple[str, dict[str, float]], ...] = ()  # every day: cost per stage
+    stages_seen: tuple[str, ...] = ()  # stages that cost something, in pipeline order
+    top: float = 0.0  # the chart's scale: a round figure at or above the dearest day
+
+
+SPEND_DAYS = (7, 14, 30)
+_STAGE_ORDER = ("triage", "investigate", "postmortem")
+
+
+def nice_ceiling(value: float) -> float:
+    """A round top for a scale of costs: 1, 2 or 5 times a power of ten."""
+    if value <= 0:
+        return 0.0
+    power = 10.0 ** math.floor(math.log10(value))
+    for step in (1, 2, 5, 10):
+        if value <= step * power + 1e-12:
+            return float(step * power)
+    return float(10 * power)  # pragma: no cover - the loop always returns
 
 
 def _counted(values: Iterable[str]) -> tuple[tuple[str, int], ...]:
@@ -996,6 +1015,7 @@ def ledger_view(store: Store, rules: Rules, now: datetime, *, days: int = 14) ->
     by_day: dict[str, Tally] = {
         (since + timedelta(days=offset)).date().isoformat(): Tally() for offset in range(days)
     }
+    per_stage: dict[str, dict[str, float]] = {day: defaultdict(float) for day in by_day}
     for event in calls:
         p = event.payload
         total.add(p)
@@ -1003,7 +1023,14 @@ def ledger_view(store: Store, rules: Rules, now: datetime, *, days: int = 14) ->
         by_model[(_text(p.get("stage")), who)].add(p)
         day = event.recorded_at.astimezone(UTC).date().isoformat()
         by_day.setdefault(day, Tally()).add(p)
+        per_stage.setdefault(day, defaultdict(float))[_text(p.get("stage"))] += float(
+            p.get("cost") or 0
+        )
     dearest = max((tally.cost for tally in by_day.values()), default=0.0)
+    seen = {stage for costs in per_stage.values() for stage, cost in costs.items() if cost}
+    stages_seen = tuple(s for s in _STAGE_ORDER if s in seen) + tuple(
+        sorted(seen - set(_STAGE_ORDER))
+    )
     today = ledger.spent_today(store, now)
     budgets = tuple(
         Budget(stage, limit, today)
@@ -1050,6 +1077,9 @@ def ledger_view(store: Store, rules: Rules, now: datetime, *, days: int = 14) ->
             (day, tally.cost, 0.0 if dearest <= 0 else tally.cost / dearest * 100)
             for day, tally in sorted(by_day.items())
         ),
+        stacks=tuple((day, dict(per_stage[day])) for day in sorted(per_stage)),
+        stages_seen=stages_seen,
+        top=nice_ceiling(dearest),
     )
 
 

@@ -518,9 +518,10 @@ def mount_ui(
         return page(request, "event.html", row=row, source=found.source, here="log")
 
     @router.get("/ledger", response_class=HTMLResponse)
-    def ledger(request: Request) -> Response:
-        view = views.ledger_view(store, rules, clock())
-        return page(request, "ledger.html", ledger=view, here="ledger")
+    def ledger(request: Request, days: Annotated[int, Query()] = 14) -> Response:
+        days = days if days in views.SPEND_DAYS else 14
+        view = views.ledger_view(store, rules, clock(), days=days)
+        return page(request, "ledger.html", ledger=view, here="ledger", spend_days=views.SPEND_DAYS)
 
     @router.get("/channels", response_class=HTMLResponse)
     def channels_page(
