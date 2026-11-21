@@ -405,7 +405,7 @@ class PostmortemWriter:
         sections = [
             "---\n" + yaml.safe_dump(front, sort_keys=False, allow_unicode=True) + "---",
             f"# {story.title}",
-            "> Draft written by Paeon from its event log. Review before relying on it.",
+            DRAFT_NOTICE,
             f"## Summary\n\n{story.summary}",
             f"## Impact\n\n{story.impact}",
             "## Timeline\n\n" + "\n".join(timeline(events)),
@@ -442,6 +442,14 @@ def _parse_problem(exc: Exception) -> str:
 
 
 # --- reading them back ------------------------------------------------------------------------
+
+
+DRAFT_NOTICE = "> Draft written by Paeon from its event log. Review before relying on it."
+
+
+def without_draft_notice(text: str) -> str:
+    """The text as a reviewed postmortem reads: the notice that it is a draft no longer holds."""
+    return text.replace(DRAFT_NOTICE + "\n", "", 1)
 
 
 @dataclass(frozen=True)

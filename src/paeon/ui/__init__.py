@@ -943,9 +943,23 @@ def mount_ui(
         return page(request, "autonomy.html", view=view, here="autonomy")
 
     @router.get("/postmortems", response_class=HTMLResponse)
-    def postmortem_list(request: Request) -> Response:
-        drafts = views.postmortems_view(rules)
-        return page(request, "postmortems.html", drafts=drafts, here="postmortems")
+    def postmortem_list(request: Request, status: Annotated[str, Query()] = "all") -> Response:
+        everything = views.postmortems_view(rules)
+        chosen = status if status in ("draft", "reviewed") else "all"
+        drafts = [d for d in everything if chosen == "all" or d.status == chosen]
+        counts = {
+            "all": len(everything),
+            "draft": sum(1 for d in everything if d.status == "draft"),
+            "reviewed": sum(1 for d in everything if d.status == "reviewed"),
+        }
+        return page(
+            request,
+            "postmortems.html",
+            drafts=drafts,
+            chosen=chosen,
+            counts=counts,
+            here="postmortems",
+        )
 
     def find_draft(name: str) -> tuple[postmortems.Draft, str]:
         found = postmortems.read_draft(rules.postmortems.dir, name) if keeps else None
@@ -962,7 +976,8 @@ def mount_ui(
         draft, raw = find_draft(name)
         # Masked before it is rendered: the rendered page does not pass through `shown`.
         text = redact_text(raw, max_length=views.DETAIL_LIMIT * 30)
-        body = markdown.render(text)
+        shown_text = postmortems.without_draft_notice(text) if draft.status == "reviewed" else text
+        body = markdown.render(shown_text)
         diagrams = markdown.DIAGRAM in body
         role = request.state.role
         return templates.TemplateResponse(
