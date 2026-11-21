@@ -222,7 +222,7 @@ function sLog(t, d, cues) {
     { time: "03:12:09", tag: "model", text: "Triage says: real", kind: "a model call · cost 0.0019", a: a0 + 4.8 },
     { time: "03:12:31", tag: "tool", text: "Log search returned its rows", kind: "a tool result", a: a0 + 6.6 },
   ], t, { lh: 32, size: 16 });
-  K.shot("board", 80, 364, 1120, { k: seg(t, a0 + 1.0, a0 + 1.7), crop: [0.172, 0.17, 0.82, 0.255] });
+  K.shot("explorer", 80, 364, 1120, { k: seg(t, a0 + 1.0, a0 + 1.7), crop: [0.314, 0.391, 0.669, 0.189] });
 }
 
 /* A budget meter: a label, a track that fills, one line under it. */
@@ -302,7 +302,7 @@ function sOutro(t, d, cues) {
   text(S.url, 640, 578, { size: 18, font: MONO, color: C.accent, align: "center", alpha: seg(t, a1 + 1.6, a1 + 2.2) });
 }
 
-K.load(["board"]);
+K.load(["explorer"]);
 VIDEO.create({
   title: { en: "Paeon in two minutes" },
   kicker: { en: "Paeon · explained" },

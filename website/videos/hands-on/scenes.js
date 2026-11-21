@@ -75,7 +75,7 @@ function sFate(t, d, cues) {
 function sGo(t, d, cues) {
   K.head("ACTIONS.CONSOLE_APPROVAL", "GO, IN THE CONSOLE", seg(t, 0.2, 0.9));
   const a0 = at(cues, 0, 0.5), a1 = at(cues, 1, 5.2);
-  browser(80, 170, 700, "plan-console-go", seg(t, a0, a0 + 0.6), { url: "paeon.example.org/ui/incidents/3" });
+  browser(80, 170, 700, "plan-console-go", seg(t, a0, a0 + 0.6), { url: "paeon.example.org/ui/incidents/3", crop: [0.161, 0.237, 0.611, 0.443] });
   const kr = seg(t, a1, a1 + 0.5);
   sheet(830, 190, 370, "THE EXECUTOR'S RULES", [
     ["actions:", C.faint], ["  console_approval: true", C.accent, seg(t, a1 + 0.4, a1 + 1.4)],
@@ -105,11 +105,11 @@ function sSame(t, d, cues) {
 function sQuiet(t, d, cues) {
   K.head("STILL OPEN?", "QUIET FOR THREE DAYS", seg(t, 0.2, 0.9));
   const a0 = at(cues, 0, 0.5), a1 = at(cues, 1, 5.0);
-  const h = browser(80, 170, 1120, "board-quiet", seg(t, a0, a0 + 0.6), { crop: [0.205, 0.635, 0.775, 0.115] });
+  const h = browser(80, 170, 1120, "explorer-quiet", seg(t, a0, a0 + 0.6), { crop: [0.314, 0.391, 0.669, 0.111] });
   text("The source sends a firing. The recovery never comes.", 80, 210 + h + 30, { size: 18, color: C.soft, alpha: seg(t, a0 + 1.5, a0 + 2.1) });
-  // the quiet tag, at the right of the card
+  // the quiet tag, after the title of the row
   const kq = seg(t, a1 + 0.5, a1 + 1.0);
-  if (kq > 0) highlight(80 + 1120 * 0.73, 200 + h * 0.2, 1120 * 0.085, h * 0.24, kq);
+  if (kq > 0) highlight(80 + 1120 * 0.261, 200 + h * 0.56, 1120 * 0.086, h * 0.16, kq);
   K.lamp(80, 210 + h + 60, 220, 44, "QUIET 3 DAYS", "HOLD", seg(t, a1 + 0.8, a1 + 1.2));
 }
 
@@ -121,7 +121,7 @@ function sRecheck(t, d, cues) {
     { name: "UPTIME-KUMA", note: "cannot be asked", state: "", label: "", ks: 0, kn: seg(t, a0 + 1.2, a0 + 1.7), nx: 190, size: 16, h: 62, lw: 150 },
   ], seg(t, a0, a0 + 0.5));
   text("Resolved through the recorder, the usual way.", 80, 376, { size: 17, color: C.soft, alpha: seg(t, a1 + 0.6, a1 + 1.1) });
-  browser(660, 170, 540, "still-open", seg(t, a2, a2 + 0.6), { url: "paeon.example.org/ui/incidents/3" });
+  browser(660, 170, 540, "still-open", seg(t, a2, a2 + 0.6), { url: "paeon.example.org/ui/incidents/3", crop: [0.161, 0.437, 0.611, 0.488] });
   K.lamp(80, 400, 240, 46, "CLOSED BY HAND", "HOLD", seg(t, within(cues, 2, 0.4, a2 + 2, 0), within(cues, 2, 0.4, a2 + 2, 0) + 0.4));
   text("who, when and why: in the record", 340, 430, { size: 16, color: C.soft, alpha: seg(t, within(cues, 2, 0.5, a2 + 2.5, 0), within(cues, 2, 0.5, a2 + 2.5, 0) + 0.4) });
   const kf = seg(t, within(cues, 2, 0.8, a2 + 4, 0), within(cues, 2, 0.8, a2 + 4, 0) + 0.4);
@@ -132,7 +132,7 @@ function sRecheck(t, d, cues) {
 function sReview(t, d, cues) {
   K.head("POSTMORTEMS", "TRIAGE READS THE REVIEWED ONES", seg(t, 0.2, 0.9));
   const a0 = at(cues, 0, 0.5), a1 = at(cues, 1, 4.0), a2 = at(cues, 2, 9.5);
-  browser(80, 170, 760, "postmortem-review", seg(t, a1, a1 + 0.6), { url: "paeon.example.org/ui/postmortems", crop: [0.205, 0.05, 0.79, 0.5] });
+  browser(80, 170, 760, "postmortem-review", seg(t, a1, a1 + 0.6), { url: "paeon.example.org/ui/postmortems", crop: [0.161, 0.05, 0.822, 0.52] });
   const kd = seg(t, a0 + 0.3, a0 + 0.8);
   K.lamp(880, 190, 320, 46, "DRAFT", "", kd);
   text("the model's account: triage does not read it", 880, 260, { size: 15, color: C.soft, alpha: kd });
@@ -160,7 +160,7 @@ function sOutro(t, d, cues) {
   text(S.url, 640, 568, { size: 18, font: MONO, color: C.accent, align: "center", alpha: seg(t, a1 + 1.0, a1 + 1.6) });
 }
 
-K.load(["plan-console-go", "board-quiet", "still-open", "postmortem-review"]);
+K.load(["plan-console-go", "explorer-quiet", "still-open", "postmortem-review"]);
 VIDEO.create({
   title: { en: "Your hands on it" },
   kicker: { en: "Paeon · 0.5" },

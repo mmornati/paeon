@@ -51,7 +51,7 @@ function sTwo(t, d, cues) {
   yaml.forEach(([s, c], i) => text(typed(s, seg(t, a0 + 0.4 + i * 0.25, a0 + 0.8 + i * 0.25)), 104, 270 + i * 30, { size: 16, font: MONO, color: c, alpha: kf }));
   // the browser, new in 0.4
   const kb = seg(t, a1, a1 + 0.6);
-  browser(640, 190 + (1 - outCubic(kb)) * 16, 560, "sources", kb, { crop: [0.19, 0, 0.81, 0.62], shadow: false });
+  browser(640, 190 + (1 - outCubic(kb)) * 16, 560, "sources", kb, { crop: [0.155, 0, 0.835, 0.64], shadow: false });
   K.lamp(1040, 140, 160, 40, "NEW IN 0.4", "HOLD", seg(t, a1 + 0.6, a1 + 1.0));
   text("Both, side by side. The file is never written.", 80, 572, { size: 18, color: C.soft, alpha: seg(t, a1 + 1.6, a1 + 2.2) });
 }
@@ -93,7 +93,7 @@ function sCode(t, d, cues) {
   ], { title: "docker logs paeon", alpha: seg(t, 0.3, 0.8), size: 16, lh: 30 });
   text("Whoever reads this log owns the server.", 80, 452, { size: 18, color: C.soft, alpha: seg(t, within(cues, 1, 0.6, a1 + 3, 0), within(cues, 1, 0.75, a1 + 4, 0)) });
   const kb = seg(t, a0 + 0.2, a0 + 0.8);
-  browser(700, 160, 500, "setup", kb, { crop: [0.31, 0.13, 0.38, 0.45], url: "paeon.example.org/ui/setup" });
+  browser(700, 160, 500, "setup", kb, { crop: [0.355, 0.1, 0.29, 0.343], url: "paeon.example.org/ui/setup" });
   K.wire([[460, 340], [690, 340]], seg(t, a1 + 2.0, a1 + 2.8), C.accent, 2, [6, 5]);
   K.lamp(80, 500, 280, 48, "PASSWORD CHOSEN", "GO", seg(t, a2 + 0.6, a2 + 1.0));
   text("Only a salted hash of it is kept.", 380, 531, { size: 17, color: C.soft, alpha: seg(t, a2 + 1.0, a2 + 1.5) });
@@ -103,7 +103,7 @@ function sLeft(t, d, cues) {
   K.head("GETTING STARTED", "WHAT IS LEFT TO DO", seg(t, 0.2, 0.9));
   const a0 = at(cues, 0, 0.5), a1 = at(cues, 1, 3.6), a2 = at(cues, 2, 8);
   // the steps card of the incidents page; its rows sit at these fractions of the crop
-  const x = 140, w = 1000, crop = [0.205, 0.125, 0.775, 0.375], rows = [0.165, 0.467, 0.767, 0.993];
+  const x = 140, w = 1000, crop = [0.161, 0.114, 0.822, 0.328], rows = [0.156, 0.464, 0.770, 0.995];
   const h = browser(x, 160, w, "getting-started", seg(t, a0, a0 + 0.6), { crop }) - 30, top = 190;
   [0.05, 0.36, 0.68].forEach((f, i) => {
     const s = within(cues, 1, f, a1 + i, 0), k = seg(t, s, s + 0.4);
