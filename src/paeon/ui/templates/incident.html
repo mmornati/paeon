@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% from "_strip.html" import cells %}
 {% from "_rows.html" import rows as record %}
 {% set s = view.strip %}
 {% set i = s.incident %}
@@ -7,15 +6,28 @@
 {% block title %}{{ i.id }} {{ i.title }}{% endblock %}
 {% block main %}
 <nav class="crumbs" aria-label="Breadcrumb"><a href="/ui">Incidents</a> <span>#{{ i.id }}</span></nav>
-<header class="inc-head sev-{{ i.severity.value }}{% if resolved %} is-resolved{% endif %}" data-id="{{ i.id }}">
+<header class="inc-head inc-sev-{{ i.severity.value }}{% if resolved %} is-resolved{% endif %}" data-id="{{ i.id }}">
   <div class="inc-top">
-    <span class="sev-badge">{{ i.severity.value }}</span>
+    <span class="sev sev-{{ i.severity.value }}">{{ i.severity.value }}</span>
     <span class="badge badge-{{ i.status.value }}">{{ i.status.value }}</span>
     {%- for flag in s.flags %} <span class="tag">{{ flag }}</span>{% endfor %}
     <span class="inc-when"><time datetime="{{ i.opened_at.isoformat() }}">{{ i.opened_at|stamp }}</time> · {{ s.standing }}</span>
   </div>
   <h1><span class="inc-id"><span class="sr">Incident </span>#{{ i.id }}</span> {{ i.title }}</h1>
-  {{ cells(s, open=true) }}
+  {% set words = {} %}{% for cell in s.cells %}{% set _ = words.update({cell.label: cell}) %}{% endfor %}
+  <ol class="stage-strip" aria-label="Stages">
+    {% for step in track -%}
+    {% set cell = words.get(step.stage.capitalize()) %}
+    <li class="sg sg-{{ step.state }}"><span class="sg-name"><i class="st st-{{ step.state }}" aria-hidden="true"></i>{{ step.stage.capitalize() }}</span><span class="sg-word{% if cell and cell.pen %} pen{% endif %}" title="{{ step.text }}">{{ cell.full if cell else step.text }}</span></li>
+    {%- endfor %}
+  </ol>
+  {% if view.analysis %}
+  <div class="conclusion"><p class="conclusion-label">Conclusion <span class="badge badge-model">Model</span> <span class="facts">{{ view.analysis.findings.root_cause.confidence|percent }} sure of the cause</span></p><p class="pen">{{ view.analysis.findings.summary }}</p></div>
+  {% elif view.failure %}
+  <div class="conclusion"><p class="conclusion-label">Conclusion</p><p>No analysis: {{ view.failure|lower }}.</p></div>
+  {% elif view.verdict and not view.verdict.fail_open and view.verdict.reason %}
+  <div class="conclusion"><p class="conclusion-label">Triage said <span class="badge badge-model">Model</span></p><p class="pen">{{ view.verdict.verdict }}, {{ view.verdict.confidence|percent }} sure. {{ view.verdict.reason }}</p></div>
+  {% endif %}
 </header>
 
 {% if done == "rechecked" %}<p class="banner banner-ok" role="status">Re-checked. What each source answered is below{% if resolved %}: every alert is back to normal, so the incident is resolved{% endif %}.</p>
@@ -25,71 +37,23 @@
 {% elif done == "refused" %}<p class="banner" role="alert">The executor did not take the answer. Why is in the record below.</p>
 {% endif %}
 
-<nav class="tabs" aria-label="Sections">
-  <a href="#alerts">Alerts <span class="count">{{ i.alerts|length }}</span></a>
-  <a href="#triage">Triage</a>
+<div class="inc-layout">
+<div class="inc-main">
+<nav class="tabs" aria-label="Sections" data-spy>
   <a href="#investigation">Investigation</a>
   {% if acting or view.plan %}<a href="#plan">Plan</a>{% endif %}
+  <a href="#triage">Triage</a>
   {% if operable and (not resolved or view.closed) %}<a href="#status">{% if resolved %}Closed{% else %}Still open?{% endif %}{% if view.quiet_days %} <span class="count">quiet</span>{% endif %}</a>{% endif %}
   <a href="#record">Record <span class="count">{{ view.rows|length }}</span></a>
 </nav>
 
-<section class="block" id="alerts" aria-labelledby="h-alerts">
-  <div class="block-head"><h2 id="h-alerts">Alerts</h2></div>
-  <div class="block-body">
-  <ul class="alerts">
-    {% for alert in i.alerts -%}
-    <li class="alert-line"><span class="state state-{{ alert.status.value }}">{{ alert.status.value }}</span> <span>{{ alert.title }}</span> <span class="dim">{{ alert.source }}</span></li>
-    {% endfor -%}
-  </ul>
-  </div>
-</section>
 
-<section class="block" id="triage" aria-labelledby="h-triage">
-  <div class="block-head"><h2 id="h-triage">Triage</h2>{% if view.verdict and view.verdict.model %}<span class="badge badge-model">Model</span>{% endif %}</div>
-  <div class="block-body">
-  {% if view.verdict %}
-    {% set v = view.verdict %}
-    {% if v.fail_open %}
-    <p class="lead">Treated as real: triage failed open ({{ v.fail_open }}).</p>
-    {% if v.verdict %}<p class="pen">The model had said {{ v.verdict }}, {{ v.confidence|percent }} sure. {{ v.reason }}</p>{% endif %}
-    {% else %}
-    <p class="lead pen">{{ v.verdict }}, {{ v.confidence|percent }} sure</p>
-    <p class="pen">{{ v.reason }}</p>
-    {% endif %}
-    <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
-    {% if v.matched_postmortem %}<p class="facts">The model matched it to <span class="pen">{{ v.matched_postmortem }}</span>.</p>{% endif %}
-    <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
-    {% if can_operate %}
-    <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/feedback">
-      <p class="vote-ask">{% if view.feedback == "up" %}You said triage was right.{% elif view.feedback == "down" %}You said triage was wrong.{% else %}Was triage right? Your answer is what decides whether it can be trusted later.{% endif %}</p>
-      <label class="field"><span>Note, optional</span><input type="text" name="note" maxlength="1000" autocomplete="off"></label>
-      <div class="vote-buttons">
-        <button class="btn" name="vote" value="up"{% if view.feedback == "up" %} aria-pressed="true"{% endif %}>Triage was right</button>
-        <button class="btn" name="vote" value="down"{% if view.feedback == "down" %} aria-pressed="true"{% endif %}>Triage was wrong</button>
-      </div>
-    </form>
-    {% else %}
-    <p class="facts">{% if view.feedback == "up" %}An operator said triage was right.{% elif view.feedback == "down" %}An operator said triage was wrong.{% else %}Nobody has said yet whether triage was right. An operator can; your role reads.{% endif %}</p>
-    {% endif %}
-  {% elif view.triage_skip == "runbook" %}
-    <p class="lead">Not sent to a model: a runbook matched this alert.</p>
-  {% elif view.triage_skip %}
-    <p class="lead">Not sent to a model ({{ view.triage_skip }}). Treated as real.</p>
-  {% elif i.triage.value == "pending" %}
-    <p class="lead">Waiting: related alerts get a moment to join before the model is asked.</p>
-  {% else %}
-    <p class="lead">Triage was off when this incident opened.</p>
-  {% endif %}
-  </div>
-</section>
 
 <section class="block" id="investigation" aria-labelledby="h-investigation">
   <div class="block-head"><h2 id="h-investigation">Investigation</h2>{% if view.analysis %}<span class="badge badge-model">Model</span>{% endif %}</div>
   <div class="block-body">
   {% if view.analysis %}
     {% set a = view.analysis %}{% set f = a.findings %}
-    <p class="lead pen">{{ f.summary }}</p>
     <dl class="findings">
       <div><dt>Impact</dt><dd class="pen">{{ f.impact }}</dd></div>
       <div><dt>Root cause, {{ f.root_cause.confidence|percent }} sure</dt><dd class="pen">{{ f.root_cause.statement }}</dd></div>
@@ -151,6 +115,7 @@
       {% endfor -%}
     </ol>
     {% endif %}
+
     <p class="facts">From the {{ p.origin }}. Level {{ p.level }}{% if p.held_back_by %}, held back because {{ p.held_back_by|join("; ") }}{% endif %}.</p>
     {% if p.waiting and answerable and can_operate and p.proposal %}
     <div class="answer">
@@ -178,6 +143,33 @@
   </div>
 </section>
 {% endif %}
+
+<section class="block" id="triage" aria-labelledby="h-triage">
+  <div class="block-head"><h2 id="h-triage">Triage</h2>{% if view.verdict and view.verdict.model %}<span class="badge badge-model">Model</span>{% endif %}</div>
+  <div class="block-body">
+  {% if view.verdict %}
+    {% set v = view.verdict %}
+    {% if v.fail_open %}
+    <p class="lead">Treated as real: triage failed open ({{ v.fail_open }}).</p>
+    {% if v.verdict %}<p class="pen">The model had said {{ v.verdict }}, {{ v.confidence|percent }} sure. {{ v.reason }}</p>{% endif %}
+    {% else %}
+    <p class="lead pen">{{ v.verdict }}, {{ v.confidence|percent }} sure</p>
+    <p class="pen">{{ v.reason }}</p>
+    {% endif %}
+    <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
+    {% if v.matched_postmortem %}<p class="facts">The model matched it to <span class="pen">{{ v.matched_postmortem }}</span>.</p>{% endif %}
+    <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
+  {% elif view.triage_skip == "runbook" %}
+    <p class="lead">Not sent to a model: a runbook matched this alert.</p>
+  {% elif view.triage_skip %}
+    <p class="lead">Not sent to a model ({{ view.triage_skip }}). Treated as real.</p>
+  {% elif i.triage.value == "pending" %}
+    <p class="lead">Waiting: related alerts get a moment to join before the model is asked.</p>
+  {% else %}
+    <p class="lead">Triage was off when this incident opened.</p>
+  {% endif %}
+  </div>
+</section>
 
 {% if operable and (not resolved or view.closed) %}
 <section class="block status-block{% if view.quiet_days %} is-quiet{% endif %}" id="status" aria-labelledby="h-status">
@@ -227,8 +219,47 @@
 </section>
 {% endif %}
 
-<section class="block" id="record" aria-labelledby="h-record">
-  <div class="block-head"><h2 id="h-record">Record</h2><span class="facts">{{ view.rows|length }} events, cost {{ view.cost|money }}.</span></div>
+<details class="block record-block" id="record" data-record>
+  <summary class="block-head"><h2 id="h-record">Record</h2><span class="facts">{{ view.rows|length }} events, cost {{ view.cost|money }}. Every event, oldest first.</span></summary>
   {{ record(view.rows) }}
-</section>
+</details>
+</div>
+<aside class="inc-side" aria-label="About this incident">
+  <section class="side-card">
+    <h2 class="side-title">Facts</h2>
+    <dl class="facts-list">
+      <div><dt>Host</dt><dd>{{ i.host or "none" }}</dd></div>
+      <div><dt>Opened</dt><dd>{{ i.opened_at|stamp }}</dd></div>
+      <div><dt>{{ "Lasted" if resolved else "Open for" }}</dt><dd>{{ s.standing|replace("resolved in ", "")|replace("open ", "") }}</dd></div>
+      <div><dt>Cost</dt><dd class="mono">{{ view.cost|money }}</dd></div>
+      <div><dt>Events</dt><dd><a href="#record" data-open-record>{{ view.rows|length }} in the record</a></dd></div>
+    </dl>
+  </section>
+  <section class="side-card" id="alerts" aria-labelledby="h-alerts">
+    <h2 class="side-title" id="h-alerts">Alerts <span class="count">{{ i.alerts|length }}</span></h2>
+    <ul class="side-alerts">
+      {% for alert in i.alerts -%}
+      <li><span class="state state-{{ alert.status.value }}">{{ alert.status.value }}</span> <span class="side-alert-title">{{ alert.title }}</span> <span class="dim">{{ alert.source }}</span></li>
+      {% endfor -%}
+    </ul>
+  </section>
+  {% if view.verdict %}
+  <section class="side-card" aria-labelledby="h-review">
+    <h2 class="side-title" id="h-review">Your review</h2>
+    {% if can_operate %}
+    <form class="vote" method="post" action="/ui/incidents/{{ i.id }}/feedback">
+      <p class="vote-ask">{% if view.feedback == "up" %}You said triage was right.{% elif view.feedback == "down" %}You said triage was wrong.{% else %}Was triage right? Your answer is what decides whether it can be trusted later.{% endif %}</p>
+      <label class="field"><span>Note, optional</span><input type="text" name="note" maxlength="1000" autocomplete="off"></label>
+      <div class="vote-buttons">
+        <button class="btn" name="vote" value="up"{% if view.feedback == "up" %} aria-pressed="true"{% endif %}>Triage was right</button>
+        <button class="btn" name="vote" value="down"{% if view.feedback == "down" %} aria-pressed="true"{% endif %}>Triage was wrong</button>
+      </div>
+    </form>
+    {% else %}
+    <p class="facts">{% if view.feedback == "up" %}An operator said triage was right.{% elif view.feedback == "down" %}An operator said triage was wrong.{% else %}Nobody has said yet whether triage was right. An operator can; your role reads.{% endif %}</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</aside>
+</div>
 {% endblock %}

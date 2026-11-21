@@ -372,6 +372,8 @@ def mount_ui(
         if found is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND)
         view = views.incident_view(store, found, clock(), acting=acting)
+        events = list(store.events(incident_id=found.id))
+        track = explorer.track_of(found, events, view.plan, acting=acting)
         askable = (
             {}
             if incidents is None
@@ -381,6 +383,7 @@ def mount_ui(
             request,
             "incident.html",
             view=view,
+            track=track,
             here="board",
             askable=askable,
             operable=incidents is not None,

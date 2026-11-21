@@ -176,3 +176,50 @@ document.addEventListener(
     if (!document.hidden) refresh();
   });
 })();
+
+// The incident page: the record is folded, so a link into it (a cited tool call, an event from
+// the log, the Record tab) opens it first. The section tabs show where the reader is.
+(() => {
+  const record = document.querySelector("[data-record]");
+  if (record) {
+    const reveal = () => {
+      const id = decodeURIComponent(location.hash.slice(1));
+      const target = id && document.getElementById(id);
+      if (!target || !record.contains(target) || record.open) return;
+      record.open = true;
+      // After the browser's own jump, which found the target hidden.
+      requestAnimationFrame(() => target.scrollIntoView({ block: "center", behavior: "instant" }));
+    };
+    reveal();
+    addEventListener("hashchange", reveal);
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest?.('a[href="#record"]');
+      if (link) record.open = true;
+    });
+  }
+
+  const spy = document.querySelector("[data-spy]");
+  if (!spy || !("IntersectionObserver" in window)) return;
+  const links = new Map(
+    [...spy.querySelectorAll('a[href^="#"]')].map((a) => [a.getAttribute("href").slice(1), a]),
+  );
+  const seen = new Map();
+  const mark = () => {
+    const current = [...links.keys()].find((id) => seen.get(id));
+    for (const [id, link] of links) {
+      if (id === current) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    }
+  };
+  const watch = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) seen.set(entry.target.id, entry.isIntersecting);
+      mark();
+    },
+    { rootMargin: "-30% 0px -60% 0px" },
+  );
+  for (const id of links.keys()) {
+    const section = document.getElementById(id);
+    if (section) watch.observe(section);
+  }
+})();
