@@ -41,9 +41,9 @@
 <section class="block" aria-labelledby="h-waiting">
   <div class="block-head"><h2 id="h-waiting">Waiting for your answer</h2></div>
   {% if view.waiting %}
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Incident</th><th>Plan</th><th class="num">Until</th></tr></thead>
+    <thead><tr><th scope="col">Incident</th><th scope="col">Plan</th><th scope="col" class="num">Until</th></tr></thead>
     <tbody>
       {% for w in view.waiting -%}
       <tr><td><a href="/ui/incidents/{{ w.incident }}#plan">{{ w.incident }}</a></td><td><span class="typed">{{ w.steps|join(", ") }}</span></td><td class="num">{{ w.expires_at[11:16] if w.expires_at else "?" }} UTC</td></tr>
@@ -60,9 +60,9 @@
 <section class="block" aria-labelledby="h-plans">
   <div class="block-head"><h2 id="h-plans">Plans, last {{ view.days }} days</h2></div>
   {% if view.plans %}
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Incident</th><th>Plan</th><th class="wide">Level</th><th>Outcome</th></tr></thead>
+    <thead><tr><th scope="col">Incident</th><th scope="col">Plan</th><th scope="col" class="wide">Level</th><th scope="col">Outcome</th></tr></thead>
     <tbody>
       {% for line in view.plans -%}
       <tr><td><a href="/ui/incidents/{{ line.incident_id }}#plan" title="{{ line.title }}">{{ line.incident_id }}</a></td><td class="subject">{{ line.plan.steps|join(", ") }}</td><td class="wide">{{ line.plan.level }}</td><td><span class="outcome outcome-{{ line.plan.state|replace(" ", "-") }}">{{ line.plan.state }}</span></td></tr>
@@ -78,9 +78,9 @@
 <section class="block" aria-labelledby="h-catalog">
   <div class="block-head"><h2 id="h-catalog">Catalog</h2></div>
   {% if catalog %}
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Action</th><th>Containers</th><th>Never</th></tr></thead>
+    <thead><tr><th scope="col">Action</th><th scope="col">Containers</th><th scope="col">Never</th></tr></thead>
     <tbody>
       {% for name, entry in catalog.items() -%}
       <tr><td class="subject">{{ name }}</td><td>{{ entry.targets|join(", ") }}</td><td>{{ entry.deny|join(", ") or "none" }}</td></tr>
@@ -108,9 +108,9 @@
 
 <section class="block" aria-labelledby="h-policies">
   <div class="block-head"><h2 id="h-policies">Policies</h2></div>
-  <div class="table-wrap">
+  <div class="table-wrap" tabindex="0">
   <table class="table">
-    <thead><tr><th>Alert</th><th>Action</th><th>Container</th><th>Level</th></tr></thead>
+    <thead><tr><th scope="col">Alert</th><th scope="col">Action</th><th scope="col">Container</th><th scope="col">Level</th></tr></thead>
     <tbody>
       {% for policy in policies -%}
       <tr><td class="subject">{{ policy.alert }}</td><td>{{ policy.action }}</td><td>{{ policy.target }}</td><td>{{ policy.level }}</td></tr>

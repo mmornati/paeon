@@ -517,3 +517,16 @@ def test_spend_chart_has_a_round_scale_and_a_period(store: Store, seeded: dict[s
     assert 'href="/ui/ledger?days=30"' in http.get("/ui/ledger").text
     assert "last 30 days" in http.get("/ui/ledger?days=30").text
     assert "last 14 days" in http.get("/ui/ledger?days=99").text  # an unknown period: the default
+
+
+def test_tables_name_their_columns_for_a_screen_reader(
+    store: Store, seeded: dict[str, int]
+) -> None:
+    http = client(store)
+    for path in ("/ui", "/ui/ledger", "/ui/sources"):
+        text = http.get(path).text
+        assert "<thead>" in text
+        assert 'scope="col"ead' not in text
+        assert '<th scope="col"' in text
+    assert 'class="rail-group"' in http.get("/ui").text
+    assert '<h2 class="rail-group"' not in http.get("/ui").text  # the page's h1 comes first
