@@ -45,7 +45,7 @@ docker compose stop demo-app
 ```
 
 Within a minute Prometheus fires `DemoAppDown`, Alertmanager posts it to
-`/ingest/alertmanager`, and an incident appears on the board. With a key, about twenty seconds later
+`/ingest/alertmanager`, and an incident appears in the console's incident explorer. With a key, about twenty seconds later
 the investigation starts: watch the incident's page, where each tool call appears as it is made.
 The model lists the containers, sees `demo-app` exited, reads its last log lines (the only
 container the rules let it read), finds the runbook in `runbooks/demo-app.md`, and hands in a root
@@ -71,7 +71,7 @@ docker compose exec paeon paeon incidents
 docker compose exec paeon paeon events --kind tool.call
 ```
 
-The **Ledger** page shows what the model calls cost. The prices in `paeon.yaml` are zero: set
+The **Spend** page shows what the model calls cost. The prices in `paeon.yaml` are zero: set
 the ones of your contract, then `daily_budget` and `budget_per_incident`, before you point Paeon
 at alerts you do not control.
 

@@ -6,7 +6,7 @@
 | 1. Observe | Correlation into incidents, flap and maintenance flags, change calendar, triage in shadow mode, daily digest with feedback | ✅ built |
 | 2. Investigate | Read-only investigation by a strong model, analysis by notification, postmortem drafts | ✅ built |
 | 3. Approve and act | Action catalog, signed Go / No-go, executor, verification, rollback, runbooks | ✅ built, not yet proven in use |
-| 4. UI and MCP | Console (board, incident, log, ledger, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
+| 4. UI and MCP | Console (incident explorer, incident, log, spend, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
 | 5. Earned autonomy | Promotion proposals, `auto`, Undo, automatic demotion | ✅ built, not yet proven in use |
 | 6. Release | Docs, threat model, a Prometheus and Docker quick start | ✅ written; the "stranger in under an hour" test is still to be run |
 | 7. Configure in the browser | Roles, a local sign-in, sources and channels added in the console without a restart, a first run with no rules file | ✅ built |

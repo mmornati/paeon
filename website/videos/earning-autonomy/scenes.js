@@ -160,7 +160,7 @@ function sRecord(t, d, cues) {
   text("Paeon never changes a policy. It keeps the record.", 80, 552, { size: 19, weight: 600, alpha: seg(t, a0 + 2.6, a0 + 3.2) });
 }
 
-const EARNED = { x: 80, y: 168, w: 1120, crop: [0.268, 0.13, 0.632, 0.155] };
+const EARNED = { x: 80, y: 168, w: 1120, crop: [0.161, 0.174, 0.822, 0.215] };
 
 function sEarned(t, d, cues) {
   K.head("EARNED", "FIVE IN A ROW: A PROPOSAL", seg(t, 0.2, 0.9));

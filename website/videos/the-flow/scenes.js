@@ -147,7 +147,7 @@ function sInvestigate(t, d, cues) {
 }
 
 /* Where a point of the investigation screenshot lands on the canvas. */
-const SHOT = { x: 80, y: 168, w: 720, crop: [0.268, 0.066, 0.632, 0.56] };
+const SHOT = { x: 80, y: 168, w: 720, crop: [0.161, 0.128, 0.611, 0.543] };
 const onShot = (px, py) => [SHOT.x + (px / 1920 - SHOT.crop[0]) / SHOT.crop[2] * SHOT.w,
                             SHOT.y + (py / 1200 - SHOT.crop[1]) / SHOT.crop[3] * (SHOT.w * (1200 * SHOT.crop[3]) / (1920 * SHOT.crop[2]))];
 
@@ -161,13 +161,13 @@ function sAnalysis(t, d, cues) {
   text("ROOT CAUSE", 840, 200, { size: 17, weight: 600, font: COND, spacing: "3px", color: K.model, alpha: k1 });
   para("media-server lost its database connections during the backup, and does not reconnect by itself.", 840, 232, 360, { size: 19, lh: 28, color: C.ink, alpha: k1 });
   text("78% sure · 3 tool calls · 2 min", 840, 348, { size: 15, font: MONO, color: C.faint, alpha: seg(t, a1 + 1.2, a1 + 1.8) });
-  const [ex, ey] = onShot(1630, 512), [ex2, ey2] = onShot(1678, 664);
+  const [ex, ey] = onShot(1388, 470), [ex2, ey2] = onShot(1444, 616);
   const k2 = seg(t, a2, a2 + 0.6);
   highlight(ex, ey, ex2 - ex, ey2 - ey, k2, C.accent);
   line(partial([[ex2 + 8, (ey + ey2) / 2], [840, 420]], k2), C.accent, 1.5, 0.9);
   text("EVERY CLAIM → ITS TOOL CALL", 840, 412, { size: 17, weight: 600, font: COND, spacing: "3px", color: C.accent, alpha: k2 });
   text("c1, c2, c3 open the call in the record", 840, 440, { size: 15, color: C.soft, alpha: seg(t, a2 + 0.5, a2 + 1.1) });
-  const [nx, ny] = onShot(1474, 682), [nx2, ny2] = onShot(1680, 718);
+  const [nx, ny] = onShot(1236, 632), [nx2, ny2] = onShot(1448, 674);
   const k3 = seg(t, a3, a3 + 0.6);
   highlight(nx, ny, nx2 - nx, ny2 - ny, k3, C.bad);
   line(partial([[nx2 + 8, (ny + ny2) / 2], [840, 510]], k3), C.bad, 1.5, 0.9);
@@ -262,7 +262,7 @@ function sGo(t, d, cues) {
 function sResolved(t, d, cues) {
   K.head("RESOLVED", "THE INCIDENT CLOSES", seg(t, 0.2, 0.9));
   const a0 = at(cues, 0, 0.5), a1 = at(cues, 1, 3.6), a2 = at(cues, 2, 8.1);
-  K.shot("plan-verified", 80, 170, 700, { k: seg(t, a0 + 0.2, a0 + 0.8), crop: [0.268, 0.066, 0.632, 0.285] });
+  K.shot("plan-verified", 80, 170, 700, { k: seg(t, a0 + 0.2, a0 + 0.8), crop: [0.161, 0.353, 0.611, 0.247] });
   K.log(80, 440, 700, [
     { time: "21:11:40", tag: "in", text: "slo_traefik_5xx resolved", kind: "alert.resolved", a: a0 + 0.8 },
     { time: "21:12:10", tag: "in", text: "media is DOWN resolved", kind: "alert.resolved", a: a0 + 1.4 },
