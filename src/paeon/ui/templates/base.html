@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="robots" content="noindex">
 <title>{% block title %}Incidents{% endblock %} · Paeon</title>
@@ -14,44 +14,74 @@
 </head>
 <body>
 {% from "_icons.html" import icon %}
+{#- One list of destinations, drawn twice: as the rail on a desk and as the tab bar on a phone. -#}
+{% set groups = [
+  ("Respond", [
+    ("board", "/ui", "incidents", "Incidents", open_count),
+    ("actions", "/ui/actions", "actions", "Actions", none) if acting else none,
+  ]),
+  ("Review", [
+    ("log", "/ui/log", "log", "Log", none),
+    ("postmortems", "/ui/postmortems", "postmortems", "Postmortems", to_review) if keeps_postmortems else none,
+    ("ledger", "/ui/ledger", "ledger", "Spend", none),
+  ]),
+  ("Configure", [
+    ("sources", "/ui/sources", "sources", "Sources", none),
+    ("channels", "/ui/channels", "channels", "Channels", none) if notifies else none,
+    ("autonomy", "/ui/autonomy", "autonomy", "Autonomy", none) if acting else none,
+  ]),
+] %}
+{% macro link(item, cls="") -%}
+{%- set key, href, glyph, label, count = item -%}
+<a href="{{ href }}"{% if cls %} class="{{ cls }}"{% endif %}{% if here == key %} aria-current="page"{% endif %}>{{ icon(glyph) }}<span class="nav-label">{{ label }}</span>{% if count %}<span class="nav-count{% if key == "postmortems" %} nav-count-warn{% endif %}">{{ count }}<span class="sr"> {{ "open" if key == "board" else "to review" }}</span></span>{% endif %}</a>
+{%- endmacro %}
 <a class="skip" href="#main">Skip to content</a>
 <div class="shell">
-<header class="side">
-  <div class="side-top">
-    <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="28" height="28"><span>Paeon</span></a>
-    <button class="icon-btn theme-btn" type="button" data-theme-toggle hidden aria-label="Switch between light and dark">{{ icon("moon", "icon-moon") }}{{ icon("sun", "icon-sun") }}</button>
+<nav class="rail" aria-label="Console">
+  <a class="brand" href="/ui"><img src="/ui/static/mark.svg" alt="" width="24" height="24"><span>Paeon</span></a>
+  {% for name, items in groups -%}
+  <h2 class="rail-group">{{ name }}</h2>
+  <ul class="rail-list">
+    {% for item in items if item %}<li>{{ link(item) }}</li>{% endfor %}
+  </ul>
+  {% endfor -%}
+  <p class="rail-foot">Paeon {{ version }}</p>
+</nav>
+<div class="content">
+<header class="topbar">
+  <a class="brand brand-top" href="/ui"><img src="/ui/static/mark.svg" alt="" width="24" height="24"><span>Paeon</span></a>
+  <ul class="modes" aria-label="Stages">
+    {% for name, state in stages -%}
+    <li class="mode{% if state in ("off", "none") %} mode-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
+    {% endfor -%}
+  </ul>
+  <div class="topbar-end">
+    <button class="icon-btn theme-btn" type="button" data-theme-toggle hidden aria-label="Dark theme">{{ icon("moon", "icon-moon") }}{{ icon("sun", "icon-sun") }}</button>
     {% if local %}<form method="post" action="/ui/signout"><button class="icon-btn" aria-label="Sign out" title="Sign out">{{ icon("out") }}</button></form>{% endif %}
   </div>
-  <nav class="nav" aria-label="Console">
-    <a href="/ui"{% if here == "board" %} aria-current="page"{% endif %}>{{ icon("incidents") }}Incidents</a>
-    <a href="/ui/log"{% if here == "log" %} aria-current="page"{% endif %}>{{ icon("log") }}Log</a>
-    <a href="/ui/ledger"{% if here == "ledger" %} aria-current="page"{% endif %}>{{ icon("ledger") }}Ledger</a>
-    {% if acting %}<a href="/ui/actions"{% if here == "actions" %} aria-current="page"{% endif %}>{{ icon("actions") }}Actions</a>
-    <a href="/ui/autonomy"{% if here == "autonomy" %} aria-current="page"{% endif %}>{{ icon("autonomy") }}Autonomy</a>{% endif %}
-    <a href="/ui/sources"{% if here == "sources" %} aria-current="page"{% endif %}>{{ icon("sources") }}Sources</a>
-    {% if notifies %}<a href="/ui/channels"{% if here == "channels" %} aria-current="page"{% endif %}>{{ icon("channels") }}Channels</a>{% endif %}
-    {% if keeps_postmortems %}<a href="/ui/postmortems"{% if here == "postmortems" %} aria-current="page"{% endif %}>{{ icon("postmortems") }}Postmortems{% if to_review %}<span class="nav-count" title="{{ to_review }} to review">{{ to_review }}<span class="sr"> to review</span></span>{% endif %}</a>{% endif %}
-  </nav>
-  <section class="sys" aria-labelledby="h-stages">
-    <h2 class="sys-title" id="h-stages">Stages</h2>
-    <ul class="stages">
-      {% for name, state in stages -%}
-      <li class="stage{% if state in ("off", "none") %} stage-off{% endif %}">{{ name }} <b>{{ state }}</b></li>
-      {% endfor -%}
-    </ul>
-  </section>
-  <p class="side-foot">Paeon {{ version }}</p>
 </header>
-<div class="content">
 <main id="main" class="{% block layout %}page{% endblock %}">
 {% block main %}{% endblock %}
 </main>
 <footer class="foot">
-  <p>Paeon {{ version }} records and advises. {% if acting %}Only the executor acts: catalog actions, at the level your policies give.{% else %}It takes no action on this server.{% endif %}</p>
-  <p>Times are in {{ zone }}. Budget days are UTC.</p>
-  {% if role %}<p>{% if local %}You are signed in as the admin.{% else %}Your role is {{ role }}{% if role == "viewer" %}: you can read{% elif role == "operator" %}: you can read, rate triage and stop automation{% endif %}.{% endif %}</p>{% endif %}
+  <p>Paeon {{ version }} records and advises. {% if acting %}Only the executor acts: catalog actions, at the level your policies give.{% else %}It takes no action on this server.{% endif %}
+  Times are in {{ zone }}. Budget days are UTC.
+  {% if role %}{% if local %}You are signed in as the admin.{% else %}Your role is {{ role }}{% if role == "viewer" %}: you can read{% elif role == "operator" %}: you can read, rate triage and stop automation{% endif %}.{% endif %}{% endif %}</p>
 </footer>
 </div>
+<nav class="tabbar" aria-label="Console, short">
+  {% set flat = [] -%}
+  {% for name, items in groups %}{% for item in items if item %}{% set _ = flat.append(item) %}{% endfor %}{% endfor -%}
+  {% for item in flat[:4] %}{{ link(item, "tab") }}{% endfor %}
+  {% if flat|length > 4 -%}
+  <details class="tab-more">
+    <summary class="tab{% if here in flat[4:]|map(attribute=0)|list %} is-here{% endif %}">{{ icon("more") }}<span class="nav-label">More</span></summary>
+    <ul class="tab-menu">
+      {% for item in flat[4:] %}<li>{{ link(item) }}</li>{% endfor %}
+    </ul>
+  </details>
+  {%- endif %}
+</nav>
 </div>
 </body>
 </html>

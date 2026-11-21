@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% from "_rows.html" import rows as record %}
-{% block title %}Ledger{% endblock %}
+{% block title %}Spend{% endblock %}
 {% macro bar(share) %}<svg class="meter" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="meter-track" width="100" height="6"/><rect class="meter-fill" width="{{ "%.1f"|format(share) }}" height="6"/></svg>{% endmacro %}
 {% block main %}
 <div class="head">
   <div>
-    <h1>Ledger</h1>
+    <h1>Spend</h1>
     <p class="sub">Every model call is an event with its tokens and its cost. Budgets are read from the same events.</p>
   </div>
 </div>

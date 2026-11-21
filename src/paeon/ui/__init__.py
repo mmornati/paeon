@@ -41,6 +41,7 @@ from paeon.console_sources import SOURCE_SERVICES, Sources
 from paeon.operations import Incidents, OperationError
 from paeon.redact import redact_text
 from paeon.rules import Rules
+from paeon.schema import IncidentStatus
 from paeon.store import Store
 from paeon.ui import markdown, views
 from paeon.ui.access import COOKIE, SESSION_SECONDS, Role, Sessions, allows, role_from_groups
@@ -229,6 +230,7 @@ def mount_ui(
             "to_review": sum(1 for d in views.postmortems_view(rules) if d.status == "draft")
             if keeps
             else 0,
+            "open_count": store.count_incidents(status=IncidentStatus.OPEN),
         }
         return templates.TemplateResponse(
             request, template, context, status_code=status_code, headers=HEADERS

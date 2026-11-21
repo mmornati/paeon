@@ -1,8 +1,20 @@
 // Nothing here is needed to read the console: without this script the board is a page you
 // reload, the filter box does nothing and the scheme follows the system.
 
-// On a phone the navigation scrolls sideways: bring the current page into view.
-document.querySelector(".nav [aria-current]")?.scrollIntoView({ inline: "center", block: "nearest" });
+// The "More" menu of the phone's tab bar closes on Escape and on a tap elsewhere.
+(() => {
+  const more = document.querySelector(".tab-more");
+  if (!more) return;
+  document.addEventListener("click", (event) => {
+    if (more.open && !more.contains(event.target)) more.open = false;
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && more.open) {
+      more.open = false;
+      more.querySelector("summary").focus();
+    }
+  });
+})();
 
 // Light or dark, kept for the next visit.
 (() => {
