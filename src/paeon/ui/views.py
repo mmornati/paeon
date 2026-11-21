@@ -147,14 +147,6 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
 }
 
-BAYS: tuple[tuple[str, str, str], ...] = (
-    ("triage", "Triage", "No incident is waiting for a verdict."),
-    ("investigation", "Investigation", "Nothing is being investigated."),
-    ("approval", "Your answer", "No plan is waiting for your Go."),
-    ("open", "Open", "No open incident. What fires next lands here or in a bay above."),
-    ("resolved", "Resolved", "Nothing was resolved in the last 7 days."),
-)
-RESOLVED_DAYS = 7
 DETAIL_LIMIT = 20_000
 
 
@@ -758,35 +750,6 @@ def strip_of(
         cells=tuple(cells),
         flags=tuple(flags),
         rev=events[-1].id if events else 0,
-    )
-
-
-@dataclass(frozen=True)
-class Bay:
-    key: str
-    name: str
-    empty: str
-    strips: tuple[Strip, ...]
-
-
-def board(store: Store, now: datetime, *, acting: bool = False) -> tuple[Bay, ...]:
-    """Every open incident, and those resolved in the last days, each in its bay."""
-    wanted = {incident.id: incident for incident in store.incidents(status=IncidentStatus.OPEN)}
-    recent = now - timedelta(days=RESOLVED_DAYS)
-    for incident in store.incidents(status=IncidentStatus.RESOLVED, active_since=recent):
-        wanted[incident.id] = incident
-    strips: dict[str, list[Strip]] = defaultdict(list)
-    for incident in wanted.values():
-        events = list(store.events(incident_id=incident.id))
-        quiet = quiet_days(store, incident, now)
-        strip = strip_of(incident, events, now, acting=acting, quiet=quiet)
-        strips[strip.bay].append(strip)
-    for found in strips.values():
-        found.sort(key=lambda strip: strip.incident.last_activity_at, reverse=True)
-    return tuple(
-        Bay(key, name, empty, tuple(strips[key]))
-        for key, name, empty in BAYS
-        if acting or key != "approval"
     )
 
 

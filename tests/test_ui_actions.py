@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,7 @@ from paeon.remediation import Journal
 from paeon.rules import parse_rules
 from paeon.store import Store
 from paeon.ui import views
+from paeon.ui.explorer import Query, explore
 from ui_data import ACTING_RULES, populate, populate_actions
 
 TOKEN = "t" * 32
@@ -81,21 +83,26 @@ def client(store: Store, tmp_path: Path, switch: Switch | None = None) -> TestCl
     return TestClient(create_app(settings, store, executor=switch or Switch()))
 
 
-def test_a_plan_waiting_for_go_has_its_own_bay(store: Store, seeded: dict[str, int]) -> None:
-    bays = {bay.key: bay for bay in views.board(store, datetime.now(UTC), acting=True)}
-    assert list(bays) == ["triage", "investigation", "approval", "open", "resolved"]
-    (strip,) = bays["approval"].strips
-    assert strip.incident.id == seeded["media"]
+def test_a_plan_waiting_for_go_needs_you(store: Store, seeded: dict[str, int]) -> None:
+    now = datetime.now(UTC)
+    page = explore(store, Query(status="needs"), now, ZoneInfo("UTC"), acting=True)
+    (row,) = page.rows
+    assert row.incident.id == seeded["media"]
+    assert row.waiting
+    assert [s.state for s in row.track][2:4] == ["model", "waiting"]
+    incident = store.incident(seeded["media"])
+    assert incident is not None
+    strip = views.strip_of(incident, list(store.events(incident_id=incident.id)), now, acting=True)
     cells = {cell.label: cell for cell in strip.cells}
     assert len(strip.cells) == 8
     assert cells["Plan"].value == "restart_container(media-server)"
     assert (cells["Action"].value, cells["Action"].full) == ("waiting", "waiting (level approve)")
-    resolved = {s.incident.id: {c.label: c.value for c in s.cells} for s in bays["resolved"].strips}
-    assert resolved[seeded["worker"]]["Action"] == "verified"
-    assert resolved[seeded["worker"]]["Plan"] == "restart_container(worker) +1"
-    # Without actions the board is what it was: four bays, six cells.
-    plain = views.board(store, datetime.now(UTC))
-    assert [bay.key for bay in plain] == ["triage", "investigation", "open", "resolved"]
+    everything = explore(store, Query(range="all"), now, ZoneInfo("UTC"), acting=True)
+    worker = next(r for r in everything.rows if r.incident.id == seeded["worker"])
+    assert {s.stage: s.state for s in worker.track}["action"] == "code"  # verified
+    # Without actions nothing can wait for an answer: no "Needs you" tab.
+    plain = explore(store, Query(), now, ZoneInfo("UTC"))
+    assert [tab[0] for tab in plain.tabs] == ["all", "open", "resolved"]
 
 
 def test_a_postmortem_without_a_diagram_keeps_the_strict_policy(
@@ -128,8 +135,8 @@ def test_the_incident_page_tells_the_plan_and_cannot_approve(
     assert "restart_container(queue) asks for approval from now on" in failed
 
     board = http.get("/ui").text
-    assert "Your answer" in board
-    assert "board-acting" in board
+    assert "Needs you" in board
+    assert "needs your answer" in board
     assert "Actions <b>by the executor</b>" in board
     assert "Only the executor acts" in board
 

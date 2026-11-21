@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Incidents{% endblock %}
+{% block layout %}page page-wide{% endblock %}
+{% block main %}
+{% set q = ex.query %}
+<div class="head ex-head">
+  <h1>Incidents</h1>
+  <p class="live" data-live-status>Live</p>
+</div>
+{% if steps %}
+<section class="block setup" aria-labelledby="h-setup">
+  <div class="block-head"><h2 id="h-setup">Finish setting up</h2><span class="facts">{{ steps|selectattr("done")|list|length }} of {{ steps|length }} done</span></div>
+  <ol class="plan setup-steps">
+    {% for step in steps -%}
+    <li{% if step.done %} class="is-done"{% endif %}>
+      <div class="setup-step">
+        <p><strong>{{ step.title }}</strong>{% if step.done %} <span class="outcome outcome-verified">done</span>{% endif %}<br><span class="setup-text">{{ step.text }}</span></p>
+        {% if not step.done %}<a class="btn{% if step.next %} btn-primary{% endif %}" href="{{ step.link }}">{{ step.action }}</a>{% endif %}
+      </div>
+    </li>
+    {% endfor -%}
+  </ol>
+</section>
+{% endif %}
+<form class="query" method="get" action="/ui" role="search">
+  {% for name, value in q.with_(q="").params() %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  <label class="query-box">{{ icon("search") }}<span class="sr">Search incidents</span><input type="search" name="q" value="{{ q.q }}" placeholder="Search title or host, or #42" autocomplete="off" data-search><kbd aria-hidden="true">/</kbd></label>
+  <nav class="seg" aria-label="Time range">
+    {% for key, label in (("24h", "24 h"), ("7d", "7 d"), ("30d", "30 d"), ("all", "All")) -%}
+    <a href="{{ q.with_(range=key).url() }}"{% if q.range == key %} aria-current="true"{% endif %}>{{ label }}</a>
+    {%- endfor %}
+  </nav>
+</form>
+<div class="ex" data-live="/ui/board{{ q.url('') }}">
+{% include "_explorer.html" %}
+</div>
+<p class="legend">
+  <span class="legend-title">Stages: triage, investigation, plan, action, postmortem.</span>
+  <span><i class="st st-model"></i>a model answered</span>
+  <span><i class="st st-code"></i>code did it</span>
+  <span><i class="st st-failed"></i>failed</span>
+  <span><i class="st st-waiting"></i>waiting</span>
+  <span><i class="st st-skipped"></i>skipped</span>
+  <span><i class="st st-off"></i>off</span>
+</p>
+{% endblock %}

@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,6 +25,7 @@ from paeon.rules import parse_rules
 from paeon.schema import Alert, IncidentStatus, Severity, Status
 from paeon.store import Store
 from paeon.ui import views
+from paeon.ui.explorer import Query, explore
 from test_ui_actions import Switch
 from ui_data import ACTING_RULES, populate, populate_actions
 
@@ -395,8 +397,8 @@ def test_an_incident_none_of_whose_alerts_was_seen_is_marked_quiet(store: Store)
     assert incident is not None
     assert views.quiet_days(store, incident, T0 + timedelta(hours=20)) is None
     assert views.quiet_days(store, incident, T0 + timedelta(days=3, hours=1)) == 3
-    bays = {bay.key: bay for bay in views.board(store, T0 + timedelta(days=3, hours=1))}
-    assert "quiet 3 days" in bays["open"].strips[0].flags
+    page = explore(store, Query(), T0 + timedelta(days=3, hours=1), ZoneInfo("UTC"))
+    assert "quiet 3 days" in page.rows[0].flags
 
 
 # --- postmortems ------------------------------------------------------------------------------
