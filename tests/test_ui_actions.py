@@ -361,3 +361,27 @@ def test_a_proposed_change_is_shown_with_its_pull_request(
     )
     assert failed is not None
     assert (failed.state, failed.waiting) in {("proposed", False), ("failed", False)}
+
+
+def test_a_reviewed_postmortem_no_longer_says_it_is_a_draft(
+    store: Store, seeded: dict[str, int], tmp_path: Path
+) -> None:
+    from paeon import postmortem as postmortems
+
+    folder = tmp_path / "postmortems"
+    folder.mkdir(exist_ok=True)
+    text = (
+        "---\nstatus: {}\n---\n# A title\n\n"
+        + postmortems.DRAFT_NOTICE
+        + "\n\n## Summary\n\nIt broke.\n"
+    )
+    (folder / "draft.md").write_text(text.format("draft"))
+    (folder / "done.md").write_text(text.format("reviewed"))
+    http = client(store, tmp_path)
+    assert "Review before relying on it" in http.get("/ui/postmortems/draft.md").text
+    reviewed = http.get("/ui/postmortems/done.md").text
+    assert "<blockquote>" not in reviewed
+    assert "It broke." in reviewed
+    listing = http.get("/ui/postmortems?status=reviewed").text
+    assert "done.md" in listing
+    assert "draft.md" not in listing

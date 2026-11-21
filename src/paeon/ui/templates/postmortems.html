@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Postmortems{% endblock %}
+{% block layout %}page page-wide{% endblock %}
 {% block main %}
 <div class="head">
   <div>
@@ -7,17 +8,33 @@
     <p class="sub">Drafts written from the event log once an incident has stayed resolved. A draft is yours to correct and mark reviewed: triage reads reviewed postmortems only.</p>
   </div>
 </div>
+{% if counts.all %}
+<nav class="tabs-status" aria-label="Status">
+  {% for key, label in (("all", "All"), ("draft", "To review"), ("reviewed", "Reviewed")) -%}
+  <a class="ts{% if key == 'draft' and counts.draft %} is-hot{% endif %}" href="/ui/postmortems{% if key != 'all' %}?status={{ key }}{% endif %}"{% if chosen == key %} aria-current="true"{% endif %}>{{ label }}<span class="ts-count">{{ counts[key] }}</span></a>
+  {%- endfor %}
+</nav>
+{% endif %}
 {% if drafts %}
-<div class="table-card">
-<table class="table">
-  <thead><tr><th>Day</th><th>What broke</th><th class="num wide">Open items</th><th>Status</th></tr></thead>
+<div class="table-ex">
+<table class="ex-table pm-table">
+  <caption class="sr">Postmortems, newest first</caption>
+  <thead><tr><th scope="col" class="c-day">Day</th><th scope="col" class="c-inc">Incident</th><th scope="col" class="c-title">What broke</th><th scope="col" class="c-items">Open items</th><th scope="col" class="c-status">Status</th></tr></thead>
   <tbody>
     {% for d in drafts -%}
-    <tr><td class="keep">{{ d.detected_at[:10] or "?" }}</td><td class="prose"><a href="/ui/postmortems/{{ d.name }}">{{ d.title }}</a></td><td class="num wide">{{ d.open_items|length }}</td><td><span class="outcome outcome-{{ d.status }}">{{ d.status }}</span></td></tr>
+    <tr class="ex-row pm-row">
+      <td class="c-day">{{ d.detected_at[:10] or "?" }}</td>
+      <td class="c-inc">{% if d.incident %}#{{ d.incident }}{% endif %}</td>
+      <td class="c-title"><a class="ex-title pm-title" href="/ui/postmortems/{{ d.name }}">{{ d.title }}</a></td>
+      <td class="c-items">{% if d.open_items %}{{ d.open_items|length }} open{% else %}<span class="dim">none open</span>{% endif %}</td>
+      <td class="c-status"><span class="outcome outcome-{{ d.status }}">{{ d.status }}</span></td>
+    </tr>
     {% endfor -%}
   </tbody>
 </table>
 </div>
+{% elif counts.all %}
+<div class="empty"><p>No postmortem {{ "waits for a review" if chosen == "draft" else "is reviewed yet" }}.</p><p><a href="/ui/postmortems">Show them all</a>.</p></div>
 {% else %}
 <div class="empty">
   <p>No postmortem has been written yet.</p>

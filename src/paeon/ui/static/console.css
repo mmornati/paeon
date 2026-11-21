@@ -279,6 +279,18 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .ex-row.is-resolved .sev { opacity: 0.65; }
 .ex-row.is-changed { background: var(--accent-bg); }
 
+/* Postmortems use the explorer's rows: day and status, then the title on its own line. */
+.pm-row { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "day inc . status" "title title title title" "items items items items"; }
+.pm-row .c-day { grid-area: day; font: 0.75rem var(--mono); color: var(--text-3); }
+.pm-row .c-inc { grid-area: inc; font: 600 0.75rem var(--mono); color: var(--text-3); }
+.pm-row .c-status { grid-area: status; justify-self: end; }
+.pm-row .c-items { grid-area: items; font-size: 0.75rem; color: var(--text-2); }
+.pm-title { font-weight: 500; }
+@media (min-width: 60rem) {
+  .pm-row .c-day, .pm-row .c-inc, .pm-row .c-items { white-space: nowrap; }
+  .pm-row .c-items { text-align: right; }
+}
+
 .sev { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; font-weight: 600; color: var(--text-3); white-space: nowrap; }
 .sev::before { content: ""; width: 0.5rem; height: 0.5rem; border-radius: 2px; background: var(--border-strong); }
 .sev-critical { color: var(--crit); } .sev-critical::before { background: var(--crit); }
@@ -450,6 +462,12 @@ a.cite:hover { background: var(--accent); color: var(--accent-ink); text-decorat
 .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .btn-stop { background: var(--crit); border-color: var(--crit); color: var(--accent-ink); }
 .btn-stop:hover { background: var(--crit); filter: brightness(1.08); }
+.btn-danger { border-color: var(--crit); color: var(--crit); background: var(--surface); }
+.btn-danger:hover { background: var(--crit-bg); }
+.stop-form > summary { list-style: none; width: fit-content; }
+.stop-form > summary::-webkit-details-marker { display: none; }
+.stop-form[open] > summary { display: none; }
+.stop-form .vote { border-top: 0; padding-top: 0; margin-top: 0; }
 .pager { margin-top: 1rem; }
 .btn .icon { width: 1rem; height: 1rem; }
 .btn:active { background: var(--border); }
@@ -656,14 +674,14 @@ a.typed { color: var(--accent); font-weight: 600; }
 
 .table-wrap { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.table th { text-align: left; font-size: 0.75rem; font-weight: 600; color: var(--text-2); background: var(--surface-2); white-space: nowrap; }
+.table th { text-align: left; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); background: var(--surface-2); white-space: nowrap; }
 .table th, .table td { padding: 0.5625rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 .table th:first-child, .table td:first-child { padding-left: 1.125rem; }
 .table th:last-child, .table td:last-child { padding-right: 1.125rem; }
 .table tbody tr:last-child td, .table tfoot tr:last-child > * { border-bottom: 0; }
 .table tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 .table .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
-.table .model, .table .subject { font-family: var(--mono); overflow-wrap: anywhere; }
+.table .model, .table .subject { font-family: var(--mono); font-size: 0.75rem; overflow-wrap: break-word; }
 .table .keep { white-space: nowrap; }
 .table tfoot th, .table tfoot td { background: var(--surface-2); font-weight: 700; border-top: 1px solid var(--border-strong); }
 .table .narrow td { color: var(--text-3); font-size: 0.75rem; padding-top: 0; }
@@ -673,7 +691,7 @@ a.typed { color: var(--accent); font-weight: 600; }
 .table > :first-child th:first-child { border-top-left-radius: var(--radius); }
 .table > :first-child th:last-child { border-top-right-radius: var(--radius); }
 .block-head + .block-body .table > :first-child th { border-radius: 0; }
-.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow-x: auto; }
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
 .table .wide { display: none; }
 @media (min-width: 44rem) {
   .table .wide { display: table-cell; }
