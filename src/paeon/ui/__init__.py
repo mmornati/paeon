@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, FastAPI, Form, HTTPException, Query, Request, status
@@ -475,16 +475,38 @@ def mount_ui(
         request: Request,
         show: Annotated[str | None, Query()] = None,
         before: Annotated[int | None, Query(ge=1)] = None,
+        incident: Annotated[int | None, Query(ge=1)] = None,
+        q: Annotated[str, Query(max_length=200)] = "",
     ) -> Response:
         chosen = show if show in views.FILTERS else None
         kinds = None if chosen is None else views.FILTERS[chosen][1]
-        events = list(
-            store.events(kinds=kinds, before_id=before, newest_first=True, limit=PAGE + 1)
+        found = views.log_page(
+            store, kinds=kinds, before=before, incident_id=incident, text=q.strip(), limit=PAGE
         )
-        rows = [views.row_of(event) for event in events[:PAGE]]
-        older = rows[-1].id if len(events) > PAGE else None
+
+        def link(**change: object) -> str:
+            pairs: dict[str, object] = {
+                "show": chosen,
+                "incident": incident,
+                "q": q.strip() or None,
+            }
+            pairs.update(change)
+            kept = [(k, str(v)) for k, v in pairs.items() if v is not None]
+            return "/ui/log" + ("?" + urlencode(kept) if kept else "")
+
         return page(
-            request, "log.html", rows=rows, show=chosen, older=older, before=before, here="log"
+            request,
+            "log.html",
+            rows=found.rows,
+            show=chosen,
+            older=found.older,
+            before=before,
+            incident=incident,
+            q=q.strip(),
+            scanned=found.scanned,
+            exhausted=found.exhausted,
+            log_link=link,
+            here="log",
         )
 
     @router.get("/events/{event_id}", response_class=HTMLResponse)

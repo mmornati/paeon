@@ -1,6 +1,8 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% from "_rows.html" import rows as record %}
 {% block title %}Log{% endblock %}
+{% block layout %}page page-wide{% endblock %}
 {% block main %}
 <div class="head">
   <div>
@@ -8,20 +10,27 @@
     <p class="sub">Every event Paeon recorded, newest first. Nothing is ever edited or removed.</p>
   </div>
 </div>
+<form class="query" method="get" action="/ui/log" role="search">
+  {% if show %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
+  {% if incident %}<input type="hidden" name="incident" value="{{ incident }}">{% endif %}
+  <label class="query-box">{{ icon("search") }}<span class="sr">Search the log</span><input type="search" name="q" value="{{ q }}" placeholder="Search what the log says, e.g. restart or opus" autocomplete="off" data-search><kbd aria-hidden="true">/</kbd></label>
+  {% if incident %}<a class="token" href="{{ log_link(incident=none) }}" aria-label="Remove the filter on incident {{ incident }}">Incident #{{ incident }} <span aria-hidden="true">×</span></a>{% endif %}
+</form>
 <nav class="chips" aria-label="Show">
-  <a href="/ui/log"{% if not show %} aria-current="true"{% endif %}>Everything</a>
+  <a href="{{ log_link(show=none) }}"{% if not show %} aria-current="true"{% endif %}>Everything</a>
   {% for key, item in filters.items() -%}
-  <a href="/ui/log?show={{ key }}"{% if show == key %} aria-current="true"{% endif %}>{{ item[0] }}</a>
+  <a href="{{ log_link(show=key) }}"{% if show == key %} aria-current="true"{% endif %}>{{ item[0] }}</a>
   {% endfor -%}
 </nav>
 {% if rows %}
-{{ record(rows, linked=true) }}
+{{ record(rows, linked=true, dense=true) }}
+{% if exhausted %}<p class="facts scan-note">Searched {{ scanned }} events for this page. Older ones may match too.</p>{% endif %}
 <nav class="pager" aria-label="Pages">
-  {% if before %}<a class="btn" href="/ui/log{% if show %}?show={{ show }}{% endif %}">Newest</a>{% endif %}
-  {% if older %}<a class="btn" href="/ui/log?{% if show %}show={{ show }}&amp;{% endif %}before={{ older }}">Older</a>{% endif %}
+  {% if before %}<a class="btn" href="{{ log_link() }}">Newest</a>{% endif %}
+  {% if older %}<a class="btn" href="{{ log_link(before=older) }}">Older</a>{% endif %}
 </nav>
-{% elif show or before %}
-<p class="empty">No event of this kind was recorded{% if before %} before this point{% endif %}. <a href="/ui/log">Show everything</a>.</p>
+{% elif show or before or q or incident %}
+<div class="empty"><p>No event {% if q %}says “{{ q }}”{% else %}of this kind was recorded{% endif %}{% if before %} before this point{% endif %}.</p><p><a href="/ui/log">Show everything</a>{% if exhausted %}, or <a href="{{ log_link(before=older) }}">search older events</a>{% endif %}.</p></div>
 {% else %}
 <div class="empty">
   <p>The log is empty: nothing has reached Paeon yet.</p>

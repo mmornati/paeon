@@ -479,3 +479,25 @@ def test_explorer_page_keeps_its_filters_in_every_link(
     assert f'data-id="{seeded["stale"]}"' in fragment  # critical
     assert f'data-id="{seeded["media"]}"' not in fragment  # warning
     assert "<html" not in fragment
+
+
+def test_log_search_matches_what_is_shown_never_a_secret(store: Store) -> None:
+    store.append("webhook.received", {"password": "swordfish", "title": "disk full"})
+    store.append("digest.sent", {"incidents": 3})
+    http = client(store)
+    assert "swordfish" not in http.get("/ui/log").text
+    # A guess at the secret finds nothing: the search reads the redacted line, not the payload.
+    guessed = http.get("/ui/log?q=swordfish").text
+    assert "No event says" in guessed
+    found = http.get("/ui/log?q=webhook").text
+    assert "webhook.received" in found
+    assert "digest.sent" not in found
+
+
+def test_log_can_be_narrowed_to_one_incident(store: Store, seeded: dict[str, int]) -> None:
+    http = client(store)
+    media = seeded["media"]
+    page = http.get(f"/ui/log?incident={media}").text
+    assert f"Incident #{media}" in page  # the filter, with a way to remove it
+    assert f"Incident {seeded['vpn']}</a>" not in page
+    assert f'href="/ui/log?incident={media}"' in http.get("/ui/log").text
