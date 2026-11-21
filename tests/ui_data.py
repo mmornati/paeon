@@ -6,6 +6,7 @@ console with something in it.
 
 from __future__ import annotations
 
+import random
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -659,6 +660,130 @@ ACTING_RULES: dict[str, Any] = {
         ],
     }
 }
+
+
+HISTORY_TITLES = (
+    ("disk_full", "server-1"),
+    ("http_5xx_rate", "server-1"),
+    ("cert_expires_soon", None),
+    ("backup_late", "server-1"),
+    ("container_restarting", "server-2"),
+    ("dns_lookup_failed", None),
+    ("node_load_high", "server-2"),
+    ("queue_backlog", "vps-1"),
+    ("worker_stalled", "vps-1"),
+    ("ping_loss", None),
+)
+
+
+def populate_history(store: Store, count: int = 80, now: datetime | None = None) -> list[int]:
+    """A month of resolved incidents, enough to page through: mostly short, a few triaged as
+    real and investigated, some where triage failed open. Deterministic. Returns their ids."""
+    end = now or datetime.now(UTC)
+    rng = random.Random(7)  # noqa: S311 - synthetic data, repeatable on purpose
+    verdicts = ("noise", "transient", "real", "known_issue")
+    severities = (Severity.CRITICAL, Severity.WARNING, Severity.WARNING, Severity.INFO)
+    made = []
+    for n in range(count):
+        title, host = HISTORY_TITLES[n % len(HISTORY_TITLES)]
+        opened = end - timedelta(days=1 + rng.random() * 29, minutes=n)
+        lasted = timedelta(minutes=rng.choice((1, 1, 2, 4, 12, 35, 90, 360)))
+        incident = store.open_incident(
+            title=title,
+            severity=rng.choice(severities),
+            host=host,
+            opened_at=opened,
+            maintenance=None,
+            triage=StageState.PENDING,
+            investigation=StageState.PENDING,
+        )
+        store.attach_alert(
+            incident, source="openobserve", fingerprint=f"h{n}", title=title, status=Status.FIRING
+        )
+        store.append("incident.opened", {"title": title}, now=opened, incident_id=incident)
+        cost = 0.0004 + rng.random() * 0.0004
+        store.append(
+            "model.call",
+            _model_call("triage", "claude-haiku-5-5", cost),
+            now=opened,
+            incident_id=incident,
+        )
+        verdict = rng.choice(verdicts)
+        failed = rng.random() < 0.3
+        store.append(
+            "triage.verdict",
+            {
+                "shadow": True,
+                "verdict": verdict,
+                "effective_verdict": "real" if failed else verdict,
+                "fail_open": "low_confidence" if failed else None,
+                "confidence": round(0.5 + rng.random() * 0.45, 2),
+                "reason": "Synthetic history.",
+                "model": "claude-haiku-5-5",
+                "attempts": 1,
+                "prompt_version": "triage-2",
+            },
+            now=opened,
+            incident_id=incident,
+        )
+        store.set_stage(incident, "triage", StageState.DONE)
+        if failed or verdict == "real":
+            calls = rng.randint(4, 16)
+            store.append(
+                "model.call",
+                _model_call("investigation", "claude-opus-5-5", 0.1 + rng.random() * 0.3),
+                now=opened + timedelta(seconds=30),
+                incident_id=incident,
+            )
+            store.append(
+                "investigation.completed",
+                {
+                    "findings": {
+                        **FINDINGS,
+                        "root_cause": {"statement": "Synthetic.", "confidence": 0.6},
+                    },
+                    "model": "claude-opus-5-5",
+                    "tool_calls": calls,
+                    "duration_seconds": 60.0,
+                },
+                now=opened + timedelta(seconds=90),
+                incident_id=incident,
+            )
+            store.set_stage(incident, "investigation", StageState.DONE)
+        else:
+            store.append(
+                "investigation.skipped",
+                {"skip": f"triage: {verdict}"},
+                now=opened,
+                incident_id=incident,
+            )
+            store.set_stage(incident, "investigation", StageState.SKIPPED)
+        store.attach_alert(
+            incident,
+            source="openobserve",
+            fingerprint=f"h{n}",
+            title=title,
+            status=Status.RESOLVED,
+        )
+        found = store.incident(incident)
+        assert isinstance(found, Incident)
+        store.save_incident(
+            found.model_copy(
+                update={
+                    "status": IncidentStatus.RESOLVED,
+                    "resolved_at": opened + lasted,
+                    "last_activity_at": opened + lasted,
+                }
+            )
+        )
+        store.append(
+            "incident.resolved",
+            {"duration_minutes": lasted.total_seconds() / 60},
+            now=opened + lasted,
+            incident_id=incident,
+        )
+        made.append(incident)
+    return made
 
 
 if __name__ == "__main__":  # pragma: no cover
