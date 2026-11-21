@@ -106,6 +106,7 @@ CREATE TABLE IF NOT EXISTS incidents (
     triage           TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS incidents_status ON incidents (status, id);
+CREATE INDEX IF NOT EXISTS incidents_activity ON incidents (last_activity_at, id);
 
 CREATE TABLE IF NOT EXISTS incident_alerts (
     incident_id INTEGER NOT NULL REFERENCES incidents (id),
@@ -122,6 +123,69 @@ _SELECT_INCIDENTS = (
     "SELECT id, status, title, severity, host, opened_at, last_activity_at, resolved_at,"
     " flapping, maintenance, triage, investigation, postmortem FROM incidents"
 )
+
+
+# Open before resolved, in the explorer's order.
+_RANK = "(CASE status WHEN 'open' THEN 0 ELSE 1 END)"
+_FACETS = ("status", "severity", "host", "triage", "investigation")
+
+
+@dataclass(frozen=True)
+class IncidentFilter:
+    """What the incident explorer asks for. An empty choice means any value."""
+
+    statuses: tuple[IncidentStatus, ...] = ()
+    severities: tuple[Severity, ...] = ()
+    hosts: tuple[str, ...] = ()  # "" stands for an incident with no host
+    triage: tuple[StageState, ...] = ()
+    investigation: tuple[StageState, ...] = ()
+    text: str = ""  # in the title or the host, or "#12" for an incident's number
+    active_since: datetime | None = None  # open incidents match whatever this says
+
+
+@dataclass(frozen=True)
+class IncidentCursor:
+    """Where a page of the explorer ended: the key of its last row."""
+
+    rank: int  # 0 open, 1 resolved
+    last_activity_at: datetime
+    id: int
+
+    @classmethod
+    def of(cls, incident: Incident) -> IncidentCursor:
+        rank = 0 if incident.status is IncidentStatus.OPEN else 1
+        return cls(rank, incident.last_activity_at, incident.id)
+
+
+def _filter_sql(where: IncidentFilter, *, without: str = "") -> tuple[str, list[Any]]:
+    clause = "1 = 1"
+    params: list[Any] = []
+    choices: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("status", tuple(s.value for s in where.statuses)),
+        ("severity", tuple(s.value for s in where.severities)),
+        ("host", where.hosts),
+        ("triage", tuple(s.value for s in where.triage)),
+        ("investigation", tuple(s.value for s in where.investigation)),
+    )
+    for column, values in choices:
+        if values and column != without:
+            target = "COALESCE(host, '')" if column == "host" else column
+            clause += f" AND {target} IN ({', '.join('?' * len(values))})"
+            params += values
+    if where.active_since is not None:
+        clause += " AND (status = 'open' OR last_activity_at >= ?)"
+        params.append(_iso(where.active_since))
+    text = where.text.strip()
+    if text:
+        number = text.removeprefix("#")
+        if number.isdigit():
+            clause += " AND id = ?"
+            params.append(int(number))
+        else:
+            like = "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            clause += " AND (title LIKE ? ESCAPE '\\' OR host LIKE ? ESCAPE '\\')"
+            params += [like, like]
+    return clause, params
 
 
 def _iso(moment: datetime) -> str:
@@ -216,6 +280,7 @@ class Store:
         source: str | None = None,
         fingerprint: str | None = None,
         incident_id: int | None = None,
+        incident_ids: Sequence[int] | None = None,
         recorded_since: datetime | None = None,
         newest_first: bool = False,
         limit: int | None = None,
@@ -228,6 +293,10 @@ class Store:
         if kinds is not None:
             sql += f" AND kind IN ({', '.join('?' * len(kinds))})" if kinds else " AND 0"
             params += kinds
+        if incident_ids is not None:
+            marks = ", ".join("?" * len(incident_ids))
+            sql += f" AND incident_id IN ({marks})" if incident_ids else " AND 0"
+            params += incident_ids
         for clause, value in (
             (" AND id < ?", before_id),
             (" AND kind = ?", kind),
@@ -404,9 +473,62 @@ class Store:
         with self._lock:
             return int(self._db.execute(sql, params).fetchone()[0])
 
-    def _incidents(self, sql: str, params: list[Any]) -> list[Incident]:
+    # --- the incident explorer -------------------------------------------------------------
+
+    def search_incidents(
+        self,
+        where: IncidentFilter,
+        *,
+        after: IncidentCursor | None = None,
+        limit: int = 50,
+    ) -> list[Incident]:
+        """Open incidents first, then the rest, each newest activity first; a page at a time.
+
+        `after` is the key of the last row of the previous page: rows are paged by position
+        in that order, not by number, so an incident that opens meanwhile shifts nothing.
+        """
+        clause, params = _filter_sql(where)
+        if after is not None:
+            clause += (
+                " AND (" + _RANK + " > ? OR (" + _RANK + " = ? AND (last_activity_at < ?"
+                " OR (last_activity_at = ? AND id < ?))))"
+            )
+            stamp = _iso(after.last_activity_at)
+            params += [after.rank, after.rank, stamp, stamp, after.id]
+        return self._incidents(
+            _SELECT_INCIDENTS + " WHERE " + clause,
+            params,
+            order=f" ORDER BY {_RANK}, last_activity_at DESC, id DESC LIMIT {int(limit)}",
+        )
+
+    def count_incidents_by(self, where: IncidentFilter, column: str) -> dict[str, int]:
+        """How many incidents match, per value of one column. The column's own choice is left
+        out, so the counts say what picking another value would show."""
+        if column not in _FACETS:
+            raise ValueError(f"not a facet: {column}")
+        clause, params = _filter_sql(where, without=column)
+        # The column is one of _FACETS and the clause is built from fixed text: values are bound.
+        sql = f"SELECT COALESCE({column}, ''), COUNT(*) FROM incidents WHERE {clause}"  # noqa: S608
         with self._lock:
-            rows = self._db.execute(sql + " ORDER BY id", params).fetchall()
+            rows = self._db.execute(sql + f" GROUP BY {column}", params).fetchall()
+        return {str(value): int(count) for value, count in rows}
+
+    def incident_openings(
+        self, where: IncidentFilter, since: datetime
+    ) -> list[tuple[datetime, str]]:
+        """When each matching incident opened since a moment, and its severity: for a chart."""
+        clause, params = _filter_sql(where)
+        sql = "SELECT opened_at, severity FROM incidents WHERE " + clause  # noqa: S608
+        sql += " AND opened_at >= ?"
+        with self._lock:
+            rows = self._db.execute(sql, [*params, _iso(since)]).fetchall()
+        return [(datetime.fromisoformat(row[0]), str(row[1])) for row in rows]
+
+    def _incidents(
+        self, sql: str, params: list[Any], *, order: str = " ORDER BY id"
+    ) -> list[Incident]:
+        with self._lock:
+            rows = self._db.execute(sql + order, params).fetchall()
             members: dict[int, list[IncidentAlert]] = {row[0]: [] for row in rows}
             for row in rows:
                 for member in self._db.execute(
