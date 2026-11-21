@@ -7,77 +7,57 @@ related_targets: []
 
 # Console (src/paeon/ui)
 
-Scope: the whole operator console served under `/ui`: board, incident page, event log, ledger.
+Scope: the whole operator console served under `/ui`: incidents, incident page, event log,
+spend (ledger), actions, autonomy, sources, channels, postmortems, sign-in and setup.
 Mode: Operate. Phone first (opened from an ntfy notification), desk review second.
 
-Job: see where each incident stands, why a model said what it said, which tools it read, what
-it cost, and what left the server. Read-only, except triage feedback.
+Job: see what needs an answer now, find any incident among hundreds, read why a model said what
+it said and which tool call backs each claim, see what it cost and what left the server.
 
-Constraints: server-rendered, no build step, no external request (fonts, scripts), strict CSP,
-every payload redacted before display. Approvals, actions and autonomy are not built: not shown.
+Constraints: server-rendered Jinja, one CSS file, a little vanilla JS, no build step, no request
+to another host, strict CSP (no inline style or script), every payload redacted before display.
+Lists that grow (incidents, log, postmortems) are paged by the server with a cursor, and their
+filters live in the URL so a view can be bookmarked and shared.
 
 ## Direction contract
 
-THESIS: Strip Bay. An incident is a flight progress strip, and the stage it stands in is the
-bay it sits in. Refused: the dark observability dashboard of stat tiles over a table.
+THESIS: Incident explorer. The console is an observability tool in the family the operator
+already uses (Datadog, OpenObserve): every list is a dense, filterable, paged table under a
+query bar and a time range, and every incident page leads with its stage outcomes and its
+conclusion. Refused: stacks of cards, one per incident; sections that show a zero; a page that
+grows without end.
 
-OWN-WORLD: a grey-green rack as ground; off-white printed strips ruled into fixed cells with
-small caps labels; the id sits in a holder filled with the severity colour (red, amber, green,
-grey). Two voices everywhere: what code recorded is printed ink, what a model said is pen blue
-italic. What left the server carries a reversed ink tag. System sans, monospace for figures.
-Hairlines, no shadows, no rounded panels.
+OWN-WORLD: the current light and dark tokens (cool neutral ground, white or near-black panels,
+one blue accent, red, amber, blue and green for state). 6px radius, 1px hairlines, no shadow on
+panels. Table rows 34px, sticky column headers, small caps column labels, monospace for ids,
+times, durations and costs. A five-square stage track per incident (triage, investigation,
+plan, action, postmortem): violet filled when a model answered, green when code did it, red
+when it failed, blue outline when waiting, empty when skipped, dashed when off. The model's
+words stay violet; facts about a model call are ink.
 
-STORY: the operator sees which bay a strip is in, reads the model's words as annotation and
-not as fact, opens the strip, and finds every claim tied to the tool call behind it.
+STORY: the operator lands on incidents, sees "Needs you" first when it is not zero, narrows
+with status, range, facets or a search, opens a row, and reads the stage outcomes and the
+conclusion before the evidence, each claim tied to its tool call.
 
-FIRST VIEWPORT: on a phone, the bar (Paeon, what is enabled, "takes no action"), then the bays
-stacked: Triage, Investigation, Open, Resolved, each a labelled rack with its strips. On a
-desk, the four bays stand side by side as columns.
+FIRST VIEWPORT: desk: a 200px navigation rail grouped Respond / Review / Configure, a 40px
+status bar (stage modes, live, last update), then the page title with status segments
+(All, Needs you, Open, Resolved, each with a count) and a range switch (24 h, 7 d, 30 d, all),
+the query bar, a 90px incidents-per-day histogram, then facets (severity, verdict,
+investigation, host) beside the table. Phone: status bar, title, segments, query, rows as three
+lines (severity, id, age / title / stage track, verdict, cost), a bottom tab bar.
 
-FORM: air traffic control strip board; position 1 of the ordered list; seed 9b757a1d (chosen by
-the user over the assigned direction). Signature interaction: on live refresh a strip slides
-from its bay to the next and keeps a "changed" tag until it is touched. Code-led: no comp, the
-image key had no credit.
+FORM: the category standard, played straight; the user named Datadog and OpenObserve as the
+bar and approved a mock of this explorer on 2026-11-21. No concept seed was rolled: the
+direction is user-pinned. Code-led.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
-## Build path record
+## History
 
-The project's recorded default is comp-led (`.impeccable/config.json`, the user's answer at
-init). This surface was built code-led all the same, because no image could be generated: the
-only image tool available was the API fallback, and its first render was refused with
-`credit_balance_exhausted`. The user was told in chat that the build was switching to code-first
-and then chose Strip Bay on a text-only decision page; they did not say words accepting the
-switch. There is no comp, no decision comp and no build state for this surface. When image
-generation is available again, a comp round for the next surface (or a re-comp of this one) is
-owed to the recorded default.
-
-The seed key 9b757a1d was printed by `concept-seed --scope direction --mode operate` in the
-build session (assigned index 6; the user took the pick card instead).
-
-Decided after the finish review: the model's voice is blue and slanted everywhere, one rule;
-a fact about a model call (tokens, cost, failure) is printed ink. A changed strip stands out of
-line and carries an outlined tag; the reversed tag is kept for what left the server. Board
-strips are a fixed form of six boxes, one line each; reasons are on the incident page.
-
-## Redirected (2026-11-18)
-
-The user asked to leave Strip Bay for the look and habits of an observability and incident
-management app: cleaner, professional. The console was rebuilt by hand, outside the comp-led
-path: sidebar shell, pipeline counts over incidents grouped by stage, rounded cards, status
-badges, section tabs on the incident page, cost figures and a spend chart on the ledger, a light
-or dark switch. The thesis, own-world and form above describe the previous build and no longer
-hold; `DESIGN.md` describes the current one. Kept from before: the model's words look different
-from what code recorded (violet, with a Model badge or tag), severity is always also a word, no
-request to another host, no inline style. `.impeccable/design.json` was generated from the old
-DESIGN.md and has not been regenerated.
-
-## Channel settings (2026-11-19)
-
-Added as a refinement of the current console, code-led, no comp: the Channels page gained
-add, edit, test and remove for an admin (`ui.settings`), a service pick list, one form per
-service, and a sign-in page for `ui.auth: local`. The job line above no longer holds as
-"read-only": the console also configures where the digest and the analysis are sent. It still
-cannot approve, and a channel added here never carries an approval. New vocabulary is in
-`DESIGN.md`: the filled form button, form fields with secret tags, the pick list, the green
-banner, the `rules file` origin tag, the sign-in card.
+- 2026-11-18: built as Strip Bay (flight strips in bays), then redirected by the user to a
+  generic incident management look (sidebar, stage counts, rounded cards).
+- 2026-11-19: channel and source settings added for an admin (`ui.settings`), plus a sign-in
+  page for `ui.auth: local`.
+- 2026-11-21: critique scored 23/40. The board did not scale past a few dozen incidents
+  (5,000px desktop, 9,800px phone), empty stage sections took the first viewport, filtering was
+  client-side text only. The user chose this explorer direction for the whole console.

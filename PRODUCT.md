@@ -66,6 +66,12 @@ log cannot account for.
 - No logo, no brand assets, no screenshots. The name is Paeon (the physician of the gods).
 - No real incident data is committed; demonstration data must be synthetic and labelled.
 
+## Brand Commitments
+
+- The console sits alongside the observability tools its operator already uses (Datadog,
+  OpenObserve): dense tables, a query bar, a time range, facets, server-side paging. Chosen by
+  the user on 2026-11-21 over a bespoke look.
+
 ## Product Principles
 
 1. The log is the record. Show the event, its time and its source before any summary of it.
