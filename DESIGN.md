@@ -1,6 +1,6 @@
 ---
 name: Paeon
-description: Two visual worlds. The console is an incident management app in system fonts. The public site, its docs and its videos are a launch-day Go / No-go status board.
+description: Two visual worlds. The console is an incident explorer in the observability family, in system fonts. The public site, its docs and its videos are a launch-day Go / No-go status board.
 colors:
   bg: "#f5f6f8"
   surface: "#ffffff"
@@ -9,7 +9,8 @@ colors:
   border-strong: "#c9ced7"
   text: "#141821"
   text-2: "#4f596a"
-  text-3: "#667082"
+  text-3: "#5f6a7c"
+  control: "#868fa0"
   accent: "#3451d1"
   accent-bg: "#ecf0fe"
   accent-ink: "#ffffff"
@@ -30,7 +31,8 @@ colors:
   border-strong-dark: "#353c4d"
   text-dark: "#e7eaf0"
   text-2-dark: "#a3acbd"
-  text-3-dark: "#7f899c"
+  text-3-dark: "#8590a3"
+  control-dark: "#606a7e"
   accent-dark: "#8da2ff"
   accent-bg-dark: "#1a2142"
   accent-ink-dark: "#0b0d12"
@@ -76,6 +78,15 @@ typography:
     fontSize: "1.0625rem"
     fontWeight: 500
     lineHeight: 1.45
+  conclusion:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.55
+  section:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: "0.9375rem"
+    fontWeight: 650
   body:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "0.9375rem"
@@ -86,18 +97,28 @@ typography:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 400
-  label:
+  badge:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 600
-  figure:
+  label:
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 600
+    letterSpacing: "0.06em"
+  figure:
+    fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace"
     fontSize: "1.5rem"
     fontWeight: 700
+    lineHeight: 1.2
     letterSpacing: "-0.02em"
   mono:
     fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace"
     fontSize: "0.8125rem"
+    fontWeight: 400
+  mono-cell:
+    fontFamily: "ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace"
+    fontSize: "0.75rem"
     fontWeight: 400
   site-display:
     fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif"
@@ -232,8 +253,9 @@ typography:
     fontWeight: 400
     lineHeight: 1.65
 rounded:
-  card: "0.625rem"
-  control: "0.375rem"
+  radius: "0.375rem"
+  radius-s: "0.25rem"
+  mark: "3px"
   pill: "999px"
   site-square: "0"
   site-pictured-phone: "2rem"
@@ -241,32 +263,116 @@ rounded:
   site-pictured-notification-key: "0.5rem"
 spacing:
   gutter: "1rem"
-  gutter-wide: "2rem"
-  card-inset: "1.125rem"
-  card-gap: "1rem"
-  row-gap: "0.5rem"
+  gutter-desk: "1.5rem"
+  stack: "0.75rem"
+  panel-inset: "1.125rem"
+  cell: "0.75rem"
+  block-gap: "1rem"
   site-gutter: "clamp(1rem, 4vw, 3.5rem)"
   site-band: "clamp(3.5rem, 8vw, 6.5rem)"
   site-row-inset: "1.125rem"
   site-control-gap: "0.75rem"
 components:
-  card:
+  panel:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
-    rounded: "{rounded.card}"
-    padding: "1rem 1.125rem"
-  nav-item:
+    rounded: "{rounded.radius}"
+  topbar:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text-3}"
+    typography: "{typography.badge}"
+    height: "2.5rem"
+  rail-item:
     textColor: "{colors.text-2}"
     typography: "{typography.small}"
-    rounded: "{rounded.control}"
-    height: "2.25rem"
-  nav-item-current:
+    rounded: "{rounded.radius}"
+    height: "2rem"
+    padding: "0 0.625rem"
+  rail-item-current:
     backgroundColor: "{colors.accent-bg}"
     textColor: "{colors.accent}"
+  tab-bar-item:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text-2}"
+    rounded: "{rounded.radius}"
+    height: "3rem"
+  tab-bar-item-current:
+    backgroundColor: "{colors.accent-bg}"
+    textColor: "{colors.accent}"
+  query-field:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.radius}"
+    height: "2.25rem"
+    padding: "0 2.25rem 0 2rem"
+  range-segment:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text-2}"
+    typography: "{typography.small}"
+    rounded: "{rounded.radius}"
+    height: "2.25rem"
+    padding: "0 0.75rem"
+  range-segment-current:
+    backgroundColor: "{colors.accent-bg}"
+    textColor: "{colors.accent}"
+  status-tab:
+    textColor: "{colors.text-2}"
+    height: "2.5rem"
+    padding: "0 0.75rem"
+  status-tab-current:
+    textColor: "{colors.text}"
+  status-count:
+    backgroundColor: "{colors.surface-2}"
+    textColor: "{colors.text-2}"
+    rounded: "{rounded.pill}"
+    height: "1.25rem"
+    padding: "0 0.3125rem"
+  status-count-hot:
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.accent-ink}"
+  facet-option:
+    textColor: "{colors.text-2}"
+    typography: "{typography.small}"
+    rounded: "{rounded.radius-s}"
+    height: "2.25rem"
+    padding: "0 0.5rem"
+  table-head:
+    backgroundColor: "{colors.surface-2}"
+    textColor: "{colors.text-3}"
+    typography: "{typography.label}"
+    height: "2rem"
+    padding: "0 0.75rem"
+  table-group:
+    backgroundColor: "{colors.bg}"
+    textColor: "{colors.text-2}"
+    typography: "{typography.label}"
+    padding: "0.375rem 0.75rem"
+  table-row:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.text}"
+    typography: "{typography.small}"
+    height: "2.25rem"
+    padding: "0 0.75rem"
+  table-row-hover:
+    backgroundColor: "{colors.surface-2}"
+  table-row-updated:
+    backgroundColor: "{colors.accent-bg}"
+  stage-square:
+    rounded: "{rounded.mark}"
+    size: "0.75rem"
+  stage-square-model:
+    backgroundColor: "{colors.model}"
+  stage-square-code:
+    backgroundColor: "{colors.ok}"
+  stage-square-failed:
+    backgroundColor: "{colors.crit}"
+  stage-square-waiting:
+    backgroundColor: "{colors.info-bg}"
   badge:
     backgroundColor: "{colors.surface-2}"
     textColor: "{colors.text-2}"
-    typography: "{typography.label}"
+    typography: "{typography.badge}"
     rounded: "{rounded.pill}"
     height: "1.375rem"
     padding: "0 0.5rem"
@@ -276,20 +382,24 @@ components:
   button:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
-    rounded: "{rounded.control}"
+    rounded: "{rounded.radius-s}"
     height: "2.5rem"
     padding: "0 0.875rem"
-  button-pressed:
+  button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.accent-ink}"
-  button-danger:
+  button-go:
+    backgroundColor: "{colors.ok}"
+    textColor: "{colors.accent-ink}"
+  button-stop:
     backgroundColor: "{colors.crit}"
     textColor: "{colors.accent-ink}"
   field:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
-    rounded: "{rounded.control}"
+    rounded: "{rounded.radius-s}"
     height: "2.5rem"
+    padding: "0 0.75rem"
   site-lamp:
     textColor: "{colors.site-faint}"
     typography: "{typography.site-lamp}"
@@ -405,20 +515,33 @@ Every section below has a **Console** part and a **Site** part.
 
 ### Console
 
-The console is an incident management app, in the family of the tools an operator already
-knows: a sidebar, a list of incidents grouped by where they stand, status as coloured badges,
-a detail page with a summary header and a timeline. It is clean and quiet: neutral surfaces,
-one accent, colour kept for state.
+**Creative North Star: "The Incident Explorer"**
 
-It replaces the earlier "Strip Bay" console. Three things carry over, because they come from
-the product and not from the old look:
+The console is an observability tool, in the family its operator already works in (Datadog,
+OpenObserve). Every list that grows is a dense table, paged by the server, under a query bar and
+a time range, with status tabs that carry counts and facets that narrow it. Every incident page
+leads with its stage outcomes and its conclusion, and the evidence follows. It is quiet and
+flat: cool neutral ground, white or near-black panels, 1px hairlines, one blue accent, and
+colour kept for state.
+
+It replaced, in turn, the "Strip Bay" console and a generic card-per-incident app. Three things
+carried over, because they come from the product and not from a look:
 
 - **The model's words look different from what code recorded.** They are violet, and the
   section or line also says so in words (a `Model` badge, a `model` or `tool` tag). A fact about
-  a model call (tokens, cost, failure) is plain text.
-- **Severity and state are always also a word.** The colour of a badge is never the only sign.
+  a model call (tokens, cost, failure) is plain ink.
+- **Severity and state are always also a word.** The colour of a mark is never the only sign.
 - **Nothing is loaded from another host**, and there is no inline style: the content policy
-  refuses both. System fonts, one stylesheet, two small scripts, inline SVG icons.
+  refuses both. System fonts, one stylesheet, small scripts, inline SVG icons and charts.
+
+**Key Characteristics (console):**
+
+- Dense tables: 2.25rem rows, sticky small-capital column heads, monospace for ids, times,
+  durations and costs.
+- A query bar with a time range, status tabs with counts, facets beside the table.
+- A five-square stage track on every incident row, and a stage strip on the incident page.
+- 6px corners on panels, 4px on buttons and fields, pills only for badges and counts.
+- No shadow on any panel; one floating menu casts the only shadow.
 
 ### Site
 
@@ -455,20 +578,39 @@ The three videos are drawn on a canvas from the same palette, copied by value in
 
 Every colour is a token in `console.css`, written once as `light-dark(light, dark)`; the
 frontmatter lists both values (`-dark` suffix). The scheme follows the system, unless the
-operator used the switch in the sidebar (`data-theme` on `<html>`, kept in `localStorage`).
+operator used the switch in the top bar (`data-theme` on `<html>`, kept in `localStorage`).
 
-- **Neutrals**: `bg` (page), `surface` (cards, sidebar, inputs), `surface-2` (table heads, code,
-  notes, neutral badges), `border` and `border-strong`, and three text levels (`text`, `text-2`
-  for secondary lines, `text-3` for labels and times).
-- **Accent** (`accent`, `accent-bg`): links, focus ring, the current page in the navigation, a
-  pressed button, citation chips, meters and chart bars, an incident that just changed.
-- **Model** (`model`, `model-bg`): what a model said, and the dot of the Investigation stage.
-- **State**: `crit` (critical, firing, failed, the kill switch), `warn` (warning, draft,
-  cancelled, a claim with no tool call behind it), `info` (info severity, waiting, running),
-  `ok` (resolved, verified, a stage that is on). Each has a tinted `-bg` for its badge.
+- **Neutrals**: `bg` (the page, the group rows of a table, the sticky section tabs), `surface`
+  (panels, rail, top bar, tab bar, fields), `surface-2` (column heads, hover, code, notes,
+  neutral badges and counts), `border` (every hairline between rows and panels),
+  `border-strong` (the empty stage square, the 3px rule of a note or quote, an outlined tag),
+  and three text levels (`text`; `text-2` for secondary lines; `text-3` for labels, column
+  heads, ids and times).
+- **Control edge** (`control`): the 1px border of what a hand can use (the query bar, the range
+  segments, buttons, fields, filter chips, a facet's box), set for 3:1 against its surface in
+  both schemes. A passive panel keeps `border`.
+- **Accent** (`accent`, `accent-bg`, `accent-ink`): links, the focus ring, the current
+  destination, range segment and section tab, the underline of the current status tab, the
+  count of "Needs you" when it is not zero, a ticked facet, the one filled button, cite chips,
+  meters, an incident row that just changed.
+- **Model** (`model`, `model-bg`): what a model said, a model-answered stage square, and the
+  model share of the spend chart.
+- **State**: `crit` (critical, firing, failed, the kill switch, a spent budget), `warn`
+  (warning, draft, cancelled, a claim with no tool call behind it, a quiet incident), `info`
+  (info severity, waiting, running, the triage share of spend), `ok` (resolved, verified, a stage
+  code did, the Go button). Each has a tinted `-bg` for its badge.
 
-State colours appear on badges, on the 3px severity edge of an incident, and on a state value
-inside an incident's boxes. They are not used for decoration.
+State colours appear on badges, severity marks, the chart's bars, the stage track and the 3px
+top edge of an incident's head. They are not used for decoration.
+
+**The Stage Track Rule.** Five squares, always in the order triage, investigation, plan,
+action, postmortem: violet filled when a model answered, green filled when code did it, red
+filled when it failed, a blue outline on the info tint when it waits, empty when skipped, a
+dashed hairline when the stage is off. Each square carries its stage and outcome as a title and
+the track as an image label, and the explorer prints the legend under the table.
+
+**The Model Voice Rule.** Violet is the colour of a model's words and of a model-answered stage,
+and nothing else. The tokens, cost, duration and failure of a model call are ink.
 
 ### Site
 
@@ -532,14 +674,31 @@ never sits on a lit colour.
 
 ### Console
 
-System sans for everything read, system monospace for what is counted or cited: ids, times,
-costs in tables, event kinds, catalog actions, payloads. Tabular numerals are on for the page.
+System sans (`--sans`) for everything read, system monospace (`--mono`) for what is counted or
+cited: ids, times, durations, costs, counts, the query, event kinds, catalog actions, payloads,
+and a stat's figure. Tabular numerals are on for the page.
 
-- **Title** 1.5rem/700: the page heading. **Lead** 1.0625rem/500: the first statement of a card.
-- **Body** 0.9375rem. **Small** 0.8125rem: secondary lines, tables, notes.
-- **Label** 0.75rem/600: badges, box labels, table heads. Sentence case; uppercase is kept for
-  the group headings of the board and the sub-headings inside a card.
-- **Figure** 1.5rem/700: the number of a stat or of a pipeline tile.
+- **Title** (`title`, 700, 1.5rem): the page heading; 1.375rem on an incident's head, with its
+  `#id` in monospace before it.
+- **Lead** (`lead`, 500, 1.0625rem): the first statement of a section.
+- **Conclusion** (`conclusion`, 1rem, line-height 1.55, at most 72ch): the incident's conclusion
+  under its stage strip.
+- **Section** (`section`, 650, 0.9375rem): the heading of a panel.
+- **Body** (`body`, 0.9375rem, line-height 1.5). **Small** (`small`, 0.8125rem): table cells,
+  facets, range segments, secondary lines, notes.
+- **Badge** (`badge`, 600, 0.75rem): badges, the severity word, the stage modes of the top bar.
+- **Label** (`label`, 600, 0.6875rem, tracking 0.06em, uppercase): column heads, the group rows
+  of a table, facet titles, the rail's groups (tracking 0.08em), stage names in the strip, side
+  panel titles, a stat's label.
+- **Figure** (`figure`, monospace 700, 1.5rem): the number of a stat tile.
+- **Mono** (`mono`, 0.8125rem) and **mono cell** (`mono-cell`, 0.75rem): the query, ids, times,
+  durations and costs in a row.
+
+**The Counted Is Mono Rule.** A value a person compares down a column (an id, a time, a
+duration, a cost, a count) is monospace. A sentence never is.
+
+**The Label Names Data Rule.** Uppercase belongs to labels that name a column, a group, a
+facet, a stage or a figure. It never stands above a heading as a teaser.
 
 ### Site
 
@@ -598,19 +757,33 @@ display, 0.06em to 0.1em on titles and stations, 0.12em to 0.16em on lamps, keys
 
 ### Console
 
-Phone first. One column with a 1rem gutter; from 60rem a 15rem sidebar stands at the left and
-the gutter widens to 2rem. Reading pages are capped at 60rem, the board at 76rem.
+Phone first. One column with a 1rem gutter; from 60rem a 13rem rail stands at the left and the
+gutter widens to 1.5rem. A page is capped at 80rem; the incident explorer runs full width.
+Pieces of a page stack 0.75rem apart, panels 1rem apart.
 
-- **Shell**: on a phone, the brand and theme switch, then the navigation as a row that scrolls
-  sideways, then the stages on one line. From 60rem, a sticky sidebar: brand, navigation with
-  icons, and the stages at the bottom with their state. The stages always say what is on.
-- **Board**: a filter box, the pipeline (one tile per stage with its count, a link to that
-  group), then the groups. Each incident is one card: severity badge, id, title, flags, when,
-  and one labelled box per stage. Boxes are one line each; reasons are on the incident page.
-- **Incident**: breadcrumb, a summary header (badges, title, the same boxes with their reasons),
-  sticky section tabs, then one card per section: Alerts, Triage, Investigation, Plan, Record.
-- **Ledger and Actions**: a row of stat tiles, then cards. Tables sit flush inside their card
-  and drop their token columns under 44rem, printing them as a second line.
+- **Shell**: a sticky top bar (2.75rem on a phone, 2.5rem on a desk) on `surface`: on a phone
+  the brand, then the stage modes on one line that scrolls sideways (each stage and what it
+  does; an off stage is struck through), then the theme switch and sign out. From 60rem the
+  brand moves into a sticky rail of destinations grouped Respond, Review, Configure, with a
+  count after an item that waits for a person. On a phone a fixed tab bar at the bottom holds
+  the first four destinations and a More menu with the rest.
+- **Explorer** (incidents, and the same rows for postmortems): the title with the live status,
+  the query bar and the range segments (24 h, 7 d, 30 d, All), the status tabs with counts
+  (All, Needs you, Open, Resolved), a 4.5rem incidents-per-day chart stacked by severity, then
+  from 60rem the facets (13rem, sticky) beside the table, and Newest / Older under it. On a
+  phone the facets fold into a Filters disclosure and each row stacks on three lines: severity,
+  id and age; the title; the stage track, the triage verdict and the cost. Open rows come
+  first under a group row, then resolved ones by day.
+- **Incident**: breadcrumb; a head panel with a 3px severity top edge (severity, status, flags,
+  when and for how long; the title; the stage strip; the conclusion); then sticky section tabs
+  and the sections. From 72rem an 18rem side column stands at the right, sticky (facts, alerts,
+  the answer). The stage strip stacks as name and outcome rows on a phone and becomes five
+  columns from 52rem. The record is folded in a disclosure that opens when a link points into it.
+- **Log, Spend, Actions, settings**: a query bar or filter chips where the list grows, stat
+  tiles where figures lead, then panels holding tables flush. A table drops its secondary
+  columns under 44rem and prints them as a second line.
+- **Targets**: buttons and fields are 2.5rem; tabs, rail and menu items, query and range are at
+  least 2.25rem; on a coarse pointer, small links grow to 2.75rem.
 
 ### Site
 
@@ -641,7 +814,18 @@ Blue hairline. Rows are not boxed, not shaded in turn and not laid out as a grid
 
 ### Console
 
-Flat. Cards are `surface` on `bg` with a 1px border and, in light only, a 1px shadow.
+Flat. A panel is `surface` on `bg` with a 1px `border` hairline and no shadow (`--shadow` is
+`none`). Depth is order and tone: the table head on `surface-2`, group rows on `bg`, a hovered
+row on `surface-2`, the sticky top bar, column heads and section tabs over what scrolls.
+
+- **Pop** (`--shadow-pop`, `0 8px 24px` at 12% in light, 50% in dark): the phone's More menu,
+  the one thing that floats over the page.
+
+Inset 1px box-shadows draw outlines (an outlined tag, the accent edge of a cited record row, the
+ring of the live dot); they are strokes, not elevation.
+
+**The Flat Panel Rule.** No panel, row or card casts a shadow. Only a menu that floats over the
+page takes `--shadow-pop`.
 
 ### Site
 
@@ -656,7 +840,11 @@ fill, not by a halo.
 
 ### Console
 
-Corners: 0.625rem for cards, 0.375rem for controls, full pills for badges and filter chips.
+Small, even corners. `--radius` (0.375rem, 6px) for panels, the query bar, range segments, chips,
+rail and tab items, and the menu. `--radius-s` (0.25rem) for buttons, fields, notes, inner lists,
+code and payloads. Full pills only for badges, tags and counts. The stage squares and the box of
+a facet keep a 3px corner; a chart swatch and a severity mark keep 2px. Borders are 1px; the
+severity edge of an incident head and the rule of a note or quote are 3px.
 
 ### Site
 
@@ -678,62 +866,78 @@ that fades from one colour to another is not used anywhere.
 
 ### Console
 
-- **Badge**: a pill, 1.375rem tall, label type, tinted by state, with a dot when it is a state.
-  Variants: severity, incident status, alert state, plan outcome, risk, `Model`, tag (outlined:
-  flapping, maintenance), `updated` (solid accent, set by the live refresh).
-- **Pipeline tile**: stage name with its dot, and the count as a figure. Empty is dimmed. "Your
-  answer" is tinted with the accent when a plan is waiting.
-- **Incident card**: 3px severity edge at the left, dimmed when resolved. The whole card is the
-  link. A state value in a box is coloured and dotted by tone: active, bad, good, warn, mute.
-- **Card** (`.block`): a head (title, and a badge or a fact at the right) over a body. Inside:
-  lead, facts, a note (tinted, with a left rule: what was not done, what a thing cannot do),
-  bordered lists (alerts, evidence, plan steps with numbered circles).
+- **Top bar and stage modes**: each stage as `Name mode` in label size; the mode in ink, struck
+  through in `text-3` when the stage is off.
+- **Rail**: label-case group headings (Respond, Review, Configure), items 2rem tall with a 1rem
+  icon; the current one on the accent tint in accent. A `nav-count` pill follows an item with
+  something open; postmortems to review use the warning tint.
+- **Tab bar and More**: up to four tabs, icon over a 0.6875rem label, the current one on the
+  accent tint; More opens a menu above it, the one element with `--shadow-pop`.
+- **Query bar**: monospace input 2.25rem tall with a search icon at the left and a `/` key hint
+  at the right that hides once typed into; its border turns accent on focus. Beside it, the
+  **range segments**: one bordered group of links split by hairlines, the current one on the
+  accent tint.
+- **Status tabs**: a row of links on a hairline, each with a monospace count pill; the current
+  one in ink, 600, over a 2px accent underline. The "Needs you" count is solid accent when it is
+  not zero.
+- **Chart** (`.chart-ex`): a panel with a caption and a key, a monospace y axis (top, half, 0),
+  an SVG of stacked bars by severity with two gridlines, and first / middle / last day under it.
+  Each day is one hover target with its counts as a title. It is not drawn when nothing opened.
+  Spend uses the same chart, 7.5rem tall, stacked by stage.
+- **Facets**: sections with a label title; each option is a link with a box, its label, and a
+  monospace count; ticked is an accent box inset in `surface` and the label in ink, 600. A
+  severity option carries its colour mark. Clear filters closes the list.
+- **Explorer table**: column heads sticky under the top bar; rows 2.25rem, one link over the
+  whole row (focus outlines the row in accent); title ellipsized; host, opened, lasted, cost in
+  monospace, numbers right-aligned. A resolved row's title drops to `text-2`. A row that changed
+  on live refresh takes the accent tint and a solid accent `updated` tag until pointed at or
+  focused. A waiting plan adds an accent-tinted `needs your answer` tag.
+- **Stage track**: five 0.75rem squares, 3px apart (see The Stage Track Rule).
+- **Severity mark** (`.sev`): a 0.5rem square in the severity colour and the word in it.
+- **Incident head and stage strip**: the head panel with its 3px severity edge; the strip is a
+  bordered list, one cell per stage with its square, its name as a label, and its outcome in a
+  sentence (violet when a model said it, red when failed, a waiting stage on the info tint).
+  The conclusion follows under a label with a `Model` badge and how sure it is.
+- **Panel** (`.block`): a head (section title, and a badge or a fact at the right) over a body.
+  Inside: lead, facts, a note (`surface-2`, 3px left rule: what was not done, what a thing
+  cannot do), bordered lists (alerts, evidence, plan steps with numbered circles). A side panel
+  (`.side-card`) is the same, smaller, with a label title and facts as ruled rows.
+- **Badge**: a pill, 1.375rem tall, tinted by state, with a dot when it is a state. Variants:
+  status, alert state, plan outcome, risk, `Model`, tag (outlined), `updated` (solid accent).
 - **Record row**: time in monospace, a voice tag (`in` blue, `code` neutral, `model` and `tool`
-  violet, `sent` green, `you`), the line, then its kind, cost and duration in monospace. A
-  disclosure shows the payload. The row a citation points to is tinted with an accent edge.
-- **Cite chip**: `c1`, `c2` in monospace on the accent tint, a link to the tool call. When no
-  tool call stands behind a claim it is an outlined warning chip that says so in words.
-- **Document** (`.md`): a postmortem rendered from its markdown on one card, prose capped at
-  46rem: ruled section headings, tinted quotes, bordered tables, code on `surface-2`, action
-  items as ticked or empty boxes. The source sits under it in a disclosure. A `mermaid` block
-  is drawn by the bundled library in a bordered figure, in its neutral or dark theme to match
-  the scheme; that page alone allows inline styles, because the library needs them.
-- **Buttons and fields**: 2.5rem tall. One neutral button; pressed is solid accent; the kill
-  switch, and removing a channel, are solid red. A form has one filled button (`.btn-primary`,
-  solid accent): the one that saves it, or signs in. Nothing else is filled.
-- **Form** (`.form`, channel settings and sign-in): one column of fields capped at 30rem. A
-  field is a label, its control, then one line of help; a secret carries a small outlined tag
-  with a lock (`secret`, or `kept` once stored) and is never printed back. What is wrong is
-  said in red under its field and counted in a banner above the form. A choice with a
-  consequence is a bordered row with its checkbox, tinted with the accent when ticked.
-- **Go** (`.btn-go`, solid green, on a green-tinted `.answer` box): the one control in the
-  console that runs something. It appears only on a plan the executor waits on, beside a
-  neutral No-go, with a line saying what will run and in which order.
-- **Still open?** (`#status` block): the alerts still firing with whether their source can be
-  asked, the last re-check's answers as state badges, Re-check (filled) and Close by hand
-  (behind a disclosure that asks for one line of why). A quiet incident's block has a warning
-  border and a `quiet N days` tag, also shown on its board card.
-- **Nav count** (`.nav-count`): a small warning pill after a navigation item, for what waits
-  for a person (postmortems to review).
-- **Pick list** (`.pick`): rows on one card, each a whole-row link: a name, one line on what
-  it is, a chevron. Used to choose the service of a new channel.
-- **Banner**: red for what failed, green (`.banner-ok`) for what was just saved, sent or
-  removed. Always a sentence, placed under the page head.
-- **Origin tag**: an outlined tag with a lock, `rules file`, beside a channel the console
-  shows and cannot change.
-- **Sign-in and setup** (`.door`): the two pages with no shell: a single card in the middle
-  of the screen, with the mark, its fields and the filled button.
-- **Getting started** (on the board, for an admin, until done): one card of numbered steps,
-  the plan-step list reused. A done step turns its number green and carries a `done` badge;
-  the first step left has the filled button, the others the neutral one.
-- **Stat tile, meter, chart**: a label, a figure, a line under it. Meters and the bars of the
-  spend chart are SVG whose sizes are attributes, in the accent; a spent budget turns red and
-  says "reached".
+  violet, `sent` green, `you`), the line, then kind, cost and duration in monospace; a
+  disclosure shows the payload. On a desk the log sets one event to a line. The row a citation
+  points to takes the accent tint and a 3px accent edge.
+- **Cite chip**: `c1`, `c2` in monospace on the accent tint, a link to the tool call. With no
+  tool call behind a claim, an outlined warning chip says so in words.
+- **Buttons and fields**: 2.5rem, `radius-s`, a `control` border. One neutral button; pressed is
+  solid accent. A form has one filled button (`.btn-primary`, solid accent): what saves it, or
+  signs in. The kill switch and removing a source or channel are solid red (`.btn-stop`),
+  behind a disclosure that asks to confirm.
+- **Go** (`.btn-go`, solid green, inside a green-tinted `.answer` box, beside a neutral No-go):
+  the one control that runs something. It appears only on a plan the executor waits on, when
+  the executor allows answers from the console, with a line saying what will run and in which
+  order.
+- **Filter chips and tokens** (the log): bordered 2.25rem links in a row that scrolls on a phone
+  and wraps on a desk; the current one and an applied filter token are accent-bordered on the
+  accent tint.
+- **Stat tile, meter**: a label, a monospace figure, a line under it; a meter is an SVG bar in
+  the accent that turns red and says "reached" when a budget is spent.
+- **Empty state**: a dashed `border-strong` panel with one sentence in ink and a way out (clear
+  the filters, look at all time).
+- **Document** (a postmortem): rendered markdown in a panel, prose at most 46rem; ruled section
+  headings, tinted quotes, bordered tables, code on `surface-2`, action items as ticked or
+  empty boxes; a `mermaid` block drawn by the bundled library (that page alone allows inline
+  styles). The source sits under it in a disclosure.
+- **Form, pick list, banner, sign-in**: a form is one column of fields capped at 30rem, each a
+  label, its control and one line of help, errors in red under the field; a pick list is
+  whole-row links with a chevron; a banner is a sentence under the page head, red for what
+  failed and green for what was just done; sign-in and setup are one centred panel with no shell.
 
-**Motion.** On live refresh (every 10 seconds, paused while the tab is hidden or focus is on
-the board) an incident that changed stage slides to its new place over 320ms, and is ringed and
-tagged `updated` until pointed at or focused. Hover states ease over 150ms. Under reduced
-motion there is no movement and no smooth scroll.
+**Motion.** The explorer refetches itself every 10 seconds with the same filters, paused while
+the tab is hidden or focus is inside it; a row that changed is tinted and tagged, not moved.
+Hover and border changes ease over 150ms. Under reduced motion there is no transition and no
+smooth scroll.
 
 ### Site
 
@@ -823,11 +1027,15 @@ complete.
 
 **Console**
 
+- **Do** put a growing list in a server-paged table under a query bar, a range and status tabs,
+  with its filters in the URL.
+- **Do** put the five-square stage track on an incident row, in its fixed order.
 - **Do** mark every word a model produced: violet, with a Model badge or a model tag nearby.
-- **Do** write severity and state as a word inside the badge.
+- **Do** write severity and state as a word beside or inside its colour.
+- **Do** set ids, times, durations, costs and counts in monospace.
 - **Do** say what was not done in a note: a stage that is off, a failed call, a spent budget.
 - **Do** define a new colour as one `light-dark()` token and check both schemes.
-- **Do** keep targets at 2.5rem for buttons, fields and navigation on a phone.
+- **Do** give a control the `control` edge and keep targets at 2.5rem for buttons and fields.
 
 **Site**
 
@@ -844,10 +1052,11 @@ complete.
 **Console**
 
 - **Don't** load a font, script, image or style from another host, or write a `style` attribute.
+- **Don't** list incidents as a stack of cards, or let a page grow without paging.
+- **Don't** put a shadow on a panel, row or card; `--shadow-pop` is for the floating menu.
 - **Don't** use a state colour for decoration, or violet for something code recorded.
-- **Don't** let an incident card on the board grow: reasons belong to the incident page.
-- **Don't** add a control that approves or runs anything: the console shows, can stop, and
-  with `ui.settings` on configures where it sends. It never configures what acts.
+- **Don't** add a control that approves or runs anything beyond Go on a waiting plan, which the
+  executor itself allows; nothing set in the console configures what acts.
 - **Don't** print a stored secret back into a page, or put a second filled button in a form.
 
 **Site**

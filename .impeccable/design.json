@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-18T20:17:06+00:00",
+  "generatedAt": "2026-11-21T16:23:15+00:00",
   "title": "Design System: Paeon",
   "extensions": {
     "worlds": [
@@ -52,16 +52,16 @@
         "scheme": "light",
         "cssVariable": "--surface",
         "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 0)",
+        "oklch": "oklch(100.0% 0.0 90)",
         "tonalRamp": [
-          "oklch(15.0% 0.000 0)",
-          "oklch(27.0% 0.000 0)",
-          "oklch(39.0% 0.000 0)",
-          "oklch(51.0% 0.000 0)",
-          "oklch(63.0% 0.000 0)",
-          "oklch(75.0% 0.000 0)",
-          "oklch(87.0% 0.000 0)",
-          "oklch(95.0% 0.000 0)"
+          "oklch(15.0% 0.0 90)",
+          "oklch(27.0% 0.0 90)",
+          "oklch(39.0% 0.0 90)",
+          "oklch(51.0% 0.0 90)",
+          "oklch(63.0% 0.0 90)",
+          "oklch(75.0% 0.0 90)",
+          "oklch(87.0% 0.0 90)",
+          "oklch(95.0% 0.0 90)"
         ]
       },
       "surface-2": {
@@ -147,16 +147,16 @@
         "scheme": "light",
         "cssVariable": "--text-2",
         "canonical": "#4f596a",
-        "oklch": "oklch(46.2% 0.030 261)",
+        "oklch": "oklch(46.2% 0.03 261)",
         "tonalRamp": [
-          "oklch(15.0% 0.030 261)",
-          "oklch(27.0% 0.030 261)",
-          "oklch(39.0% 0.030 261)",
-          "oklch(51.0% 0.030 261)",
-          "oklch(63.0% 0.030 261)",
-          "oklch(75.0% 0.030 261)",
-          "oklch(87.0% 0.030 261)",
-          "oklch(95.0% 0.030 261)"
+          "oklch(15.0% 0.03 261)",
+          "oklch(27.0% 0.03 261)",
+          "oklch(39.0% 0.03 261)",
+          "oklch(51.0% 0.03 261)",
+          "oklch(63.0% 0.03 261)",
+          "oklch(75.0% 0.03 261)",
+          "oklch(87.0% 0.03 261)",
+          "oklch(95.0% 0.03 261)"
         ]
       },
       "text-3": {
@@ -165,18 +165,38 @@
         "world": "console",
         "scheme": "light",
         "cssVariable": "--text-3",
-        "canonical": "#667082",
-        "oklch": "oklch(54.3% 0.031 262)",
+        "canonical": "#5f6a7c",
+        "oklch": "oklch(52.2% 0.032 260)",
         "tonalRamp": [
-          "oklch(15.0% 0.031 262)",
-          "oklch(27.0% 0.031 262)",
-          "oklch(39.0% 0.031 262)",
-          "oklch(51.0% 0.031 262)",
-          "oklch(63.0% 0.031 262)",
-          "oklch(75.0% 0.031 262)",
-          "oklch(87.0% 0.031 262)",
-          "oklch(95.0% 0.031 262)"
+          "oklch(15.0% 0.032 260)",
+          "oklch(27.0% 0.032 260)",
+          "oklch(39.0% 0.032 260)",
+          "oklch(51.0% 0.032 260)",
+          "oklch(63.0% 0.032 260)",
+          "oklch(75.0% 0.032 260)",
+          "oklch(87.0% 0.032 260)",
+          "oklch(95.0% 0.032 260)"
         ]
+      },
+      "control": {
+        "role": "neutral",
+        "displayName": "Control Edge",
+        "canonical": "#868fa0",
+        "oklch": "oklch(64.8% 0.027 263)",
+        "world": "console",
+        "scheme": "light",
+        "cssVariable": "--control",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 263)",
+          "oklch(27.0% 0.027 263)",
+          "oklch(39.0% 0.027 263)",
+          "oklch(51.0% 0.027 263)",
+          "oklch(63.0% 0.027 263)",
+          "oklch(75.0% 0.027 263)",
+          "oklch(87.0% 0.027 263)",
+          "oklch(95.0% 0.027 263)"
+        ],
+        "purpose": "The 1px edge of what a hand can use (query bar, range segments, buttons, fields, chips, facet boxes): 3:1 against its surface."
       },
       "accent": {
         "role": "primary",
@@ -223,16 +243,16 @@
         "scheme": "light",
         "cssVariable": "--accent-ink",
         "canonical": "#ffffff",
-        "oklch": "oklch(100.0% 0.000 0)",
+        "oklch": "oklch(100.0% 0.0 90)",
         "tonalRamp": [
-          "oklch(15.0% 0.000 0)",
-          "oklch(27.0% 0.000 0)",
-          "oklch(39.0% 0.000 0)",
-          "oklch(51.0% 0.000 0)",
-          "oklch(63.0% 0.000 0)",
-          "oklch(75.0% 0.000 0)",
-          "oklch(87.0% 0.000 0)",
-          "oklch(95.0% 0.000 0)"
+          "oklch(15.0% 0.0 90)",
+          "oklch(27.0% 0.0 90)",
+          "oklch(39.0% 0.0 90)",
+          "oklch(51.0% 0.0 90)",
+          "oklch(63.0% 0.0 90)",
+          "oklch(75.0% 0.0 90)",
+          "oklch(87.0% 0.0 90)",
+          "oklch(95.0% 0.0 90)"
         ]
       },
       "model": {
@@ -318,16 +338,16 @@
         "scheme": "light",
         "cssVariable": "--warn",
         "canonical": "#a35400",
-        "oklch": "oklch(53.1% 0.130 56)",
+        "oklch": "oklch(53.1% 0.13 56)",
         "tonalRamp": [
-          "oklch(15.0% 0.130 56)",
-          "oklch(27.0% 0.130 56)",
-          "oklch(39.0% 0.130 56)",
-          "oklch(51.0% 0.130 56)",
-          "oklch(63.0% 0.130 56)",
-          "oklch(75.0% 0.130 56)",
-          "oklch(87.0% 0.130 56)",
-          "oklch(95.0% 0.130 56)"
+          "oklch(15.0% 0.13 56)",
+          "oklch(27.0% 0.13 56)",
+          "oklch(39.0% 0.13 56)",
+          "oklch(51.0% 0.13 56)",
+          "oklch(63.0% 0.13 56)",
+          "oklch(75.0% 0.13 56)",
+          "oklch(87.0% 0.13 56)",
+          "oklch(95.0% 0.13 56)"
         ]
       },
       "warn-bg": {
@@ -470,16 +490,16 @@
         "scheme": "dark",
         "cssVariable": "--surface-2",
         "canonical": "#191d27",
-        "oklch": "oklch(23.1% 0.020 268)",
+        "oklch": "oklch(23.1% 0.02 268)",
         "tonalRamp": [
-          "oklch(15.0% 0.020 268)",
-          "oklch(27.0% 0.020 268)",
-          "oklch(39.0% 0.020 268)",
-          "oklch(51.0% 0.020 268)",
-          "oklch(63.0% 0.020 268)",
-          "oklch(75.0% 0.020 268)",
-          "oklch(87.0% 0.020 268)",
-          "oklch(95.0% 0.020 268)"
+          "oklch(15.0% 0.02 268)",
+          "oklch(27.0% 0.02 268)",
+          "oklch(39.0% 0.02 268)",
+          "oklch(51.0% 0.02 268)",
+          "oklch(63.0% 0.02 268)",
+          "oklch(75.0% 0.02 268)",
+          "oklch(87.0% 0.02 268)",
+          "oklch(95.0% 0.02 268)"
         ]
       },
       "border-dark": {
@@ -564,17 +584,36 @@
         "world": "console",
         "scheme": "dark",
         "cssVariable": "--text-3",
-        "canonical": "#7f899c",
-        "oklch": "oklch(62.8% 0.031 263)",
+        "canonical": "#8590a3",
+        "oklch": "oklch(65.1% 0.031 261)",
         "tonalRamp": [
-          "oklch(15.0% 0.031 263)",
-          "oklch(27.0% 0.031 263)",
-          "oklch(39.0% 0.031 263)",
-          "oklch(51.0% 0.031 263)",
-          "oklch(63.0% 0.031 263)",
-          "oklch(75.0% 0.031 263)",
-          "oklch(87.0% 0.031 263)",
-          "oklch(95.0% 0.031 263)"
+          "oklch(15.0% 0.031 261)",
+          "oklch(27.0% 0.031 261)",
+          "oklch(39.0% 0.031 261)",
+          "oklch(51.0% 0.031 261)",
+          "oklch(63.0% 0.031 261)",
+          "oklch(75.0% 0.031 261)",
+          "oklch(87.0% 0.031 261)",
+          "oklch(95.0% 0.031 261)"
+        ]
+      },
+      "control-dark": {
+        "role": "neutral",
+        "displayName": "Control Edge (dark)",
+        "canonical": "#606a7e",
+        "oklch": "oklch(52.3% 0.034 264)",
+        "world": "console",
+        "scheme": "dark",
+        "cssVariable": "--control",
+        "tonalRamp": [
+          "oklch(15.0% 0.034 264)",
+          "oklch(27.0% 0.034 264)",
+          "oklch(39.0% 0.034 264)",
+          "oklch(51.0% 0.034 264)",
+          "oklch(63.0% 0.034 264)",
+          "oklch(75.0% 0.034 264)",
+          "oklch(87.0% 0.034 264)",
+          "oklch(95.0% 0.034 264)"
         ]
       },
       "accent-dark": {
@@ -1208,37 +1247,57 @@
     "typographyMeta": {
       "title": {
         "displayName": "Title",
-        "purpose": "Console. The page heading.",
+        "purpose": "Console. The page heading; 1.375rem on an incident head.",
         "world": "console"
       },
       "lead": {
         "displayName": "Lead",
-        "purpose": "Console. The first statement of a card.",
+        "purpose": "Console. The first statement of a section.",
+        "world": "console"
+      },
+      "conclusion": {
+        "displayName": "Conclusion",
+        "purpose": "Console. The incident's conclusion under its stage strip, at most 72ch.",
+        "world": "console"
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Console. The heading of a panel.",
         "world": "console"
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Console. Running text, with tabular numerals.",
+        "purpose": "Console. Running text.",
         "world": "console"
       },
       "small": {
         "displayName": "Small",
-        "purpose": "Console. Secondary lines, tables, notes.",
+        "purpose": "Console. Table cells, facets, range segments, secondary lines, notes.",
+        "world": "console"
+      },
+      "badge": {
+        "displayName": "Badge",
+        "purpose": "Console. Badges, the severity word, the top bar's stage modes.",
         "world": "console"
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Console. Badges, box labels, table heads.",
+        "purpose": "Console. Uppercase: column heads, table group rows, facet and rail group titles, stage names, stat labels.",
         "world": "console"
       },
       "figure": {
         "displayName": "Figure",
-        "purpose": "Console. The number of a stat or of a pipeline tile.",
+        "purpose": "Console. The monospace number of a stat tile.",
         "world": "console"
       },
       "mono": {
         "displayName": "Mono",
-        "purpose": "Console. Ids, times, costs, event kinds, catalog actions, payloads.",
+        "purpose": "Console. The query, ids, payloads, catalog actions.",
+        "world": "console"
+      },
+      "mono-cell": {
+        "displayName": "Mono cell",
+        "purpose": "Console. Ids, times, durations and costs in a table row.",
         "world": "console"
       },
       "site-display": {
@@ -1368,27 +1427,21 @@
       }
     },
     "colorSchemes": {
-      "console": "Each custom property is one light-dark(light, dark) value. Frontmatter keys ending in -dark are the dark value of the same variable. The scheme follows the system unless data-theme is set on <html> by the switch in the sidebar.",
+      "console": "Each custom property is one light-dark(light, dark) value. Frontmatter keys ending in -dark are the dark value of the same variable. The scheme follows the system unless data-theme is set on <html> by the switch in the top bar.",
       "site": "Dark only (color-scheme: dark). The documentation also has MkDocs Material's light scheme, where links use docs-link-light and docs-accent-light."
     },
     "shadows": [
       {
-        "name": "console-card",
+        "name": "console-pop",
         "world": "console",
-        "value": "light-dark(0 1px 2px rgb(16 24 40 / 0.05), none)",
-        "purpose": "The 1px shadow under a card, in the light scheme only (--shadow)."
-      },
-      {
-        "name": "console-changed-ring",
-        "world": "console",
-        "value": "0 0 0 3px var(--accent-bg)",
-        "purpose": "The ring around an incident that just changed stage. A ring, not elevation."
+        "value": "light-dark(0 8px 24px rgb(16 24 40 / 0.12), 0 8px 24px rgb(0 0 0 / 0.5))",
+        "purpose": "--shadow-pop: the phone's More menu, the one element that floats. Panels have none (--shadow: none)."
       },
       {
         "name": "console-live-ring",
         "world": "console",
         "value": "0 0 0 3px var(--ok-bg)",
-        "purpose": "The halo of the live dot; it uses --crit-bg when the refresh is stale."
+        "purpose": "A flat 3px ring around the live dot (--crit-bg when stale). A stroke, not elevation."
       }
     ],
     "focus": [
@@ -1408,19 +1461,13 @@
         "name": "console-state-ease",
         "world": "console",
         "value": "150ms",
-        "purpose": "Hover and press colour changes on buttons and incident cards."
-      },
-      {
-        "name": "console-incident-slide",
-        "world": "console",
-        "value": "320ms cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "An incident sliding to its new group on live refresh, as a view transition."
+        "purpose": "Hover, border and background changes on buttons, checks, pick rows."
       },
       {
         "name": "console-refresh-interval",
         "world": "console",
         "value": "10000ms",
-        "purpose": "The board refetches itself; paused while the tab is hidden or focus is on the board."
+        "purpose": "The explorer refetches itself with its filters; paused while hidden or under focus. A changed row is tinted and tagged, not moved."
       },
       {
         "name": "site-ease",
@@ -1473,22 +1520,34 @@
     ],
     "breakpoints": [
       {
-        "name": "console-table",
+        "name": "console-rows",
         "world": "console",
         "value": "44rem",
-        "purpose": "Record rows on one line, findings in two columns, full table columns."
+        "purpose": "Secondary table columns, record rows on a grid, findings in two columns, pick rows in three columns."
       },
       {
-        "name": "console-sidebar",
+        "name": "console-strip",
+        "world": "console",
+        "value": "52rem",
+        "purpose": "The incident's stage strip as five columns."
+      },
+      {
+        "name": "console-desk",
         "world": "console",
         "value": "60rem",
-        "purpose": "The 15rem sticky sidebar; gutter 2rem."
+        "purpose": "The 13rem rail, gutter 1.5rem, the explorer as a table with sticky heads, facets beside it; the tab bar goes."
       },
       {
-        "name": "console-boxes",
+        "name": "console-side",
         "world": "console",
-        "value": "64rem",
-        "purpose": "An incident card's boxes in one row."
+        "value": "72rem",
+        "purpose": "The incident page's 18rem sticky side column."
+      },
+      {
+        "name": "console-coarse",
+        "world": "console",
+        "value": "pointer: coarse",
+        "purpose": "Small links grow to 2.75rem targets."
       },
       {
         "name": "site-rows",
@@ -1519,17 +1578,43 @@
       {
         "name": "console-page",
         "world": "console",
-        "value": "60rem"
+        "value": "80rem"
       },
       {
         "name": "console-page-wide",
         "world": "console",
-        "value": "76rem"
+        "value": "none",
+        "purpose": "The incident explorer."
+      },
+      {
+        "name": "console-rail",
+        "world": "console",
+        "value": "13rem"
+      },
+      {
+        "name": "console-facets",
+        "world": "console",
+        "value": "13rem"
+      },
+      {
+        "name": "console-side",
+        "world": "console",
+        "value": "18rem"
+      },
+      {
+        "name": "console-form",
+        "world": "console",
+        "value": "30rem"
       },
       {
         "name": "console-prose",
         "world": "console",
         "value": "46rem"
+      },
+      {
+        "name": "console-conclusion",
+        "world": "console",
+        "value": "72ch"
       },
       {
         "name": "site-page",
@@ -1567,64 +1652,82 @@
       }
     ],
     "delivery": {
-      "console": "Nothing is loaded from another host and there is no inline style: system fonts, one stylesheet, two small scripts, inline SVG icons. Meter and chart sizes are SVG attributes.",
+      "console": "Nothing is loaded from another host and there is no inline style (the postmortem page alone allows it for its bundled diagram library): system fonts, one stylesheet, small scripts (theme, console, diagrams), inline SVG icons. Chart, meter and track sizes are SVG attributes or classes.",
       "site": "Barlow Condensed (500, 600, 700), Barlow (400, 500, 600) and JetBrains Mono (400, 600) are loaded from the Google Fonts stylesheet by website/index.html and mkdocs.yml. One stylesheet and one script for the landing page; videos are drawn on a canvas by website/videos/kit.js."
     }
   },
   "components": [
+    {
+      "name": "Console: Query bar and range",
+      "kind": "input",
+      "refersTo": "query-field",
+      "world": "console",
+      "description": "A monospace search over the table, with the time range as one segmented control beside it.",
+      "html": "<div class=\"ds-c-query\"><label class=\"ds-c-qbox\"><svg class=\"ds-c-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/></svg><input type=\"search\" placeholder=\"Search title or host, or #42\"><kbd>/</kbd></label><nav class=\"ds-c-seg\"><a href=\"#\">24 h</a><a href=\"#\" aria-current=\"true\">7 d</a><a href=\"#\">30 d</a><a href=\"#\">All</a></nav></div>",
+      "css": ".ds-c-query { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-query { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-c-qbox { position: relative; flex: 1 1 16rem; display: flex; align-items: center; } .ds-c-icon { position: absolute; left: 0.625rem; width: 1rem; height: 1rem; fill: none; stroke: var(--text-3); stroke-width: 1.75; stroke-linecap: round; } .ds-c-qbox input { width: 100%; height: 2.25rem; padding: 0 2.25rem 0 2rem; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); color: var(--text); font: 0.8125rem var(--mono); } .ds-c-qbox input::placeholder { color: var(--text-3); font-family: var(--sans); } .ds-c-qbox input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); } .ds-c-qbox kbd { position: absolute; right: 0.5rem; padding: 0 0.375rem; border: 1px solid var(--border); border-radius: var(--radius-s); color: var(--text-3); font: 0.6875rem/1.25rem var(--mono); } .ds-c-qbox input:focus ~ kbd, .ds-c-qbox input:not(:placeholder-shown) ~ kbd { display: none; } .ds-c-seg { display: inline-flex; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); overflow: hidden; } .ds-c-seg a { display: inline-flex; align-items: center; padding: 0 0.75rem; min-height: 2.25rem; color: var(--text-2); font-size: 0.8125rem; font-weight: 500; text-decoration: none; border-right: 1px solid var(--border); } .ds-c-seg a:last-child { border-right: 0; } .ds-c-seg a:hover { background: var(--surface-2); color: var(--text); } .ds-c-seg a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; } .ds-c-seg a[aria-current] { background: var(--accent-bg); color: var(--accent); font-weight: 600; }"
+    },
+    {
+      "name": "Console: Status tabs",
+      "kind": "nav",
+      "refersTo": "status-tab",
+      "world": "console",
+      "description": "Status as tabs with monospace counts on a hairline; the current one is underlined in accent; Needs you is solid accent when it is not zero.",
+      "html": "<nav class=\"ds-c-ts\"><a href=\"#\" aria-current=\"true\">All<span>128</span></a><a href=\"#\" class=\"hot\">Needs you<span>2</span></a><a href=\"#\">Open<span>9</span></a><a href=\"#\">Resolved<span>117</span></a></nav>",
+      "css": ".ds-c-ts { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-ts { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); } .ds-c-ts a { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 2.5rem; padding: 0 0.75rem; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--text-2); font-size: 0.875rem; font-weight: 500; text-decoration: none; } .ds-c-ts a:hover { color: var(--text); } .ds-c-ts a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; } .ds-c-ts a[aria-current] { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); } .ds-c-ts span { min-width: 1.25rem; padding: 0 0.3125rem; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font: 600 0.6875rem/1.25rem var(--mono); text-align: center; } .ds-c-ts a.hot span { background: var(--accent); color: var(--accent-ink); }"
+    },
+    {
+      "name": "Console: Explorer table with stage track",
+      "kind": "custom",
+      "refersTo": "table-row",
+      "world": "console",
+      "description": "Dense rows under sticky small-capital heads: severity mark, id, title, host, the five-square stage track, triage verdict, and monospace times and cost.",
+      "html": "<div class=\"ds-c-tbl\"><table><thead><tr><th>Severity</th><th>#</th><th>Incident</th><th>Host</th><th>Stages</th><th>Triage</th><th>Opened</th><th class=\"r\">Cost</th></tr></thead><tbody><tr class=\"g\"><th colspan=\"8\">Open</th></tr><tr><td><span class=\"sev crit\">critical</span></td><td class=\"m\">#42</td><td><a href=\"#\">Disk full on /var</a> <span class=\"ans\">needs your answer</span></td><td class=\"m\">nas</td><td><span class=\"trk\"><i class=\"st model\"></i><i class=\"st model\"></i><i class=\"st wait\"></i><i class=\"st\"></i><i class=\"st off\"></i></span></td><td class=\"pen\">real</td><td class=\"m\">10:42</td><td class=\"m r\">$0.031</td></tr><tr><td><span class=\"sev warn\">warning</span></td><td class=\"m\">#41</td><td><a href=\"#\">Backup job late</a></td><td class=\"m\">vps</td><td><span class=\"trk\"><i class=\"st code\"></i><i class=\"st failed\"></i><i class=\"st\"></i><i class=\"st\"></i><i class=\"st\"></i></span></td><td class=\"bad\">failed</td><td class=\"m\">09:10</td><td class=\"m r\">$0.004</td></tr></tbody></table></div>",
+      "css": ".ds-c-tbl { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-tbl { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; } .ds-c-tbl table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; } .ds-c-tbl thead th { height: 2rem; padding: 0 0.75rem; text-align: left; background: var(--surface-2); border-bottom: 1px solid var(--border); color: var(--text-3); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; } .ds-c-tbl .g th { padding: 0.375rem 0.75rem; text-align: left; background: var(--bg); border-bottom: 1px solid var(--border); color: var(--text-2); font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; } .ds-c-tbl td { height: 2.25rem; padding: 0 0.75rem; border-bottom: 1px solid var(--border); white-space: nowrap; } .ds-c-tbl tbody tr:not(.g):hover td { background: var(--surface-2); } .ds-c-tbl a { color: var(--text); font-weight: 600; font-size: 0.875rem; text-decoration: none; } .ds-c-tbl tr:hover a { color: var(--accent); } .ds-c-tbl a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-c-tbl .m { font: 0.75rem var(--mono); color: var(--text-3); } .ds-c-tbl .r { text-align: right; } .sev { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.75rem; font-weight: 600; } .sev::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 2px; background: currentColor; } .sev.crit { color: var(--crit); } .sev.warn { color: var(--warn); } .ans { display: inline-flex; align-items: center; height: 1.125rem; padding: 0 0.5rem; border-radius: 999px; background: var(--accent-bg); color: var(--accent); font-size: 0.6875rem; font-weight: 600; } .trk { display: inline-flex; gap: 0.1875rem; vertical-align: middle; } .st { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; border: 1.5px solid var(--border-strong); } .st.model { background: var(--model); border-color: var(--model); } .st.code { background: var(--ok); border-color: var(--ok); } .st.failed { background: var(--crit); border-color: var(--crit); } .st.wait { background: var(--info-bg); border-color: var(--info); } .st.off { border-style: dashed; border-color: var(--border); } .pen { color: var(--model); } .bad { color: var(--crit); }"
+    },
+    {
+      "name": "Console: Incident head and stage strip",
+      "kind": "card",
+      "refersTo": "panel",
+      "world": "console",
+      "description": "The incident page leads with a head panel on a 3px severity edge, the stage strip (one cell per stage and its outcome), then the conclusion.",
+      "html": "<header class=\"ds-c-head\"><span class=\"sev\">critical</span><h1><span class=\"id\">#42</span> Disk full on /var</h1><ol class=\"strip\"><li><span class=\"n\"><i class=\"st model\"></i>Triage</span><span class=\"w pen\">real, 92% sure</span></li><li><span class=\"n\"><i class=\"st model\"></i>Investigation</span><span class=\"w pen\">Logrotate stopped on the 12th</span></li><li class=\"wait\"><span class=\"n\"><i class=\"st wait\"></i>Plan</span><span class=\"w\">Waiting for your answer</span></li><li><span class=\"n\"><i class=\"st\"></i>Action</span><span class=\"w mute\">Not yet</span></li><li><span class=\"n\"><i class=\"st off\"></i>Postmortem</span><span class=\"w mute\">Off</span></li></ol><div class=\"concl\"><p class=\"lbl\">Conclusion <span class=\"mb\">Model</span></p><p class=\"pen\">Logs filled /var after logrotate stopped; rotating and compressing frees 38 GB.</p></div></header>",
+      "css": ".ds-c-head { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-head { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--crit); border-radius: var(--radius); padding: 0.875rem 1rem 1rem; } .ds-c-head .sev { color: var(--crit); font-size: 0.75rem; font-weight: 600; } .ds-c-head h1 { margin: 0.5rem 0 0; font-size: 1.375rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; } .ds-c-head .id { font: 600 1.0625rem var(--mono); color: var(--text-3); } .strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 0.875rem 0 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; } .strip li { display: grid; gap: 0.25rem; padding: 0.5rem 0.75rem; border-left: 1px solid var(--border); } .strip li:first-child { border-left: 0; } .strip li.wait { background: var(--info-bg); } .strip li.wait .w { color: var(--info); } .n { display: inline-flex; align-items: center; gap: 0.4375rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); } .w { font-size: 0.8125rem; font-weight: 500; } .w.mute { color: var(--text-3); font-weight: 400; } .st { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; border: 1.5px solid var(--border-strong); } .st.model { background: var(--model); border-color: var(--model); } .st.wait { background: var(--info-bg); border-color: var(--info); } .st.off { border-style: dashed; border-color: var(--border); } .pen { color: var(--model); } .concl { margin-top: 0.875rem; display: grid; gap: 0.25rem; } .concl p { margin: 0; } .lbl { display: flex; align-items: center; gap: 0.5rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); } .mb { display: inline-flex; align-items: center; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; background: var(--model-bg); color: var(--model); font-size: 0.75rem; letter-spacing: 0; text-transform: none; } .concl > p:last-child { font-size: 1rem; line-height: 1.55; max-width: 72ch; }"
+    },
     {
       "name": "Console: Badge",
       "kind": "chip",
       "refersTo": "badge",
       "world": "console",
       "description": "A pill tinted by state, with a dot when it is a state and always with its word. Model is violet; a tag is outlined; updated is solid accent.",
-      "html": "<div class=\"ds-c-badges\"><span class=\"ds-c-badge ds-dot ds-c-crit\">Critical</span><span class=\"ds-c-badge ds-dot ds-c-warn\">Warning</span><span class=\"ds-c-badge ds-dot ds-c-info\">Waiting</span><span class=\"ds-c-badge ds-dot ds-c-ok\">Resolved</span><span class=\"ds-c-badge ds-c-model\">Model</span><span class=\"ds-c-badge ds-c-tag\">flapping</span><span class=\"ds-c-badge ds-c-updated\">updated</span></div>",
-      "css": ".ds-c-badges { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-c-badge { display: inline-flex; align-items: center; gap: 0.3125rem; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; background: light-dark(#f0f2f5, #191d27); color: light-dark(#4f596a, #a3acbd); } .ds-c-badge.ds-dot::before { content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; } .ds-c-crit { background: light-dark(#fdecee, #3a171d); color: light-dark(#c7253a, #ff7480); } .ds-c-warn { background: light-dark(#fdf2df, #33270e); color: light-dark(#a35400, #f3b045); } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-tag { background: none; box-shadow: inset 0 0 0 1px light-dark(#c9ced7, #353c4d); font-weight: 500; } .ds-c-updated { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } "
+      "html": "<div class=\"ds-c-badges\"><span class=\"b dot crit\">open</span><span class=\"b dot ok\">resolved</span><span class=\"b dot info\">waiting</span><span class=\"b dot warn\">draft</span><span class=\"b model\">Model</span><span class=\"b tag\">flapping</span><span class=\"b upd\">updated</span></div>",
+      "css": ".ds-c-badges { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; } .b { display: inline-flex; align-items: center; gap: 0.3125rem; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; background: var(--surface-2); color: var(--text-2); } .b.dot::before { content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; } .crit { background: var(--crit-bg); color: var(--crit); } .ok { background: var(--ok-bg); color: var(--ok); } .info { background: var(--info-bg); color: var(--info); } .warn { background: var(--warn-bg); color: var(--warn); } .model { background: var(--model-bg); color: var(--model); } .tag { background: none; box-shadow: inset 0 0 0 1px var(--border-strong); font-weight: 500; } .upd { background: var(--accent); color: var(--accent-ink); }"
     },
     {
-      "name": "Console: Button",
+      "name": "Console: Buttons",
       "kind": "button",
       "refersTo": "button",
       "world": "console",
-      "description": "The one neutral button, 2.5rem tall. Pressed is solid accent; the kill switch is solid red. There is no other primary action.",
-      "html": "<div class=\"ds-c-buttons\"><button class=\"ds-c-btn\">Triage was right</button><button class=\"ds-c-btn\" aria-pressed=\"true\">Triage was wrong</button><button class=\"ds-c-btn ds-c-btn-stop\">Stop automation</button></div>",
-      "css": ".ds-c-buttons { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-c-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.875rem; border: 1px solid light-dark(#c9ced7, #353c4d); border-radius: 0.375rem; background: light-dark(#ffffff, #12151c); color: light-dark(#141821, #e7eaf0); font: 600 0.875rem -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; cursor: pointer; transition: background-color 0.15s, border-color 0.15s; } .ds-c-btn:hover { background: light-dark(#f0f2f5, #191d27); } .ds-c-btn:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-btn[aria-pressed='true'] { background: light-dark(#3451d1, #8da2ff); border-color: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } .ds-c-btn-stop { background: light-dark(#c7253a, #ff7480); border-color: light-dark(#c7253a, #ff7480); color: light-dark(#ffffff, #0b0d12); } .ds-c-btn-stop:hover { background: light-dark(#c7253a, #ff7480); filter: brightness(1.08); }"
+      "description": "2.5rem, 4px corners, a control edge. One filled accent button per form; Go is green and only on a waiting plan; Stop and Remove are red.",
+      "html": "<div class=\"ds-c-btns\"><button class=\"btn\">No-go</button><button class=\"btn primary\">Save and test</button><button class=\"btn go\">Go: run it</button><button class=\"btn stop\">Stop automation</button><button class=\"btn quiet\">Cancel</button></div>",
+      "css": ".ds-c-btns { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-btns { display: flex; flex-wrap: wrap; gap: 0.5rem; } .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.5rem; padding: 0 0.875rem; border: 1px solid var(--control); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: 600 0.875rem var(--sans); cursor: pointer; transition: background-color 0.15s, border-color 0.15s; } .btn:hover { background: var(--surface-2); } .btn:active { background: var(--border); } .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); } .btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--text)); border-color: transparent; } .btn.go { background: var(--ok); border-color: var(--ok); color: var(--accent-ink); } .btn.go:hover { background: color-mix(in srgb, var(--ok) 88%, var(--text)); } .btn.stop { background: var(--crit); border-color: var(--crit); color: var(--accent-ink); } .btn.stop:hover { filter: brightness(1.08); } .btn.quiet { border-color: transparent; background: none; color: var(--text-2); } .btn.quiet:hover { color: var(--text); } @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }"
     },
     {
-      "name": "Console: Navigation",
+      "name": "Console: Navigation rail",
       "kind": "nav",
-      "refersTo": "nav-item",
+      "refersTo": "rail-item",
       "world": "console",
-      "description": "Sidebar navigation from 60rem, a row that scrolls sideways on a phone. The current page is tinted with the accent.",
-      "html": "<nav class=\"ds-c-nav\"><a href=\"#\" aria-current=\"page\">Incidents</a><a href=\"#\">Log</a><a href=\"#\">Ledger</a><a href=\"#\">Actions</a></nav>",
-      "css": ".ds-c-nav { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: flex; flex-direction: column; gap: 0.125rem; width: 13.75rem; padding: 0.25rem 0.625rem; background: light-dark(#ffffff, #12151c); } .ds-c-nav a { display: flex; align-items: center; gap: 0.5rem; height: 2.25rem; padding: 0 0.75rem; border-radius: 0.375rem; color: light-dark(#4f596a, #a3acbd); font-weight: 500; font-size: 0.875rem; text-decoration: none; white-space: nowrap; } .ds-c-nav a:hover { background: light-dark(#f0f2f5, #191d27); color: light-dark(#141821, #e7eaf0); } .ds-c-nav a:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-nav a[aria-current] { background: light-dark(#ecf0fe, #1a2142); color: light-dark(#3451d1, #8da2ff); font-weight: 600; }"
-    },
-    {
-      "name": "Console: Incident card",
-      "kind": "card",
-      "refersTo": "card",
-      "world": "console",
-      "description": "One incident on the board: a 3px severity edge, severity badge, id, title, when, and one labelled box per stage. What a model said is violet.",
-      "html": "<article class=\"ds-c-inc\"><div class=\"ds-c-inc-top\"><span class=\"ds-c-badge ds-dot ds-c-crit\">Critical</span><span class=\"ds-c-inc-id\">#3</span><h3 class=\"ds-c-inc-title\"><a href=\"#\">slo_traefik_5xx on server-1</a></h3><span class=\"ds-c-inc-when\">4 min ago</span></div><dl class=\"ds-c-kv\"><div><dt>Triage</dt><dd class=\"ds-c-pen\">real, 86%</dd></div><div><dt>Investigation</dt><dd class=\"ds-c-active\">running</dd></div><div><dt>Plan</dt><dd class=\"ds-c-mute\">none yet</dd></div></dl></article>",
-      "css": ".ds-c-inc { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); position: relative; max-width: 34rem; background: light-dark(#ffffff, #12151c); border: 1px solid light-dark(#e2e5ea, #232835); border-radius: 0.625rem; box-shadow: light-dark(0 1px 2px rgb(16 24 40 / 0.05), none); padding: 0.75rem 0.875rem 0.75rem 1.125rem; transition: border-color 0.15s, box-shadow 0.15s; } .ds-c-inc::before { content: ''; position: absolute; left: 0; top: 0.625rem; bottom: 0.625rem; width: 0.1875rem; border-radius: 0 0.1875rem 0.1875rem 0; background: light-dark(#c7253a, #ff7480); } .ds-c-inc:hover { border-color: light-dark(#c9ced7, #353c4d); } .ds-c-inc:has(a:focus-visible) { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-inc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.5rem; } .ds-c-inc-id { font: 600 0.8125rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-inc-title { margin: 0; font-size: 0.9375rem; font-weight: 600; line-height: 1.3; flex: 1 1 12rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-c-inc-title a { color: light-dark(#141821, #e7eaf0); text-decoration: none; outline: none; } .ds-c-inc:hover .ds-c-inc-title a { color: light-dark(#3451d1, #8da2ff); } .ds-c-inc-when { color: light-dark(#4f596a, #a3acbd); font-size: 0.8125rem; white-space: nowrap; } .ds-c-kv { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0.5rem 1rem; margin: 0.625rem 0 0; } .ds-c-kv dt { font-size: 0.6875rem; font-weight: 500; color: light-dark(#667082, #7f899c); line-height: 1.3; } .ds-c-kv dd { margin: 0; font-size: 0.8125rem; font-weight: 500; } .ds-c-pen { color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-active { color: light-dark(#1565bd, #62adff); } .ds-c-active::before { content: ''; display: inline-block; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; margin-right: 0.3125rem; vertical-align: 0.08em; } .ds-c-mute { color: light-dark(#667082, #7f899c); font-weight: 400; } .ds-c-badge { display: inline-flex; align-items: center; gap: 0.3125rem; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; line-height: 1; white-space: nowrap; background: light-dark(#f0f2f5, #191d27); color: light-dark(#4f596a, #a3acbd); } .ds-c-badge.ds-dot::before { content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: currentColor; } .ds-c-crit { background: light-dark(#fdecee, #3a171d); color: light-dark(#c7253a, #ff7480); } .ds-c-warn { background: light-dark(#fdf2df, #33270e); color: light-dark(#a35400, #f3b045); } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-tag { background: none; box-shadow: inset 0 0 0 1px light-dark(#c9ced7, #353c4d); font-weight: 500; } .ds-c-updated { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } "
+      "description": "Destinations grouped Respond, Review, Configure, on the surface beside the page; the current one on the accent tint; a count pill for what waits.",
+      "html": "<nav class=\"ds-c-rail\"><p class=\"grp\">Respond</p><a href=\"#\" aria-current=\"page\">Incidents<span class=\"cnt\">9</span></a><a href=\"#\">Actions</a><p class=\"grp\">Review</p><a href=\"#\">Log</a><a href=\"#\">Postmortems<span class=\"cnt warn\">2</span></a><a href=\"#\">Spend</a><p class=\"grp\">Configure</p><a href=\"#\">Sources</a><a href=\"#\">Channels</a></nav>",
+      "css": ".ds-c-rail { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-rail { display: grid; gap: 1px; width: 13rem; padding: 0.75rem 0.5rem; background: var(--surface); border-right: 1px solid var(--border); } .grp { margin: 0.75rem 0.625rem 0.25rem; font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); } .grp:first-child { margin-top: 0; } .ds-c-rail a { display: flex; align-items: center; gap: 0.625rem; min-height: 2rem; padding: 0 0.625rem; border-radius: var(--radius); color: var(--text-2); font-size: 0.8125rem; font-weight: 500; text-decoration: none; } .ds-c-rail a:hover { background: var(--surface-2); color: var(--text); } .ds-c-rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; } .ds-c-rail a[aria-current] { background: var(--accent-bg); color: var(--accent); font-weight: 600; } .cnt { margin-left: auto; min-width: 1.25rem; padding: 0 0.3125rem; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font: 600 0.6875rem/1.25rem var(--mono); text-align: center; } .cnt.warn { background: var(--warn-bg); color: var(--warn); }"
     },
     {
       "name": "Console: Field",
       "kind": "input",
       "refersTo": "field",
       "world": "console",
-      "description": "A labelled text field, 2.5rem tall. Focus moves the border to the accent under the focus outline.",
-      "html": "<label class=\"ds-c-field\"><span>What was wrong (optional)</span><input type=\"text\" placeholder=\"It was a deploy\"></label>",
-      "css": ".ds-c-field { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); display: grid; gap: 0.25rem; max-width: 30rem; } .ds-c-field span { font-size: 0.75rem; font-weight: 500; color: light-dark(#4f596a, #a3acbd); } .ds-c-field input { height: 2.5rem; padding: 0 0.75rem; border: 1px solid light-dark(#c9ced7, #353c4d); border-radius: 0.375rem; background: light-dark(#ffffff, #12151c); color: light-dark(#141821, #e7eaf0); font: inherit; font-size: 0.875rem; } .ds-c-field input::placeholder { color: light-dark(#667082, #7f899c); } .ds-c-field input:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 0; border-color: light-dark(#3451d1, #8da2ff); }"
-    },
-    {
-      "name": "Console: Record rows",
-      "kind": "custom",
-      "refersTo": "badge",
-      "world": "console",
-      "description": "The timeline: time in monospace, a voice tag (in, code, model, sent), the line, then its kind and cost in monospace. Model and tool rows carry the violet tag; a citation is a monospace chip on the accent tint.",
-      "html": "<div class=\"ds-c-record\"><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:12</span><span class=\"ds-c-rtag ds-c-info\">in</span><div class=\"ds-c-main\"><span>Alert received: slo_traefik_5xx</span><span class=\"ds-c-rmeta\"><span>alert.received</span></span></div></div><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:15</span><span class=\"ds-c-rtag ds-c-model\">model</span><div class=\"ds-c-main\"><span class=\"ds-c-pen\">media-server lost its database connections <a class=\"ds-c-cite\" href=\"#\">c1</a></span><span class=\"ds-c-rmeta\"><span>investigation.completed</span><span>$0.0412</span></span></div></div><div class=\"ds-c-row\"><span class=\"ds-c-time\">21:04:16</span><span class=\"ds-c-rtag ds-c-ok\">sent</span><div class=\"ds-c-main\"><span>Notification sent to ntfy</span><span class=\"ds-c-rmeta\"><span>notify.sent</span></span></div></div></div>",
-      "css": ".ds-c-record { color-scheme: light dark; font: 400 0.9375rem/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; color: light-dark(#141821, #e7eaf0); max-width: 40rem; background: light-dark(#ffffff, #12151c); border: 1px solid light-dark(#e2e5ea, #232835); border-radius: 0.625rem; box-shadow: light-dark(0 1px 2px rgb(16 24 40 / 0.05), none); overflow: hidden; } .ds-c-row { display: grid; grid-template-columns: 4.25rem 3.25rem minmax(0, 1fr); align-items: start; gap: 0.25rem 0.625rem; padding: 0.625rem 1.125rem; border-top: 1px solid light-dark(#e2e5ea, #232835); } .ds-c-row:first-child { border-top: 0; } .ds-c-time { font: 400 0.75rem/1.375rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-rtag { display: inline-flex; align-items: center; justify-content: center; height: 1.25rem; min-width: 3rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; line-height: 1; } .ds-c-main { display: grid; gap: 0.1875rem; font-size: 0.875rem; min-width: 0; } .ds-c-rmeta { display: flex; flex-wrap: wrap; gap: 0.125rem 0.75rem; font: 400 0.75rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; color: light-dark(#667082, #7f899c); } .ds-c-pen { color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-cite { display: inline-flex; align-items: center; justify-content: center; height: 1.375rem; min-width: 2rem; padding: 0 0.5rem; border-radius: 999px; font: 600 0.75rem ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; background: light-dark(#ecf0fe, #1a2142); color: light-dark(#3451d1, #8da2ff); text-decoration: none; } .ds-c-cite:hover { background: light-dark(#3451d1, #8da2ff); color: light-dark(#ffffff, #0b0d12); } .ds-c-cite:focus-visible { outline: 2px solid light-dark(#3451d1, #8da2ff); outline-offset: 2px; } .ds-c-info { background: light-dark(#e7f1fd, #11263e); color: light-dark(#1565bd, #62adff); } .ds-c-model { background: light-dark(#f2edfc, #211a3a); color: light-dark(#6a3fc0, #b9a0ff); } .ds-c-ok { background: light-dark(#e5f6ed, #102a20); color: light-dark(#17754b, #4bcb8e); }"
+      "description": "A label, its control (2.5rem, 4px corners, control edge, accent on focus), one line of help; an error is said in red under it.",
+      "html": "<div class=\"ds-c-field\"><label for=\"ds-u\">URL</label><input id=\"ds-u\" value=\"https://ntfy.example/paeon\"><small>Where the digest and the analysis are sent.</small></div>",
+      "css": ".ds-c-field { color-scheme: light dark; --bg: light-dark(#f5f6f8, #0b0d12); --surface: light-dark(#ffffff, #12151c); --surface-2: light-dark(#f0f2f5, #191d27); --border: light-dark(#e2e5ea, #232835); --border-strong: light-dark(#c9ced7, #353c4d); --text: light-dark(#141821, #e7eaf0); --text-2: light-dark(#4f596a, #a3acbd); --text-3: light-dark(#5f6a7c, #8590a3); --control: light-dark(#868fa0, #606a7e); --accent: light-dark(#3451d1, #8da2ff); --accent-bg: light-dark(#ecf0fe, #1a2142); --accent-ink: light-dark(#ffffff, #0b0d12); --model: light-dark(#6a3fc0, #b9a0ff); --model-bg: light-dark(#f2edfc, #211a3a); --crit: light-dark(#c7253a, #ff7480); --crit-bg: light-dark(#fdecee, #3a171d); --warn: light-dark(#a35400, #f3b045); --warn-bg: light-dark(#fdf2df, #33270e); --info: light-dark(#1565bd, #62adff); --info-bg: light-dark(#e7f1fd, #11263e); --ok: light-dark(#17754b, #4bcb8e); --ok-bg: light-dark(#e5f6ed, #102a20); --radius: 0.375rem; --radius-s: 0.25rem; --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, monospace; font: 400 0.9375rem/1.5 var(--sans); font-variant-numeric: tabular-nums; color: var(--text); } .ds-c-field { display: grid; gap: 0.25rem; max-width: 30rem; } .ds-c-field label { font-size: 0.8125rem; font-weight: 600; } .ds-c-field input { height: 2.5rem; padding: 0 0.75rem; border: 1px solid var(--control); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: inherit; font-size: 0.875rem; } .ds-c-field input:hover { border-color: var(--text-3); } .ds-c-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); } .ds-c-field small { font-size: 0.8125rem; color: var(--text-2); }"
     },
     {
       "name": "Site: Lamp",
@@ -1701,16 +1804,51 @@
   ],
   "narrative": {
     "northStar": "The Go / No-go Board",
-    "overview": "Paeon has two visual worlds. They are separate on purpose, and a surface belongs to exactly one.\n\nIn the frontmatter, a token with no prefix belongs to the console. A token that starts with `site-` belongs to the site, and one that starts with `docs-` exists only in the documentation theme. Nothing crosses: the console never takes a `site-` token, and the site never takes a console token. The two worlds share one idea and nothing else: what a model said is violet. The site's model violet is the same value as the console's dark-scheme one.\n\nEvery section below has a **Console** part and a **Site** part.\n\nThe console is an incident management app, in the family of the tools an operator already knows: a sidebar, a list of incidents grouped by where they stand, status as coloured badges, a detail page with a summary header and a timeline. It is clean and quiet: neutral surfaces, one accent, colour kept for state.\n\nIt replaces the earlier \"Strip Bay\" console. Three things carry over, because they come from the product and not from the old look:\n\nThe site is a launch-day status board. Each station of Paeon reports in turn on a deep navy ground, in chalk-white condensed capitals, and answers with a lit cell: green GO, amber HOLD, red NO-GO. The last row holds on YOU, beside a striped guard over the one switch that acts. The board is the argument of the page: a visitor sees where thinking stops and doing starts because the poll stops there.\n\nThe page is dark only (`color-scheme: dark`), flat, ruled and square. It has no card grid, no shadow and no soft gradient. What reads as a sentence is set in Barlow in sentence case; what reads as a label, a station or an answer is set in Barlow Condensed capitals.\n\nThe documentation wears the same board at reading size: condensed capital headings, amber links, square code blocks and tables, with a plain Barlow body. It also has a light scheme (MkDocs Material's white page under the navy header), where amber darkens to stay readable. The three videos are drawn on a canvas from the same palette, copied by value into `kit.js`.",
+    "overview": "Paeon has two visual worlds. They are separate on purpose, and a surface belongs to exactly one.\n\nIn the frontmatter, a token with no prefix belongs to the console. A token that starts with `site-` belongs to the site, and one that starts with `docs-` exists only in the documentation theme. Nothing crosses: the console never takes a `site-` token, and the site never takes a console token. The two worlds share one idea and nothing else: what a model said is violet. The site's model violet is the same value as the console's dark-scheme one.\n\nEvery section below has a **Console** part and a **Site** part.\n\nThe console is an observability tool, in the family its operator already works in (Datadog, OpenObserve). Every list that grows is a dense table, paged by the server, under a query bar and a time range, with status tabs that carry counts and facets that narrow it. Every incident page leads with its stage outcomes and its conclusion, and the evidence follows. It is quiet and flat: cool neutral ground, white or near-black panels, 1px hairlines, one blue accent, and colour kept for state.\n\nIt replaced, in turn, the \"Strip Bay\" console and a generic card-per-incident app. Three things carried over, because they come from the product and not from a look:\n\nThe site is a launch-day status board. Each station of Paeon reports in turn on a deep navy ground, in chalk-white condensed capitals, and answers with a lit cell: green GO, amber HOLD, red NO-GO. The last row holds on YOU, beside a striped guard over the one switch that acts. The board is the argument of the page: a visitor sees where thinking stops and doing starts because the poll stops there.\n\nThe page is dark only (`color-scheme: dark`), flat, ruled and square. It has no card grid, no shadow and no soft gradient. What reads as a sentence is set in Barlow in sentence case; what reads as a label, a station or an answer is set in Barlow Condensed capitals.\n\nThe documentation wears the same board at reading size: condensed capital headings, amber links, square code blocks and tables, with a plain Barlow body. It also has a light scheme (MkDocs Material's white page under the navy header), where amber darkens to stay readable. The three videos are drawn on a canvas from the same palette, copied by value into `kit.js`.",
     "keyCharacteristics": [
       "A navy board in four tonal steps, with hairline rules between rows.",
       "Status is a lit square cell with its word inside: GO, HOLD, NO-GO.",
       "Barlow Condensed capitals for stations, headings and keys; Barlow for sentences; JetBrains Mono for commands and catalog names.",
       "Square corners everywhere, and no shadow.",
       "One guarded switch: lift the hazard-striped cover, then press.",
-      "Every example is fictional and says so on the board (`Simulated`) and in the footer."
+      "Every example is fictional and says so on the board (`Simulated`) and in the footer.",
+      "Console: Dense tables: 2.25rem rows, sticky small-capital column heads, monospace for ids, times, durations and costs.",
+      "Console: A query bar with a time range, status tabs with counts, facets beside the table.",
+      "Console: A five-square stage track on every incident row, and a stage strip on the incident page.",
+      "Console: 6px corners on panels, 4px on buttons and fields, pills only for badges and counts.",
+      "Console: No shadow on any panel; one floating menu casts the only shadow."
     ],
     "rules": [
+      {
+        "name": "The Stage Track Rule",
+        "body": "Five squares, always in the order triage, investigation, plan, action, postmortem: violet filled when a model answered, green filled when code did it, red filled when it failed, a blue outline on the info tint when it waits, empty when skipped, a dashed hairline when the stage is off. Each square carries its stage and outcome as a title and the track as an image label, and the explorer prints the legend under the table.",
+        "section": "colors",
+        "world": "console"
+      },
+      {
+        "name": "The Model Voice Rule",
+        "body": "Violet is the colour of a model's words and of a model-answered stage, and nothing else. The tokens, cost, duration and failure of a model call are ink.",
+        "section": "colors",
+        "world": "console"
+      },
+      {
+        "name": "The Counted Is Mono Rule",
+        "body": "A value a person compares down a column (an id, a time, a duration, a cost, a count) is monospace. A sentence never is.",
+        "section": "typography",
+        "world": "console"
+      },
+      {
+        "name": "The Label Names Data Rule",
+        "body": "Uppercase belongs to labels that name a column, a group, a facet, a stage or a figure. It never stands above a heading as a teaser.",
+        "section": "typography",
+        "world": "console"
+      },
+      {
+        "name": "The Flat Panel Rule",
+        "body": "No panel, row or card casts a shadow. Only a menu that floats over the page takes `--shadow-pop`.",
+        "section": "elevation",
+        "world": "console"
+      },
       {
         "name": "The Lamp Rule",
         "body": "A status colour is a lit cell with its word in it. Green is GO, amber is HOLD, red is NO-GO; the cell is filled, its text is Deep Navy, and the word is always there. An unlit cell is a Rule Blue outline with Faint Chalk text. A cell at work (`Apply`, `Verify`) is an amber outline with amber text.",
@@ -1773,11 +1911,14 @@
       }
     ],
     "dos": [
+      "Console: **Do** put a growing list in a server-paged table under a query bar, a range and status tabs, with its filters in the URL.",
+      "Console: **Do** put the five-square stage track on an incident row, in its fixed order.",
       "Console: **Do** mark every word a model produced: violet, with a Model badge or a model tag nearby.",
-      "Console: **Do** write severity and state as a word inside the badge.",
+      "Console: **Do** write severity and state as a word beside or inside its colour.",
+      "Console: **Do** set ids, times, durations, costs and counts in monospace.",
       "Console: **Do** say what was not done in a note: a stage that is off, a failed call, a spent budget.",
       "Console: **Do** define a new colour as one `light-dark()` token and check both schemes.",
-      "Console: **Do** keep targets at 2.5rem for buttons, fields and navigation on a phone.",
+      "Console: **Do** give a control the `control` edge and keep targets at 2.5rem for buttons and fields.",
       "Site: **Do** put a status in a lamp, with its word: GO, HOLD, NO-GO, or the fact itself (`In catalog`, `Proposed`, `Blanked`).",
       "Site: **Do** set text on a lit colour in Deep Navy.",
       "Site: **Do** lay new content out as ruled rows under a 2px Chalk rule.",
@@ -1787,9 +1928,11 @@
     ],
     "donts": [
       "Console: **Don't** load a font, script, image or style from another host, or write a `style` attribute.",
+      "Console: **Don't** list incidents as a stack of cards, or let a page grow without paging.",
+      "Console: **Don't** put a shadow on a panel, row or card; `--shadow-pop` is for the floating menu.",
       "Console: **Don't** use a state colour for decoration, or violet for something code recorded.",
-      "Console: **Don't** let an incident card on the board grow: reasons belong to the incident page.",
-      "Console: **Don't** add a control that approves or runs anything: the console shows, and can only stop.",
+      "Console: **Don't** add a control that approves or runs anything beyond Go on a waiting plan, which the executor itself allows; nothing set in the console configures what acts.",
+      "Console: **Don't** print a stored secret back into a page, or put a second filled button in a form.",
       "Site: **Don't** round a corner, except on the picture of the phone.",
       "Site: **Don't** add a shadow, a glow or a gradient that fades. Hard stripes belong to the guard and to the blanked position.",
       "Site: **Don't** use green, amber or red for anything but go, hold and no-go, and what you can press.",
