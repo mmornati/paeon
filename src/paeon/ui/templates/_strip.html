@@ -1,7 +1,0 @@
-{% macro cells(s, open=false) %}
-<dl class="kv{% if open %} kv-open{% endif %}">
-  {% for cell in s.cells -%}
-  <div class="kv-item tone-{{ cell.tone }}"><dt>{{ cell.label }}</dt><dd{% if cell.pen %} class="pen"{% endif %}{% if not open %} title="{{ cell.full }}"{% endif %}>{{ cell.full if open else cell.value }}</dd></div>
-  {% endfor -%}
-</dl>
-{% endmacro %}
