@@ -501,3 +501,19 @@ def test_log_can_be_narrowed_to_one_incident(store: Store, seeded: dict[str, int
     assert f"Incident #{media}" in page  # the filter, with a way to remove it
     assert f"Incident {seeded['vpn']}</a>" not in page
     assert f'href="/ui/log?incident={media}"' in http.get("/ui/log").text
+
+
+def test_spend_chart_has_a_round_scale_and_a_period(store: Store, seeded: dict[str, int]) -> None:
+    assert views.nice_ceiling(0) == 0
+    assert views.nice_ceiling(0.21) == 0.5
+    assert views.nice_ceiling(1.23) == 2
+    assert views.nice_ceiling(3) == 5
+    assert views.nice_ceiling(7.5) == 10
+    view = views.ledger_view(store, parse_rules({}), datetime.now(UTC), days=7)
+    assert len(view.stacks) == 7
+    assert view.stages_seen[:2] == ("triage", "investigate")
+    assert view.top >= max(sum(costs.values()) for _, costs in view.stacks)
+    http = client(store)
+    assert 'href="/ui/ledger?days=30"' in http.get("/ui/ledger").text
+    assert "last 30 days" in http.get("/ui/ledger?days=30").text
+    assert "last 14 days" in http.get("/ui/ledger?days=99").text  # an unknown period: the default
