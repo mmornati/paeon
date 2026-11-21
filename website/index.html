@@ -190,20 +190,20 @@
 <section class="band" id="console" aria-labelledby="h-console">
   <div class="band-head">
     <h2 id="h-console">The record, rendered</h2>
-    <p>The console is the event log made readable: what was taken into account, which model or tool was called and why, what it cost, and what was sent or done. It can stop automation. It cannot approve a plan.</p>
+    <p>The console is the event log made readable: what was taken into account, which model or tool was called and why, what it cost, and what was sent or done. It can stop automation. It answers a plan only where the executor's own rules allow it.</p>
   </div>
   <div class="monitor" data-monitor>
     <div class="monitor-tabs" role="tablist" aria-label="Console pages">
-      <button type="button" role="tab" aria-selected="true" data-shot="board" data-alt="The incidents board: a count per stage, then incidents grouped by the stage they wait for">Incidents</button>
-      <button type="button" role="tab" aria-selected="false" data-shot="investigation" data-alt="An investigation: a root cause, evidence tied to tool calls, a suggested plan">Investigation</button>
-      <button type="button" role="tab" aria-selected="false" data-shot="plan-waiting" data-alt="A plan waiting for Go: the console cannot approve it">Waiting for Go</button>
-      <button type="button" role="tab" aria-selected="false" data-shot="plan-verified" data-alt="The same plan after Go: it ran and the result was verified">After Go</button>
-      <button type="button" role="tab" aria-selected="false" data-shot="ledger" data-alt="The ledger: what model calls cost, by day, stage and model">Ledger</button>
+      <button type="button" role="tab" aria-selected="true" data-shot="explorer" data-alt="The incident explorer: status tabs, a time range, incidents opened per day, filters beside a paged table">Incidents</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="incident" data-alt="An incident: what each stage concluded, then the conclusion and the investigation">Incident</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="investigation" data-alt="An investigation: a root cause, evidence tied to tool calls, what was ruled out">Investigation</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="plan-console-go" data-alt="A plan waiting for Go, answered on the phone or, where the executor allows it, in the console">Waiting for Go</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="spend" data-alt="Spend: what model calls cost per day, stacked by stage, against the daily budgets">Spend</button>
       <button type="button" role="tab" aria-selected="false" data-shot="sources" data-alt="The Sources page: a source added in the console and tested, next to those of the rules file">Sources</button>
-      <button type="button" role="tab" aria-selected="false" data-shot="board-dark" data-alt="The incidents board in dark mode">Dark</button>
+      <button type="button" role="tab" aria-selected="false" data-shot="explorer-dark" data-alt="The incident explorer in dark mode">Dark</button>
     </div>
     <figure class="monitor-screen">
-      <img data-monitor-img src="docs/assets/console/board.webp" width="1920" height="1200" alt="The incidents board: a count per stage, then incidents grouped by the stage they wait for" loading="lazy">
+      <img data-monitor-img src="docs/assets/console/explorer.webp" width="1920" height="1200" alt="The incident explorer: status tabs, a time range, incidents opened per day, filters beside a paged table" loading="lazy">
       <figcaption>The real console, on synthetic data. No real server, alert or model answer is shown.</figcaption>
     </figure>
   </div>

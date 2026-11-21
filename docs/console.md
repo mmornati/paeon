@@ -2,12 +2,14 @@
 
 The console is the event log rendered for a person, under `/ui`. It is where you see why Paeon
 said what it said: what was taken into account, which model or tool was called, what it cost,
-and what was sent or done.
+and what was sent or done. It reads like the observability tools you already use: every list is
+a filterable, paged table under a search box and a time range, and every incident leads with
+what each stage concluded.
 
-![The incidents board: a count per stage, then incidents grouped by the stage they wait for](assets/console/board.webp)
+![The incident explorer: status tabs, a time range and a search box, incidents opened per day, filters beside the table](assets/console/explorer.webp)
 
-Every screenshot on this page comes from synthetic data (`tests/ui_data.py`): no real server,
-alert or model answer is shown.
+Every screenshot on this page comes from synthetic data (`tests/ui_data.py`), taken with
+`scripts/console_shots.py`: no real server, alert or model answer is shown.
 
 ## Turn it on
 
@@ -105,9 +107,11 @@ PAEON_CONSOLE=local
 
 With no `PAEON_CONFIG`, this variable alone turns the console on with `auth: local` and
 `settings: true`: start Paeon, open `/ui`, choose the password, and add your sources and
-channels there. The incidents page lists what is left to do until it is done.
+channels there. The incidents page lists what is left to do, above the explorer, until it is done.
 
-![Finish setting up: connect a source, send a first alert, add a channel](assets/console/getting-started.webp) Stages that call
+![Finish setting up: connect a source, send a first alert, add a channel](assets/console/getting-started.webp)
+
+Stages that call
 a model, and everything about acting, are still configured in a rules file; when you write
 one, remove `PAEON_CONSOLE` and set `ui` in the file. What you added in the console stays, as
 long as the file keeps `settings: true`.
@@ -124,7 +128,7 @@ ui:
 With `settings` on, an admin adds notification channels on the Channels page: choose the
 service, name the channel, fill in its settings, choose what it carries, and send a test.
 
-![The Channels page: a channel of the rules file, locked, and one added here, just tested](assets/console/channels.webp)
+![The Channels page: a channel added here, just tested](assets/console/channels.webp)
 
 ![A channel added in the console: its token is kept and never shown again](assets/console/channel-edit.webp)
 A channel added there takes effect at once, without a restart. This also needs
@@ -163,31 +167,89 @@ secrets again.
 - **With `settings` off, the file is all there is**: channels and sources added in the console are kept
   and ignored. That is the setting for a deployment configured from git.
 
-## The pages
+## Finding your way
+
+On a desk, a rail on the left groups the pages by what you came to do:
+
+| Group | Pages |
+|---|---|
+| **Respond** | **Incidents**, with the number still open, and **Actions** (with actions on). |
+| **Review** | **Log**, **Postmortems** (with the number of drafts nobody reviewed yet) and **Spend**. |
+| **Configure** | **Sources**, **Channels** (once a channel exists, or with `settings`) and **Autonomy** (with actions on). |
+
+The bar at the top says how each stage runs (triage in shadow mode, investigation read-only,
+postmortems as drafts, actions by the executor), and holds the light or dark switch. On a
+phone the rail becomes a tab bar at the bottom: the first four pages, then **More** for the
+rest.
 
 | Page | |
 |---|---|
-| **Incidents** | Every open incident and those resolved in the last 7 days, grouped by the stage they are waiting for: triage, investigation, your Go (with actions on), open, resolved, with a count of each at the top and a filter box. It refreshes itself; an incident that changed is marked until you touch it. |
-| **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
-| **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
-| **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
+| **Incidents** | The incident explorer: every incident, filtered and paged. See below. |
+| **Incident** | What each stage concluded, then the investigation with each claim tied to the tool call behind it, the plan and what became of it, triage, and the full record of events. |
+| **Log** | Everything recorded, newest first: searched, narrowed to one kind or one incident. |
+| **Spend** | The cost of model calls over 7, 14 or 30 days, by stage, against the daily budgets. |
 | **Sources** | Every monitoring service: how its alerts arrive (with the address it posts to), the tools it offers an investigation, how many alerts it fired in the last 30 days, and whether a polled one has gone stale. Never its address or its secret. With `settings`, an admin adds, tests, edits and removes sources here. |
-| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. Shown once a channel is configured, or always with `settings`, where an admin adds, tests, edits and removes channels. |
+| **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. With `settings`, an admin adds, tests, edits and removes channels here. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
-| **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. |
+| **Postmortems** | The drafts and their review status, as a table with tabs for those to review and those reviewed. A draft is shown rendered, with its markdown source one click away. |
+
+## The incident explorer
+
+The incidents page lists every incident, open ones first, then the rest by the day of their
+last activity. From top to bottom:
+
+- **Search** matches the title or the host; `#42` (or `42`) finds incident 42. Press `/` to
+  jump to the box, Escape to clear it.
+- **Range**: 24 h, 7 d (the default), 30 d or all time. An incident still open is shown
+  whatever the range.
+- **Status tabs**: All, **Needs you** (a plan waiting for your Go), Open and Resolved, each
+  with its count. Needs you stands out when it is not zero.
+- **The chart** counts the incidents opened per day (per hour over 24 h, per week over a long
+  history), stacked by severity, and follows the filters.
+- **Filters** beside the table: severity, what triage did, what the investigation did, and the
+  host, each value with its count. **Clear filters** drops them all.
+- **The table**: severity, number, title with its tags (`flapping`, `maintenance`,
+  `quiet 3 days`, `needs your answer`), host, the stage track, what triage said, when it opened,
+  how long it lasted, and what its model calls cost.
+- **Paging**: 50 incidents a page, with **Older** and **Newest**. A new incident never shifts
+  the page you are on.
+
+The **stage track** is five squares, one per stage: triage, investigation, plan, action,
+postmortem. Violet means a model answered, green that code did it, red that it failed, a blue
+outline that it is waiting, an empty square that it was skipped, a faint one that the stage is
+off. The legend under the table says the same.
+
+Every filter is in the URL, so a view can be bookmarked or sent to someone. The page refreshes
+itself while it is open.
+
+![The explorer over 30 days, filtered on critical incidents of one host](assets/console/explorer-filtered.webp)
+
+![Needs you: the plans waiting for your answer](assets/console/explorer-needs-you.webp)
 
 ## An incident, top to bottom
 
-The header says where the incident stands: severity, status, and one box per stage.
+The header says where the incident stands: severity, status, its tags, when it opened and for
+how long. Under the title, the **stage strip** has one cell per stage, with what it came to:
+the triage verdict and how sure, how sure the investigation was and how many tools it called,
+the plan, what became of it, and the postmortem. Then the **conclusion**: the investigation's
+summary, or triage's reason when nothing was investigated, marked as the model's.
 
-![An incident page: summary header, then alerts and triage](assets/console/incident.webp)
+![An incident page: the stage strip, the conclusion, then the investigation](assets/console/incident.webp)
 
-The investigation shows the model's summary, the impact and the root cause with its confidence.
-Each claim under **Evidence** links to the tool call behind it. A claim that cites no real call
-says so.
+Below, tabs jump to each section: **Investigation**, **Plan**, **Triage**, **Still open?** and
+**Record**. On the side, the facts (host, times, cost), the alerts with their state, and your
+review of triage.
 
-![The investigation: findings, evidence tied to tool calls, a suggested plan](assets/console/investigation.webp)
+The investigation shows the impact and the root cause with its confidence. Each claim under
+**Evidence** links to the tool call behind it. A claim that cites no real call says so.
+
+![The investigation: impact, root cause, evidence tied to tool calls, what was ruled out](assets/console/investigation.webp)
+
+The **record** is folded: open it for every event of the incident, oldest first, each with its
+payload. Its heading says how many events there are and what they cost.
+
+![The record, unfolded](assets/console/record.webp)
 
 With actions on, the plan says what was proposed, at which level, and what became of it. A plan
 held under `approve` says what held it: a policy line (`a policy sets it to observe`), the default
@@ -215,12 +277,16 @@ the file, so the core's copy alone cannot turn it on. What it costs is in the
 
 ![A plan waiting for a Go, with Go and No-go in the console](assets/console/plan-console-go.webp)
 
+Once the executor ran a plan, the same section says so, and every step is in the record.
+
+![A plan a runbook ran without asking: it ran and the result was verified](assets/console/plan-verified.webp)
+
 ### Still open?
 
 An incident closes by itself when its alerts resolve. Some sources never send that: OpenObserve
 writes a `normal` row only when it evaluates a healthy alert, and uptime-kuma notifies a change
-of state and nothing else. An open incident whose alerts were not seen for two days is marked
-**quiet** on the board, and its page has a **Still open?** box for an operator:
+of state and nothing else. An open incident whose alerts were not seen for two days is tagged
+**quiet** in the explorer, and its page has a **Still open?** box for an operator:
 
 - **Re-check now** asks each source that can answer what the alert is right now: OpenObserve
   (its alert's latest evaluation), Alertmanager and uptime-kuma when they have a `url` (their
@@ -230,34 +296,66 @@ of state and nothing else. An open incident whose alerts were not seen for two d
   incident resolves, and the record keeps your name and the line. If an alert fires again, it
   opens an incident again.
 
-![An incident marked quiet for three days, on the board](assets/console/board-quiet.webp)
+![An incident tagged quiet for three days, found with the search box](assets/console/explorer-quiet.webp)
 
 ![Still open?: the alerts still firing, whether their source can be asked, and the close form](assets/console/still-open.webp)
 
 ![The same incident once closed by hand: who, when and why](assets/console/closed-by-hand.webp)
 
-Everything a person did (rating triage, re-checking, closing, reviewing, answering a plan) is in
-the log under **What you did**.
+## The log
+
+Every event Paeon recorded, newest first, 50 a page. Nothing in it is ever edited or removed.
+
+- **Search** finds what the log says (`restart`, a model's name, a host). A search that finds
+  little on a page says how many events it looked through, and offers older ones.
+- **Kinds**: everything, or only what came in, what code decided, what a model said, what a
+  tool read, plans and actions, what left the server, or **What you did**.
+- **One incident**: the **only** link on a line narrows the log to that incident; the
+  `Incident #3 ×` token above the list removes it.
+
+Each line links to its incident and to its full payload.
+
+![The log: search, kinds, every event newest first](assets/console/log.webp)
+
+![The log narrowed to one incident](assets/console/log-incident.webp)
+
+Everything a person did (rating triage, re-checking, closing, reviewing, answering a plan,
+changing a channel or a source) is under **What you did**.
 
 ![The log, filtered on what a person did](assets/console/log-what-you-did.webp)
 
-![A plan waiting for Go](assets/console/plan-waiting.webp)
-
-Once you answered and the executor ran it, the same section says so, and every step is in the
-record below it.
-
-![The same plan after Go: it ran and the result was verified](assets/console/plan-verified.webp)
-
 ## What it costs
 
-The ledger shows what the model calls cost, by day, stage and model, against the daily budgets.
+The Spend page shows what the model calls cost over the last 7, 14 or 30 days. At the top,
+what was spent today, over the period, how many calls failed, and how often you rated triage
+right. **Today** shows each stage's daily budget and what is left of it, and what happens
+once it is reached. **By day** stacks the cost of each UTC day by stage, on a labelled scale;
+the same numbers are a table one click below. Further down: the period by stage and model,
+triage's record, and the latest calls.
 
-![The ledger](assets/console/ledger.webp)
+![Spend over 30 days: totals, today's budgets, the cost per day by stage](assets/console/spend.webp)
+
+## Actions and autonomy
+
+With actions on, the Actions page has the kill switch, the plans waiting for your answer,
+every plan of the last 30 days with its outcome, the catalog and the policies. Autonomy shows,
+per alert, action and container, the level in force and the record behind it, and the
+promotions that were earned as the line to add to your rules file.
+
+![The Actions page](assets/console/actions.webp)
+
+![The Autonomy page: what was earned, and the track record](assets/console/autonomy.webp)
 
 ## Postmortems
 
-A draft is shown rendered, with its markdown source one click away. A `mermaid` block is drawn
-as a diagram. The navigation counts the drafts nobody has reviewed yet.
+The Postmortems page is a table of drafts, newest first: the day, the incident, what broke,
+the open action items and the status. Tabs show them all, those **to review**, or those
+reviewed. The navigation counts the drafts nobody has reviewed yet.
+
+![The Postmortems page: status tabs and the table of drafts](assets/console/postmortems.webp)
+
+A draft is shown rendered (headings, tables, ticked action items), with its markdown source
+one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram.
 
 **Triage reads a postmortem only once a person has marked it reviewed**; the investigation can
 read drafts too, labelled as unreviewed. An operator reviews one from its page:
@@ -276,7 +374,7 @@ read drafts too, labelled as unreviewed. An operator reviews one from its page:
 Each change is in the incident's record, with who made it, and is committed and pushed like
 the drafts when `postmortems.git` is set.
 
-![A draft with its Review block: mark reviewed, edit the text, write the prose again](assets/console/postmortem-review.webp)
+![A draft with its Review block: mark reviewed, edit the text](assets/console/postmortem-review.webp)
 
 ![The editor: the whole file, front matter included](assets/console/postmortem-edit.webp)
 
@@ -284,12 +382,17 @@ the drafts when `postmortems.git` is set.
 
 ## On a phone, in the dark
 
-The console is built phone first, since that is where a notification opens it, and follows your
-system's light or dark setting unless you use the switch.
+The console is built phone first, since that is where a notification opens it. On a phone the
+explorer's rows take three lines (severity, number and time; the title; the stage track,
+triage and cost), the filters fold under one button, and the pages are in a tab bar at the
+bottom. It follows your system's light or dark setting unless you use the switch.
+
+![The incident explorer in the dark](assets/console/explorer-dark.webp)
 
 <div class="shots" markdown>
-![The board on a phone](assets/console/phone-board.webp){ width="300" }
-![The board on a phone, dark](assets/console/phone-board-dark.webp){ width="300" }
+![The explorer on a phone](assets/console/phone-explorer.webp){ width="300" }
+![The explorer on a phone, dark](assets/console/phone-explorer-dark.webp){ width="300" }
+![An incident on a phone](assets/console/phone-incident.webp){ width="300" }
 ![What is left to set up, on a phone](assets/console/phone-getting-started.webp){ width="300" }
 ![A new ntfy channel, on a phone](assets/console/phone-channel-form.webp){ width="300" }
 ![Reviewing a postmortem, on a phone](assets/console/phone-postmortem-review.webp){ width="300" }

@@ -1,0 +1,4 @@
+{
+  "prompt": "ORIGIN: not generated imagery. A screenshot of Paeon's own console (src/paeon/ui): the incident explorer: status tabs, range, search, the chart of incidents per day, filters and the table. Rendered from the synthetic demo data in tests/ui_data.py (populate, populate_actions, populate_history) and fictional channels and sources typed in by scripts/console_shots.py, answered by a mock transport, with a stand-in executor; no real server, address, token, alert or model answer is shown. Captured headless with Playwright (desktop viewport, 1440x900 at 4/3x, stored at 1920x1200 px), converted with cwebp.",
+  "createdAt": "2026-11-21T16:35:35.000Z"
+}

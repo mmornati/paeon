@@ -88,10 +88,11 @@ Now open the console at <http://127.0.0.1:8080/ui>. The first time, it asks for 
 the log and lets you choose the admin password.
 
 ![The first-run page](assets/console/setup.webp)
- Then the incident is there, in the **Open**
-group, and its page shows the record of what happened so far.
 
-Above the incidents, **Finish setting up** lists what is left, each with its button: connect a
+Then the incident is there, at the top of the incident explorer under **Open**, and its page
+shows what each stage did so far, with the full record one click away.
+
+Above the explorer, **Finish setting up** lists what is left, each with its button: connect a
 source (Prometheus, Grafana, uptime-kuma and others), and add a channel (ntfy, Telegram,
 e-mail and others) for the daily digest. Both are forms in the console, take effect at once
 and can be tested from there.

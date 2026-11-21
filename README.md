@@ -292,15 +292,15 @@ file at all. Then open `http://paeon:8080/ui`.
 
 | Page | |
 |---|---|
-| **Incidents** | Every open incident and those resolved in the last 7 days, grouped by the stage they are waiting for: triage, investigation, your Go (with actions on), open, resolved, with a count of each at the top and a filter box. It refreshes itself; an incident that changed is marked until you touch it. |
-| **Incident** | The alerts, what triage said and whether you agreed, the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, and the full record of events with their payloads. |
-| **Log** | Everything recorded, filtered by who spoke: came in, decided by code, said by a model, read by a tool, left the server. |
-| **Ledger** | The cost of model calls by day, stage and model, against the daily budgets. |
+| **Incidents** | The incident explorer: a search box, a time range (24 h to all time), status tabs (All, Needs you, Open, Resolved), the incidents opened per day, filters by severity, triage, investigation and host, and a paged table with a five-square stage track per incident. Filters live in the URL; the page refreshes itself. |
+| **Incident** | A stage strip with what each stage concluded and the conclusion first, then the investigation's findings with each claim tied to the tool call behind it, the plan and what became of it, triage and whether you agreed, and the record of events, folded. |
+| **Log** | Everything recorded, newest first: searched, filtered by who spoke (came in, decided by code, said by a model, read by a tool, left the server, what you did), or narrowed to one incident. |
+| **Spend** | The cost of model calls over 7, 14 or 30 days, stacked by stage per day, by model, against the daily budgets. |
 | **Sources** | Every monitoring service, how its alerts arrive (its `/ingest/<name>` address, or polled), what an investigation may read in it, and what it sent. With `settings`, an admin adds, tests, edits and removes sources here. |
 | **Channels** | Every notification channel a stage sends to, what it carries, and how its deliveries of the last 30 days went. With `settings`, an admin adds, tests, edits and removes channels here. |
 | **Actions** | The kill switch, the plans waiting for your answer, every plan of the last 30 days with its outcome, the catalog and the policies. |
 | **Autonomy** | Per alert, action and container: the level in force, the track record, what was demoted and why, and the promotions that were earned, as the line to add to your rules file. |
-| **Postmortems** | The drafts, their review status and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. An operator marks it reviewed (triage reads reviewed postmortems only), edits it, or has the model write a missing prose again. |
+| **Postmortems** | The drafts as a table, with tabs for those to review and those reviewed, and their open action items. A draft is shown rendered (headings, tables, ticked action items), with its markdown source one click away; the file itself stays markdown. A `mermaid` block is drawn as a diagram. An operator marks it reviewed (triage reads reviewed postmortems only), edits it, or has the model write a missing prose again. |
 
 What a model said is shown in violet and marked as the model's, what code recorded in plain text:
 a verdict is never dressed as a fact. Light or dark follows your system, or the switch you set.
@@ -415,7 +415,7 @@ vulnerability) and in [§4 of the design](docs/llm-incident-response-architectur
 | 1. Observe | Correlation into incidents, flap and maintenance flags, change calendar, triage in shadow mode, daily digest with feedback | ✅ built |
 | 2. Investigate | Read-only investigation by a strong model, analysis by notification, postmortem drafts | ✅ built |
 | 3. Approve and act | Action catalog, signed Go / No-go, executor, verification, rollback, runbooks | ✅ built, not yet proven in use |
-| 4. UI and MCP | Console (board, incident, log, ledger, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
+| 4. UI and MCP | Console (incident explorer, incident, log, spend, actions, autonomy, postmortems), read-only MCP server, `/brief` for a daily brief | ✅ built |
 | 5. Earned autonomy | Promotion proposals, `auto`, Undo, automatic demotion | ✅ built, not yet proven in use |
 | 6. Release | Docs, threat model, a Prometheus and Docker quick start | ✅ written; the "stranger in under an hour" test is still to be run |
 | 7. Configure in the browser | Roles, a local sign-in, sources and channels added in the console without a restart, a first run with no rules file | ✅ built |
