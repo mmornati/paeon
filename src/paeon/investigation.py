@@ -336,6 +336,11 @@ class Investigator:
                 verdict = event.payload.get("effective_verdict")
                 if verdict not in config.verdicts:
                     return f"triage: {verdict}"
+        if config.repeat_hours is not None:
+            since = now - timedelta(hours=config.repeat_hours)
+            earlier = self._investigated_before(incident, since)
+            if earlier is not None:
+                return f"repeat: incident {earlier} investigated the same alert"
         hour_ago = now - timedelta(hours=1)
         started = sum(
             1 for _ in self._store.events(kind="investigation.started", recorded_since=hour_ago)
@@ -346,6 +351,20 @@ class Investigator:
             ledger.spent_today(self._store, now) >= config.daily_budget
         ):
             return "budget"
+        return None
+
+    def _investigated_before(self, incident: Incident, since: datetime) -> int | None:
+        """The latest other incident with one of these alerts whose investigation completed
+        since then, if any."""
+        members = {(alert.source, alert.fingerprint) for alert in incident.alerts}
+        for event in self._store.events(
+            kind="investigation.completed", recorded_since=since, newest_first=True
+        ):
+            if event.incident_id is None or event.incident_id == incident.id:
+                continue
+            other = self._store.incident(event.incident_id)
+            if other is not None and members & {(a.source, a.fingerprint) for a in other.alerts}:
+                return other.id
         return None
 
     # --- one investigation --------------------------------------------------------------------

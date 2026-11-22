@@ -334,6 +334,25 @@ def test_settle_time_storm_guard_and_daily_budget(store: Store) -> None:
     assert [e.payload for e in store.events(kind="investigation.skipped")][-1] == {"skip": "budget"}
 
 
+def test_an_alert_investigated_recently_is_not_investigated_again(store: Store) -> None:
+    now = datetime.now(UTC)
+    model = Scripted(calls((SUBMIT, FINDINGS)), calls((SUBMIT, FINDINGS)))
+    setup = Setup(store, model, rules(repeat_hours=6))
+    setup.recorder.observe(alert(Status.FIRING, 0, "sonarr"))
+    assert setup.investigator.run_pending(now) == 1
+    setup.recorder.observe(alert(Status.RESOLVED, 5, "sonarr"))
+    # The same monitor, an hour later: a new incident, the same story.
+    setup.recorder.observe(alert(Status.FIRING, 65, "sonarr"))
+    setup.recorder.observe(alert(Status.FIRING, 65, "radarr", labels={"host": "other"}))
+    assert setup.investigator.run_pending(now) == 2
+    first, again, other = store.incidents()
+    assert first.investigation is StageState.DONE
+    assert again.investigation is StageState.SKIPPED
+    assert other.investigation is StageState.DONE
+    [skipped] = list(store.events(kind="investigation.skipped"))
+    assert skipped.payload == {"skip": f"repeat: incident {first.id} investigated the same alert"}
+
+
 def test_a_lost_notification_is_recorded_not_raised(store: Store) -> None:
     setup = Setup(
         store,

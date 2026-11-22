@@ -43,6 +43,20 @@ about it:
 curl -X POST http://paeon:8080/ingest/change -H "Authorization: Bearer $PAEON_INGEST_TOKEN" -H 'Content-Type: application/json' -d '{"kind": "update", "title": "weekly updater", "host": "server-1"}'
 ```
 
+A change that takes a while can say when it ended. Give it an `id` of yours when it starts,
+then end it under that id when it is done; triage then knows the change is over, not still
+running:
+
+```bash
+ID="update-$(date +%F)"
+curl -X POST http://paeon:8080/ingest/change -H "Authorization: Bearer $PAEON_INGEST_TOKEN" -H 'Content-Type: application/json' -d "{\"id\": \"$ID\", \"kind\": \"update\", \"title\": \"weekly updater\"}"
+# … the update runs …
+curl -X POST "http://paeon:8080/ingest/change/$ID/end" -H "Authorization: Bearer $PAEON_INGEST_TOKEN"
+```
+
+The end takes an optional `{"ended_at": "…"}`; without it, the change ends when the call
+arrives. A change sent again with the same `id` replaces the earlier one.
+
 ## A silent source, a silent Paeon
 
 A polled source that stops answering opens an internal `source_stale` alert, and Paeon can push a

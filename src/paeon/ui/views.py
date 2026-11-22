@@ -212,7 +212,8 @@ def describe(event: Event) -> str:
             return f"Webhook received from {_text(event.source)}"
         case "change.recorded":
             where = f" on {p['host']}" if p.get("host") else ""
-            return f"{_text(p.get('kind'))}: {_text(p.get('title'))}{where}"
+            ended = ", ended" if p.get("ended_at") else ""
+            return f"{_text(p.get('kind'))}: {_text(p.get('title'))}{where}{ended}"
         case "incident.opened":
             window = f", in maintenance window {p['maintenance']}" if p.get("maintenance") else ""
             return f"Incident opened{window}"

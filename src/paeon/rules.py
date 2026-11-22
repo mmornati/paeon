@@ -654,6 +654,12 @@ class Investigation(_Rule):
         description="A tool result longer than this is cut before the model reads it.",
     )
     max_per_hour: int = Field(default=6, ge=1, description="Storm guard.")
+    repeat_hours: float | None = Field(
+        default=None,
+        gt=0,
+        description="An alert investigated this many hours ago or less is not investigated"
+        " again: the skip names the incident that was. Unset: every incident is.",
+    )
     budget_per_incident: float | None = Field(
         default=None,
         ge=0,

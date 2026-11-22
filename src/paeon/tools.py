@@ -25,6 +25,7 @@ from typing import Any, Protocol
 
 import httpx2 as httpx
 
+from paeon import changes as calendar
 from paeon import knowledge, proc
 from paeon.models import ToolSpec
 from paeon.redact import redact
@@ -179,10 +180,7 @@ def paeon_tools(store: Store, knowledge_paths: Sequence[Path | str]) -> list[Too
     def recent_changes(args: dict[str, Any]) -> Any:
         hours = _integer(args, "hours", 6, low=1, high=168)
         since = datetime.now(UTC) - timedelta(hours=hours)
-        return [
-            event.payload
-            for event in store.events(kind="change.recorded", recorded_since=since, limit=100)
-        ]
+        return calendar.recent(store, since, limit=100)
 
     def search_knowledge(args: dict[str, Any]) -> Any:
         query = _string(args, "query")

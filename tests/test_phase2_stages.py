@@ -212,7 +212,7 @@ def test_triage_is_given_the_past_postmortems_that_match(store: Store, tmp_path:
     assert past["path"] == "2026-10-01-disk-full.md"
     assert "[REDACTED]" in past["excerpt"]
     assert "abcdef123456" not in model.calls[0][1]
-    assert pack["not_available"] == ["the alert's query result"]
+    assert "not_available" not in pack  # nothing of this alert is withheld
     assert "matched_postmortem" in model.calls[0][0]
 
 

@@ -24,7 +24,7 @@ The same is available over HTTP behind the bearer token: `GET /incidents`, `GET 
 daily brief).
 
 Alerts come in by `POST /ingest/<name>`, one address per [source](sources.md), and planned work
-by `POST /ingest/change`.
+by `POST /ingest/change`, ended by `POST /ingest/change/{id}/end` when it was given an `id`.
 
 ## Ask it from your assistant
 
