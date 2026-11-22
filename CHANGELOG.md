@@ -2,6 +2,26 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+### Maintenance windows hold their incidents
+
+A maintenance window used to be a flag on the incident: triage and the investigation saw it, and
+a restart during the weekly update could still wake you up and pay for an investigation. On a
+real Sunday run, two incidents opened by the authentik restart sent two notifications at 05:07
+and cost one investigation each, for a service that was healthy a minute later.
+
+- An incident that opens in a window is held until the window closes, plus `grace_minutes`
+  (10 by default): no triage, no investigation, no notification.
+- Then each alert still firing is re-checked with its source, as the console's Re-check does.
+  An incident that is over closes as expected (`maintenance.released`, triage skipped as
+  `maintenance`) and still shows in the digest. One that is not goes on as usual, and triage and
+  the investigation get `after_maintenance` with what was still firing.
+- The re-check also catches a recovery that uptime-kuma never sent: it does not notify
+  PENDING to UP, which left incidents open after a restart.
+- New keys on each window: `hold` (default `true`; `false` keeps the flag only) and
+  `grace_minutes`. A rules file of 0.6.0 works unchanged, and holds by default.
+
 ## 0.6.0
 
 The console, redesigned as an incident explorer: it stays readable with hundreds of incidents.

@@ -75,6 +75,12 @@ One append-only SQLite log holds every alert, decision, model call (with its cos
 - **Correlation** (`paeon.correlation`): the same alert firing again within a window is the same
   incident; alerts on the same host within a few minutes join the open incident. Flapping and
   maintenance windows are flags on the incident. Nothing is dropped.
+- **Maintenance holds** (`paeon.maintenance`): an incident that opens in a window with `hold`
+  (the default) waits until the window closes, plus `grace_minutes`. No triage, no
+  investigation, no notification meanwhile. Then each alert still firing is re-checked with its
+  source, as the console's Re-check does: an incident that is over by then closes as expected,
+  and still shows in the digest; one that is not goes on as usual, and triage is told it was
+  still failing after the maintenance.
 - **Triage** (`paeon.triage`), **investigation** (`paeon.investigation`, `paeon.tools`) and
   **postmortems** (`paeon.postmortem`): the three model stages.
 - **Knowledge** (`paeon.knowledge`): SQLite FTS5 over your markdown, kept in step with the files.

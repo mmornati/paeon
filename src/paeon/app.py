@@ -35,6 +35,7 @@ from paeon.console_sources import Sources
 from paeon.correlation import Correlator
 from paeon.guard import BodyGuard
 from paeon.investigation import Investigator
+from paeon.maintenance import Holds
 from paeon.models import AnthropicClient, ModelClient, OpenAIClient, build_client
 from paeon.operations import Checker, Incidents, openobserve_checker, tool_checker
 from paeon.postmortem import PostmortemWriter
@@ -68,6 +69,7 @@ INVESTIGATION_TICK_SECONDS = 15
 POSTMORTEM_TICK_SECONDS = 60
 DIGEST_TICK_SECONDS = 300
 REMEDIATION_TICK_SECONDS = 5
+HOLDS_TICK_SECONDS = 30
 SOURCES_TICK_SECONDS = 2
 
 
@@ -361,6 +363,11 @@ def create_app(
             return
         await asyncio.to_thread(exporter.export)
 
+    async def run_holds() -> None:
+        if holds is None:  # pragma: no cover - not scheduled
+            return
+        await asyncio.to_thread(holds.run_pending, _now())
+
     async def run_remediation() -> None:
         if remediator is None:  # pragma: no cover - not scheduled
             return
@@ -436,6 +443,8 @@ def create_app(
             tasks.append(
                 asyncio.create_task(_every(settings.heartbeat_seconds, "heartbeat", heartbeat))
             )
+        if holds is not None:
+            tasks.append(asyncio.create_task(_every(HOLDS_TICK_SECONDS, "holds", run_holds)))
         if triager is not None:
             tasks.append(asyncio.create_task(_every(TRIAGE_TICK_SECONDS, "triage", run_triage)))
         if investigator is not None:
@@ -649,6 +658,8 @@ def create_app(
         return None
 
     operations = Incidents(store, recorder, checker, _now)
+    # Held incidents wait for their maintenance window to end; this releases them.
+    holds = Holds(store, rules, operations) if any(w.hold for w in rules.maintenance) else None
 
     if rules.ui.enabled:
         mount_ui(
@@ -678,6 +689,7 @@ def create_app(
     app.state.exporter = exporter
     app.state.remediator = remediator
     app.state.triager = triager
+    app.state.holds = holds
     app.state.investigator = investigator
     app.state.postmortems = writer
     app.state.send_digest = send_digest

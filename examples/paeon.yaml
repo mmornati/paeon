@@ -16,7 +16,9 @@ correlation:
     threshold: 3        # firings of one alert
     window_minutes: 60  # within this long: the incident is flagged as flapping
 
-# Weekly windows in which alerts are expected. The incident is flagged, never dropped.
+# Weekly windows in which alerts are expected. The incident is flagged, never dropped, and held
+# until the window closes (plus grace_minutes): what is still firing then is re-checked, and only
+# what is still broken goes to triage, investigation and your phone.
 maintenance:
   - name: weekly updates
     days: [sun]
@@ -24,6 +26,7 @@ maintenance:
     duration_minutes: 90
     timezone: Europe/Paris
     match: { labels: { host: server-1 } }
+    grace_minutes: 10  # the default; `hold: false` only flags the incident
 
 # Model aliases. Two backends: `anthropic` (Messages API) and `openai` (chat completions,
 # as served by OpenAI and by compatible gateways and local servers).

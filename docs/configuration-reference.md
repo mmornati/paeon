@@ -70,6 +70,8 @@ A weekly window in which alerts are expected (an updater run, a backup).
 | `duration_minutes` | number | **required** | How long it stays open. It may run past midnight. From 0 to 1440. |
 | `timezone` | text | `UTC` | The timezone of `start`. |
 | `match` | section |  | The alerts it covers. Empty: all of them. |
+| `hold` | boolean | `true` | Hold the incidents it covers: no triage, investigation or notification until it closes. Then each alert still firing is re-checked: an incident that is over by then closes as expected, one that is not goes on as usual. |
+| `grace_minutes` | number | `10` | With `hold`, how long after it closes the services get to come back before the re-check. From 0 to 1440. |
 
 ### `maintenance.match`
 

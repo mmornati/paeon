@@ -143,8 +143,25 @@ class MaintenanceWindow(_Rule):
     match: Matcher = Field(
         default_factory=Matcher, description="The alerts it covers. Empty: all of them."
     )
+    hold: bool = Field(
+        default=True,
+        description="Hold the incidents it covers: no triage, investigation or notification"
+        " until it closes. Then each alert still firing is re-checked: an incident"
+        " that is over by then closes as expected, one that is not goes on as usual.",
+    )
+    grace_minutes: float = Field(
+        default=10,
+        ge=0,
+        le=24 * 60,
+        description="With `hold`, how long after it closes the services get to come back"
+        " before the re-check.",
+    )
 
     def covers(self, moment: datetime) -> bool:
+        return self.closes_at(moment) is not None
+
+    def closes_at(self, moment: datetime) -> datetime | None:
+        """When the opening of this window that covers `moment` closes, or None."""
         local = moment.astimezone(ZoneInfo(self.timezone))
         # A window that started yesterday can still be running after midnight.
         for back in (0, 1):
@@ -152,9 +169,10 @@ class MaintenanceWindow(_Rule):
             if _DAYS[day.weekday()] not in self.days:
                 continue
             begin = datetime.combine(day, self.start, tzinfo=local.tzinfo)
-            if begin <= local < begin + timedelta(minutes=self.duration_minutes):
-                return True
-        return False
+            end = begin + timedelta(minutes=self.duration_minutes)
+            if begin <= local < end:
+                return end
+        return None
 
 
 class Price(_Rule):
@@ -1633,6 +1651,10 @@ class Rules(_Rule):
             found.append((self.LEGACY, NtfyChannel(type="ntfy", **config.ntfy.model_dump())))
         found += [(name, self.notifiers[name]) for name in config.notify]
         return found
+
+    def window(self, name: str) -> MaintenanceWindow | None:
+        """The maintenance window of that name, if the rules still have one."""
+        return next((window for window in self.maintenance if window.name == name), None)
 
     def maintenance_for(self, alert: Alert) -> str | None:
         for window in self.maintenance:

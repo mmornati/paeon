@@ -216,6 +216,15 @@ def describe(event: Event) -> str:
         case "incident.opened":
             window = f", in maintenance window {p['maintenance']}" if p.get("maintenance") else ""
             return f"Incident opened{window}"
+        case "maintenance.released":
+            window = _text(p.get("window"))
+            if p.get("outcome") == "expected":
+                return (
+                    f"Held during maintenance window {window}: over by its end, closed as expected"
+                )
+            firing = p.get("still_firing")
+            names = ", ".join(_text(t) for t in firing) if isinstance(firing, list) else ""
+            return f"Still firing after maintenance window {window}: {names or 'see the alerts'}"
         case "incident.correlated":
             return f"{_text(alert.get('title'))} joined (same {_text(p.get('reason'))})"
         case "incident.reopened":
@@ -232,6 +241,8 @@ def describe(event: Event) -> str:
                 said = f" (model said {p['verdict']})" if p.get("verdict") else ""
                 return f"Triage failed open ({p['fail_open']}): treated as real{said}"
             return f"Triage verdict: {_text(p.get('verdict'))}, {_percent(p.get('confidence'))}"
+        case "triage.skipped" if p.get("skip") == "maintenance":
+            return "Triage skipped: over by the end of its maintenance window"
         case "triage.skipped":
             return f"Triage skipped ({_text(p.get('skip'))}): treated as real"
         case "investigation.started":
