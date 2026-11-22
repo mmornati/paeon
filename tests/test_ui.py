@@ -396,6 +396,17 @@ def test_postmortem_cell_and_stage_names(store: Store, tmp_path: Path) -> None:
         ("Postmortems", "off"),
         ("Actions", "none"),
     )
+    models = {
+        "triage": {"backend": "openai", "model": "m"},
+        "investigate": {"backend": "openai", "model": "m"},
+    }
+    alone = parse_rules({"models": models, "triage": {"enabled": True}})
+    both = parse_rules(
+        {"models": models, "triage": {"enabled": True}, "investigation": {"enabled": True}}
+    )
+    # Triage holds no alert back: the bar says what it does decide.
+    assert views.stages(alone)[0] == ("Triage", "recorded only")
+    assert views.stages(both)[0] == ("Triage", "decides investigations")
 
 
 def test_proxy_secret_refuses_a_neighbour_that_only_knows_the_header(store: Store) -> None:

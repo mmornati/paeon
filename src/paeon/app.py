@@ -23,10 +23,11 @@ from urllib.parse import parse_qs
 from zoneinfo import ZoneInfo
 
 import httpx2 as httpx
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Path, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from paeon import autonomy, notify, sources
+from paeon import changes as calendar
 from paeon import digest as digests
 from paeon import postmortem as postmortems
 from paeon.channels import Channels
@@ -41,7 +42,7 @@ from paeon.operations import Checker, Incidents, openobserve_checker, tool_check
 from paeon.postmortem import PostmortemWriter
 from paeon.recorder import Recorder
 from paeon.remediation import ExecutorApi, ExecutorClient, Remediator, pending_approvals
-from paeon.schema import Alert, Change, IncidentStatus
+from paeon.schema import Alert, Change, ChangeEnd, IncidentStatus
 from paeon.sources.openobserve import HttpSearchClient, OpenObserveSource
 from paeon.sources.webhook import parse_alertmanager, parse_uptime_kuma
 from paeon.store import Store
@@ -518,9 +519,29 @@ def create_app(
     @app.post("/ingest/change", dependencies=[Depends(authorized)])
     def ingest_change(change: Change) -> dict[str, int]:
         """The change calendar: a deploy, an update run, a backup, announced by whatever did it."""
-        payload = change.model_dump(mode="json")
+        payload = change.model_dump(mode="json", exclude={"id"} if change.id is None else None)
         payload["started_at"] = (change.started_at or _now()).isoformat()
-        return {"event": store.append("change.recorded", payload, source="change")}
+        event = store.append(calendar.KIND, payload, source="change", fingerprint=change.id)
+        return {"event": event}
+
+    @app.post("/ingest/change/{change_id}/end", dependencies=[Depends(authorized)])
+    def end_change(
+        change_id: Annotated[str, Path(pattern=r"^[A-Za-z0-9._:-]{1,128}$")],
+        end: Annotated[ChangeEnd | None, Body()] = None,
+    ) -> dict[str, int]:
+        """Ends a change announced with this id: it is recorded again, with its end."""
+        payload = calendar.latest(store, change_id)
+        if payload is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no change has this id")
+        ended = (end.ended_at if end is not None else None) or _now()
+        started = payload.get("started_at")
+        if isinstance(started, str) and ended < datetime.fromisoformat(started):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT, "the change ends before it started"
+            )
+        payload = {**payload, "ended_at": ended.isoformat()}
+        event = store.append(calendar.KIND, payload, source="change", fingerprint=change_id)
+        return {"event": event}
 
     def received(name: str, payload: dict[str, Any]) -> dict[str, int]:
         parse = connected[name].parse

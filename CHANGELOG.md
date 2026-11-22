@@ -2,6 +2,23 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+Fewer investigations that tell you nothing new, and a triage that is told what fired.
+
+- Triage is given the alert's query, when its source has one (OpenObserve), and is told that
+  the query's result is never part of what it sees, so that its absence is no reason to doubt.
+  It no longer names the query result as missing for alerts that have no query. The prompt is
+  `triage-3`.
+- `investigation.repeat_hours`: an alert whose investigation completed this recently is not
+  investigated again; the skip names the incident that was. Off by default.
+- A change can carry an `id`, and `POST /ingest/change/{id}/end` gives it its end. Triage, the
+  `recent_changes` tool and the console read each change once, as last recorded.
+- Triage is no longer called "shadow mode": its verdict already decides what is investigated,
+  and holds no alert back. The console bar says `decides investigations` (or `recorded only`
+  without an investigation), and the incident page, the digest and the docs say the same. The
+  verdict event keeps its `shadow` field.
+
 ## 0.7.0
 
 Maintenance windows stop waking you up for what they were declared for.

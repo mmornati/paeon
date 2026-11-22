@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from paeon import changes
 from paeon.app import create_app
 from paeon.cli import main
 from paeon.config import Settings, load
@@ -98,6 +99,42 @@ def test_change_calendar(client: TestClient, store: Store) -> None:
     assert datetime.fromisoformat(first["started_at"]).tzinfo is not None  # defaulted to now
     assert second["started_at"] == "2026-11-18T04:00:00+01:00"
     bad = client.post("/ingest/change", json={"kind": "update"}, headers=AUTH)
+    assert bad.status_code == 422
+
+
+def test_a_change_with_an_id_is_ended_later(client: TestClient, store: Store) -> None:
+    body = {"id": "update-2026-11-22", "kind": "update", "title": "weekly updater"}
+    explicit = {**body, "started_at": "2026-11-22T04:00:00+01:00"}
+    assert client.post("/ingest/change", json=explicit, headers=AUTH).status_code == 200
+    client.post("/ingest/change", json={"kind": "deploy", "title": "bazarr"}, headers=AUTH)
+    ended = client.post(
+        "/ingest/change/update-2026-11-22/end",
+        json={"ended_at": "2026-11-22T04:40:00+01:00"},
+        headers=AUTH,
+    )
+    assert ended.status_code == 200
+    # Readers see each change once, as last recorded.
+    since = datetime.now(UTC) - timedelta(hours=1)
+    deploy, update = changes.recent(store, since, limit=10)
+    assert deploy["title"] == "bazarr"
+    assert "id" not in deploy  # a change without an id is stored as before
+    assert update["id"] == "update-2026-11-22"
+    assert update["started_at"] == "2026-11-22T04:00:00+01:00"
+    assert update["ended_at"] == "2026-11-22T04:40:00+01:00"
+    assert len(list(store.events(kind="change.recorded"))) == 3  # every version is kept
+
+    # With no body, it ends now.
+    client.post("/ingest/change", json={**body, "id": "backup-1"}, headers=AUTH)
+    assert client.post("/ingest/change/backup-1/end", headers=AUTH).status_code == 200
+    assert changes.latest(store, "backup-1")["ended_at"] is not None  # type: ignore[index]
+
+    early = {"ended_at": "2026-11-22T03:00:00+01:00"}
+    late = client.post("/ingest/change/update-2026-11-22/end", json=early, headers=AUTH)
+    assert late.status_code == 422
+    assert client.post("/ingest/change/unknown/end", headers=AUTH).status_code == 404
+    assert client.post("/ingest/change/bad%20id/end", headers=AUTH).status_code == 422
+    assert client.post("/ingest/change/backup-1/end").status_code == 401
+    bad = client.post("/ingest/change", json={**body, "id": "no spaces"}, headers=AUTH)
     assert bad.status_code == 422
 
 

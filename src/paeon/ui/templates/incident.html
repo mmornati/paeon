@@ -158,7 +158,7 @@
     {% endif %}
     <p class="facts">{% if v.model %}Answered by {{ v.model }}, {% endif %}{{ v.attempts }} attempt{{ "" if v.attempts == 1 else "s" }}, prompt {{ v.prompt_version }}.</p>
     {% if v.matched_postmortem %}<p class="facts">The model matched it to <span class="pen">{{ v.matched_postmortem }}</span>.</p>{% endif %}
-    <p class="note">Shadow mode: the verdict is recorded and nothing acts on it.</p>
+    <p class="note">The verdict holds no alert back. It decides whether the incident is investigated, never whether an alert reaches you.</p>
   {% elif view.triage_skip == "runbook" %}
     <p class="lead">Not sent to a model: a runbook matched this alert.</p>
   {% elif view.triage_skip %}

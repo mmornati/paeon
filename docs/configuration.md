@@ -67,6 +67,10 @@ Paeon records alerts and groups them into incidents.
 
 The budgets (`daily_budget`, `budget_per_incident`), the storm guard (`max_per_hour`) and the limits on tool calls and time are set per stage in the same file. A spent budget never hides an alert: Paeon fails open and treats the incident as real.
 
+`investigation.repeat_hours` spares an investigation that would tell you nothing new: an alert
+investigated that recently is passed over, and the skip names the incident that was. Off by
+default.
+
 ## Sources
 
 A monitoring service is defined once under `sources`, by a name of yours: Prometheus,

@@ -317,6 +317,7 @@ Stage 2: a strong model with read-only tools. See [Configuration](configuration.
 | `max_seconds` | number | `600` | How long one investigation may last. |
 | `max_result_chars` | integer | `12000` | A tool result longer than this is cut before the model reads it. |
 | `max_per_hour` | integer | `6` | Storm guard. |
+| `repeat_hours` | number |  | An alert investigated this many hours ago or less is not investigated again: the skip names the incident that was. Unset: every incident is. |
 | `budget_per_incident` | number |  | What one investigation may spend, in the currency of `price`. |
 | `daily_budget` | number |  | Counts every model call of the day, all stages. |
 | `tools` | section |  | What the investigator may read. Each tool is off until it is configured. |

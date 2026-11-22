@@ -83,7 +83,7 @@ at alerts you do not control.
 | Logs and metrics as tools | Paeon's telemetry tools read OpenObserve today. With Prometheus alone the investigator has Docker, Paeon's own record and your runbooks. |
 | Your containers | List them under `investigation.tools.docker.logs`. A container that is not listed cannot have its logs read, and the environment of none is ever returned. |
 | Your runbooks | Mount a directory of markdown at `/knowledge/runbooks`. Postmortems are added to the search as they are written. |
-| A cheaper first look | Enable `triage` with a small model: one call per incident, in shadow mode. See `examples/paeon.yaml`. |
+| A cheaper first look | Enable `triage` with a small model: one call per incident; it decides what is investigated and holds no alert back. See `examples/paeon.yaml`. |
 | The analysis on your phone | Give `investigation` a channel: `investigation.ntfy`, or any service in [Notifications](notifications.md). |
 | Paeon to fix things | Read [acting.md](acting.md) first. It is a second process and a decision of yours. |
 

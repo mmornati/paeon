@@ -121,6 +121,12 @@ class Change(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
+    id: str | None = Field(
+        default=None,
+        pattern=r"^[A-Za-z0-9._:-]{1,128}$",
+        description="A name of yours for this change, to end it later with"
+        " `POST /ingest/change/<id>/end`. A change sent again with the same id replaces it.",
+    )
     kind: str = Field(min_length=1, max_length=64, description="deploy, update, backup, restart…")
     title: str = Field(min_length=1, max_length=300)
     host: str | None = Field(default=None, max_length=200)
@@ -129,3 +135,13 @@ class Change(BaseModel):
         default=None, description="Defaults to the time the change is recorded."
     )
     ended_at: AwareDatetime | None = None
+
+
+class ChangeEnd(BaseModel):
+    """The end of a change announced earlier with an id."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ended_at: AwareDatetime | None = Field(
+        default=None, description="Defaults to the time the end is recorded."
+    )
