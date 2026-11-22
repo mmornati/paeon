@@ -28,6 +28,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from paeon import knowledge, ledger
+from paeon.maintenance import held, released
 from paeon.models import ModelClient, ModelError, complete, cost_of
 from paeon.redact import redact
 from paeon.rules import Rules
@@ -118,6 +119,8 @@ class Triager:
         settle = timedelta(seconds=self._rules.triage.settle_seconds)
         handled = 0
         for incident in self._store.incidents(triage=TriageState.PENDING):
+            if held(self._store, self._rules, incident):
+                continue  # a maintenance window: see paeon.maintenance
             if now - incident.opened_at >= settle:
                 self.triage(incident, now)
                 handled += 1
@@ -252,6 +255,7 @@ class Triager:
                 "status": incident.status.value,
                 "flapping": incident.flapping,
                 "maintenance_window": incident.maintenance,
+                "after_maintenance": released(self._store, incident),
             },
             "alerts": [
                 {

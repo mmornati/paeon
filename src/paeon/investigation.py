@@ -28,6 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from paeon import ledger
 from paeon.catalog import ACTIONS, TARGET_PATTERN
+from paeon.maintenance import held, released
 from paeon.models import (
     ModelClient,
     ModelError,
@@ -311,6 +312,8 @@ class Investigator:
         for incident in self._store.incidents(investigation=StageState.PENDING):
             if incident.triage is StageState.PENDING:
                 continue  # triage first: its verdict decides
+            if held(self._store, self._rules, incident):
+                continue  # a maintenance window: see paeon.maintenance
             if now - incident.opened_at < timedelta(seconds=config.settle_seconds):
                 continue
             handled += 1
@@ -567,6 +570,7 @@ class Investigator:
                     "opened_at": incident.opened_at.isoformat(),
                     "flapping": incident.flapping,
                     "maintenance_window": incident.maintenance,
+                    "after_maintenance": released(self._store, incident),
                 },
                 "alerts": alerts,
                 "triage": triage,
