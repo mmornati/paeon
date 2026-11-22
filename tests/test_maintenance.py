@@ -145,3 +145,13 @@ def test_the_release_waits_for_the_end_of_the_window_that_opened_it() -> None:
     assert window.closes_at(tuesday_night) == datetime(2026, 11, 18, 0, 30, tzinfo=UTC)
     assert window.closes_at(datetime(2026, 11, 18, 0, 30, tzinfo=UTC)) is None
     assert (window.hold, window.grace_minutes) == (True, 5)
+
+
+def test_an_alert_time_far_ahead_holds_no_longer_than_one_window(store: Store) -> None:
+    bench = Bench(store, rules())
+    ahead = alert(FIRING, 7 * 24 * 60)  # next Wednesday 08:00, in the window again
+    bench.recorder.observe(ahead)
+    [incident] = store.incidents()
+    assert incident.maintenance == "weekly updates"
+    seen = next(iter(store.events(kind="incident.opened"))).recorded_at
+    assert bench.holds.release_at(incident) == seen + timedelta(minutes=70)

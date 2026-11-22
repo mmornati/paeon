@@ -86,7 +86,17 @@ class Holds:
         if window is None:
             return incident.opened_at
         closes = window.closes_at(incident.opened_at) or incident.opened_at
-        return closes + timedelta(minutes=window.grace_minutes)
+        grace = timedelta(minutes=window.grace_minutes)
+        # `opened_at` is the alert's own time, sent by the source: a time far ahead must not
+        # hold an incident for longer than one window, counted from when Paeon recorded it.
+        seen = next(
+            iter(self._store.events(incident_id=incident.id, kind="incident.opened", limit=1)),
+            None,
+        )
+        if seen is not None:
+            longest = seen.recorded_at + timedelta(minutes=window.duration_minutes) + grace
+            return min(closes + grace, longest)
+        return closes + grace
 
     def release(self, incident: Incident, now: datetime) -> None:
         checked: list[dict[str, str]] = []
