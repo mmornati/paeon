@@ -1,3 +1,3 @@
 """Paeon: alert triage, investigation and approved remediation for self-hosted servers."""
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"

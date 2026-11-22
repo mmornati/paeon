@@ -2,9 +2,12 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.8.0
 
 Fewer investigations that tell you nothing new, and a triage that is told what fired.
+
+A rules file and an environment of 0.7.0 work unchanged. `investigation.repeat_hours` is off
+until it is set, and a change sent without an `id` is recorded as before.
 
 - Triage is given the alert's query, when its source has one (OpenObserve), and is told that
   the query's result is never part of what it sees, so that its absence is no reason to doubt.
