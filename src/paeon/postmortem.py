@@ -111,7 +111,7 @@ _TIMELINE: dict[str, Callable[[dict[str, Any]], str]] = {
     "incident.flapping": lambda p: "Flagged as flapping",
     "incident.reopened": lambda p: "Incident reopened",
     "triage.verdict": lambda p: (
-        f"Triage (shadow): {p.get('effective_verdict')}"
+        f"Triage: {p.get('effective_verdict')}"
         + (f", fail open: {p.get('fail_open')}" if p.get("fail_open") else "")
     ),
     "triage.skipped": lambda p: f"Triage skipped: {p.get('skip')}",

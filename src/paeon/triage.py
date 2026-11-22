@@ -1,9 +1,12 @@
-"""Stage 1, triage, in shadow mode: one model call per incident, recorded and never acted on.
+"""Stage 1, triage: one model call per incident, recorded; it holds no alert back.
 
 The model gets a context pack built by code (the same for every incident) and answers with a
-verdict as JSON. Nothing downstream reads the verdict yet: it is recorded next to what really
-happened, and the digest asks whether it was right. That record is what decides, later, whether
-triage can be trusted to demote anything.
+verdict as JSON. One thing reads it: the investigation, which passes over the verdicts not in
+`investigation.verdicts` (by default `noise` and `transient`). No alert is held back or
+silenced on it, since the alerts reach people from their own sources. The verdict is recorded
+next to what really happened, and the digest asks whether it was right: that record is what
+decides whether triage can be trusted to demote more. The `shadow` field of each verdict says
+it demoted no alert.
 
 Rules that keep it safe, from the design:
 
@@ -190,7 +193,7 @@ class Triager:
         )
         self._done(incident, TriageState.DONE)
         log.info(
-            "incident %d triaged in shadow mode: %s%s",
+            "incident %d triaged: %s%s",
             incident.id,
             effective.value,
             f" (fail open: {fail_open})" if fail_open else "",

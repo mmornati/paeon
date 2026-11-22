@@ -14,6 +14,10 @@ Fewer investigations that tell you nothing new, and a triage that is told what f
   investigated again; the skip names the incident that was. Off by default.
 - A change can carry an `id`, and `POST /ingest/change/{id}/end` gives it its end. Triage, the
   `recent_changes` tool and the console read each change once, as last recorded.
+- Triage is no longer called "shadow mode": its verdict already decides what is investigated,
+  and holds no alert back. The console bar says `decides investigations` (or `recorded only`
+  without an investigation), and the incident page, the digest and the docs say the same. The
+  verdict event keeps its `shadow` field.
 
 ## 0.7.0
 

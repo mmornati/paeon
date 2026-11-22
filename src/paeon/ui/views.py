@@ -1095,10 +1095,17 @@ def ledger_view(store: Store, rules: Rules, now: datetime, *, days: int = 14) ->
     )
 
 
+def _triage_stage(rules: Rules) -> str:
+    """Triage holds no alert back: what it can do is spare an investigation."""
+    if not rules.triage.enabled:
+        return "off"
+    return "decides investigations" if rules.investigation.enabled else "recorded only"
+
+
 def stages(rules: Rules) -> tuple[tuple[str, str], ...]:
     """What is switched on, for the bar: the console must say what Paeon is not doing."""
     return (
-        ("Triage", "shadow" if rules.triage.enabled else "off"),
+        ("Triage", _triage_stage(rules)),
         ("Investigation", "read-only" if rules.investigation.enabled else "off"),
         ("Postmortems", "drafts" if rules.postmortems.enabled else "off"),
         ("Actions", "by the executor" if rules.actions.enabled else "none"),

@@ -177,7 +177,7 @@ On a desk, a rail on the left groups the pages by what you came to do:
 | **Review** | **Log**, **Postmortems** (with the number of drafts nobody reviewed yet) and **Spend**. |
 | **Configure** | **Sources**, **Channels** (once a channel exists, or with `settings`) and **Autonomy** (with actions on). |
 
-The bar at the top says how each stage runs (triage in shadow mode, investigation read-only,
+The bar at the top says how each stage runs (triage deciding what is investigated, investigation read-only,
 postmortems as drafts, actions by the executor), and holds the light or dark switch. On a
 phone the rail becomes a tab bar at the bottom: the first four pages, then **More** for the
 rest.

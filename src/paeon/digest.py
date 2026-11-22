@@ -1,8 +1,9 @@
 """The daily digest: what happened, what triage would have said, and whether it was right.
 
-In shadow mode the digest is the whole output of triage. Each line can be answered with a
-thumbs-up or a thumbs-down (`paeon feedback`, or `POST /incidents/{id}/feedback`); the answers are
-events, and they are the labelled data that tells whether triage can be trusted.
+Triage holds no alert back: past deciding what is investigated, the digest is its output. Each
+line can be answered with a thumbs-up or a thumbs-down (`paeon feedback`, or
+`POST /incidents/{id}/feedback`); the answers are events, and they are the labelled data that
+tells whether triage can be trusted.
 """
 
 from __future__ import annotations
@@ -149,7 +150,8 @@ def render(digest: Digest, *, console: bool = False) -> str:
     kept = [line for line in digest.lines if not line.demoted]
     parts = [
         f"{len(digest.lines)} incidents, {len(demoted)} that triage would have demoted"
-        f" (shadow mode: nothing was). {digest.model_calls} model calls, cost {digest.cost:g}."
+        f" (no alert was held back; those were not investigated)."
+        f" {digest.model_calls} model calls, cost {digest.cost:g}."
     ]
     if demoted:
         parts += ["", "Would have been demoted:", *(_line(line) for line in demoted)]

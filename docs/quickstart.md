@@ -127,7 +127,7 @@ was called and nothing was sent anywhere. From here, each step is a decision of 
 | You want | Go to |
 |---|---|
 | Your real alerts in it | **Sources** in the console, or [Connect your alerts](connect-alerts.md): uptime-kuma, Alertmanager, Grafana, OpenObserve, Gatus, Zabbix and others |
-| A model to say whether an alert is noise | `triage` in [Configuration](configuration.md): one cheap call per incident, in shadow mode |
+| A model to say whether an alert is noise | `triage` in [Configuration](configuration.md): one cheap call per incident; it decides what is investigated and holds no alert back |
 | A root cause with evidence on your phone | `investigation` in [Configuration](configuration.md), and what it sends in [Privacy and safety](privacy-and-safety.md) |
 | Paeon to fix things after your Go | [Acting](acting.md): a second process, a closed catalog, and a decision of yours |
 | It running for real | The hardened [compose file](https://github.com/mmornati/paeon/blob/main/examples/compose.yaml): read-only root filesystem, non-root, secrets as files, Docker through a proxy limited to `GET` |
