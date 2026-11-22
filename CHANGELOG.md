@@ -2,7 +2,12 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
-## Unreleased
+## 0.7.0
+
+Maintenance windows stop waking you up for what they were declared for.
+
+A rules file and an environment of 0.6.0 work unchanged; windows now hold their incidents by
+default (`hold: false` keeps the old behaviour).
 
 ### Maintenance windows hold their incidents
 
@@ -21,6 +26,8 @@ and cost one investigation each, for a service that was healthy a minute later.
   PENDING to UP, which left incidents open after a restart.
 - New keys on each window: `hold` (default `true`; `false` keeps the flag only) and
   `grace_minutes`. A rules file of 0.6.0 works unchanged, and holds by default.
+- A hold lasts one window at most, counted from when Paeon recorded the incident: an alert time
+  far ahead, sent by a source, cannot hold an incident until then.
 
 ## 0.6.0
 
