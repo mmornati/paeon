@@ -42,6 +42,7 @@ class FakeExecutor:
         self.entries: list[dict[str, Any]] = []
         self.reply: dict[str, Any] = {"status": "pending", "proposal": 1, "level": "approve"}
         self.answers: list[tuple[int, str, str]] = []
+        self.not_cleared_calls: list[tuple[int, str]] = []
         self.down = False
         self.killed = False
 
@@ -76,6 +77,10 @@ class FakeExecutor:
         self._check()
         self.answers.append((proposal_id, answer, by))
         return {"ok": True, "message": "Approved. The plan is running; the result follows."}
+
+    def not_cleared(self, proposal_id: int, reason: str) -> None:
+        self._check()
+        self.not_cleared_calls.append((proposal_id, reason))
 
     def add(self, kind: str, incident_id: int | None = 1, **payload: Any) -> None:
         self.entries.append(
@@ -253,6 +258,107 @@ def test_the_journal_is_mirrored_once_and_a_failed_runbook_falls_back(store: Sto
     assert remediator.mirror() == 1
     assert next(store.events(kind="executor.journal_restarted")).payload == {"was": 3, "now": 1}
     assert remediator.mirror() == 0
+
+
+def watched(
+    store: Store, clear_minutes: int | None = 10
+) -> tuple[Recorder, Remediator, FakeExecutor]:
+    """A runbook hit whose plan ran and verified, as the executor's journal says."""
+    book = {**ACTIONS["runbooks"][0], "clear_minutes": clear_minutes}
+    config = rules(actions={**ACTIONS, "settle_seconds": 60, "runbooks": [book]})
+    recorder, remediator, fake = setup(store, config)
+    recorder.observe(alert(Status.FIRING, 0, title="worker_stalled"))
+    remediator.run_pending(LATER)
+    fake.add("plan.completed", proposal=1, outcome="verified", origin="runbook", level="auto")
+    fake.entries[-1]["at"] = LATER.isoformat()
+    remediator.mirror()
+    return recorder, remediator, fake
+
+
+class Rechecks:
+    """The console's re-check, answering what the source would say."""
+
+    def __init__(self, store: Store, recorder: Recorder, answer: str) -> None:
+        from paeon.operations import Incidents
+
+        self.asked: list[str] = []
+
+        def checker(source: str) -> Any:
+            def check(fingerprint: str, title: str) -> tuple[str, str]:
+                self.asked.append(title)
+                return answer, f"the source says {answer}"
+
+            return check
+
+        self.incidents = Incidents(store, recorder, checker, lambda: LATER)
+
+
+def test_a_runbook_whose_alert_still_fires_hands_over_and_tells_the_executor(
+    store: Store,
+) -> None:
+    recorder, remediator, fake = watched(store)
+    watch = next(store.events(kind="runbook.watching")).payload
+    assert watch == {
+        "runbook": "worker-stalled",
+        "proposal": 1,
+        "minutes": 10,
+        "until": (LATER + timedelta(minutes=10)).isoformat(),
+    }
+    checks = Rechecks(store, recorder, "firing")
+    remediator.incidents = checks.incidents
+    assert remediator.run_pending(LATER + timedelta(minutes=9)) == 0  # its time is not up
+    assert checks.asked == []
+    assert remediator.run_pending(LATER + timedelta(minutes=10)) == 1
+    assert checks.asked == ["worker_stalled"]
+    reason = "the alert still fires 10 min after the fix of runbook worker-stalled"
+    assert fake.not_cleared_calls == [(1, reason)]
+    assert next(store.events(kind="runbook.not_cleared")).payload == {
+        "reason": reason,
+        "proposal": 1,
+        "runbook": "worker-stalled",
+        "executor_told": True,
+    }
+    assert store.incident(1).investigation is StageState.PENDING  # type: ignore[union-attr]
+    assert remediator.run_pending(LATER + timedelta(minutes=20)) == 0  # once
+
+
+def test_a_runbook_whose_alert_cleared_is_left_alone(store: Store) -> None:
+    recorder, remediator, fake = watched(store)
+    recorder.observe(alert(Status.RESOLVED, 120, title="worker_stalled"))
+    assert remediator.run_pending(LATER + timedelta(minutes=3)) == 1
+    assert next(store.events(kind="runbook.cleared")).payload == {
+        "proposal": 1,
+        "runbook": "worker-stalled",
+    }
+    assert fake.not_cleared_calls == []
+    assert remediator.run_pending(LATER + timedelta(minutes=30)) == 0
+
+
+def test_the_re_check_can_clear_an_alert_whose_resolution_was_never_sent(store: Store) -> None:
+    recorder, remediator, fake = watched(store)
+    checks = Rechecks(store, recorder, "resolved")
+    remediator.incidents = checks.incidents
+    assert remediator.run_pending(LATER + timedelta(minutes=10)) == 1
+    assert store.incident(1).status is IncidentStatus.RESOLVED  # type: ignore[union-attr]
+    assert any(store.events(kind="runbook.cleared"))
+    assert fake.not_cleared_calls == []
+    assert store.incident(1).investigation is StageState.SKIPPED  # type: ignore[union-attr]
+
+
+def test_an_unreachable_executor_is_asked_again_then_the_incident_goes_on(store: Store) -> None:
+    _, remediator, fake = watched(store)  # no re-check: still open means still firing
+    fake.down = True
+    assert remediator.run_pending(LATER + timedelta(minutes=11)) == 0
+    assert not any(store.events(kind="runbook.not_cleared"))
+    assert remediator.run_pending(LATER + timedelta(minutes=21)) == 1
+    assert next(store.events(kind="runbook.not_cleared")).payload["executor_told"] is False
+    assert store.incident(1).investigation is StageState.PENDING  # type: ignore[union-attr]
+
+
+def test_without_clear_minutes_a_verified_runbook_is_not_watched(store: Store) -> None:
+    _, remediator, _ = watched(store, clear_minutes=None)
+    assert not any(store.events(kind="runbook.watching"))
+    assert remediator.run_pending(LATER + timedelta(hours=1)) == 0
 
 
 def test_an_approval_for_a_resolved_incident_is_cancelled(store: Store) -> None:

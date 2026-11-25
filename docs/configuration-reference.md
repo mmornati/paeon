@@ -651,6 +651,7 @@ A known signature and its fix: a hit skips both models.
 | `match` | section | **required** | The alert this runbook answers. |
 | `steps` | list of section | **required** | The actions, in order. Each must be allowed by the catalog. |
 | `mode` | `escalate` \| `sequence` | `escalate` | escalate: stop at the first step that fixes it. sequence: run them all. |
+| `clear_minutes` | integer |  | After a verified run, the alert must clear within this many minutes, as its source says when asked (the console's re-check). If it still fires, the runbook counts as failed: the incident goes to investigation and an `auto` policy on its actions goes back to `approve`. Unset: a container that is up again is enough. From 1 to 1440. |
 
 ### `actions.runbooks.match`
 

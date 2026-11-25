@@ -100,7 +100,11 @@ FILTERS: dict[str, tuple[str, tuple[str, ...]]] = {
             "runbook.matched",
             "runbook.skipped",
             "runbook.failed",
+            "runbook.watching",
+            "runbook.cleared",
+            "runbook.not_cleared",
             "plan.proposed",
+            "plan.not_cleared",
             "plan.refused",
             "plan.not_proposed",
             "plan.cancelled",
@@ -317,6 +321,17 @@ def describe(event: Event) -> str:
             return f"Runbook not run ({_text(p.get('reason'))})"
         case "runbook.failed":
             return f"Runbook gave up ({_text(p.get('reason'))})"
+        case "runbook.watching":
+            return (
+                f"Runbook {_text(p.get('runbook'))} ran: the alert has"
+                f" {_text(p.get('minutes'))} min to clear"
+            )
+        case "runbook.cleared":
+            return f"Runbook {_text(p.get('runbook'))}: the alert cleared"
+        case "runbook.not_cleared":
+            return f"Runbook did not fix it ({_text(p.get('reason'))})"
+        case "plan.not_cleared":
+            return f"The run counts as failed: {_text(p.get('reason'))}"
         case "plan.proposed":
             held = p.get("held_back_by")
             why = f" ({'; '.join(map(str, held))})" if isinstance(held, list) and held else ""

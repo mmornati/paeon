@@ -8,6 +8,11 @@ the incident's record is in one place.
 
 When the executor cannot be reached nothing is lost and nothing is hidden: a runbook's incident
 falls back to investigation, and the analysis of an investigation has already been sent.
+
+A container that is up again is not always a fixed service. A runbook with `clear_minutes` is
+watched after a verified run: when the time is up, the alert's source is asked (the console's
+re-check). An alert that still fires makes the run a failure: the executor is told, and demotes
+the `auto` tuples of the plan, and the incident goes to investigation.
 """
 
 from __future__ import annotations
@@ -16,22 +21,28 @@ import contextlib
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import httpx2 as httpx
 
 from paeon.catalog import Proposal, Step
 from paeon.investigation import Extras, Findings
 from paeon.notify import Button
+from paeon.operations import OperationError
 from paeon.rules import Rules
 from paeon.schema import Incident, IncidentStatus, StageState
 from paeon.store import Store
+
+if TYPE_CHECKING:
+    from paeon.operations import Incidents
 
 log = logging.getLogger(__name__)
 
 RUNBOOK_CURSOR = "remediation.runbooks"
 JOURNAL_CURSOR = "remediation.journal"
 GIVE_UP = timedelta(minutes=10)
+WATCHING = "runbook.watching"
+_WATCHED = ("runbook.cleared", "runbook.not_cleared")
 _CLOSED = ("approval.granted", "approval.declined", "approval.expired", "plan.cancelled")
 
 
@@ -66,6 +77,15 @@ def pending_approvals(store: Store, now: datetime) -> list[dict[str, Any]]:
     return waiting
 
 
+def _when(value: Any) -> datetime | None:
+    """A time the executor wrote, or None if it is not one."""
+    try:
+        found = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return found if found.tzinfo is not None else None
+
+
 class ExecutorError(Exception):
     """The executor did not answer, or refused the request. Carries no URL and no token."""
 
@@ -90,6 +110,8 @@ class ExecutorApi(Protocol):
     def vote_links(self, incident_id: int, about: str) -> dict[str, str]: ...
 
     def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]: ...
+
+    def not_cleared(self, proposal_id: int, reason: str) -> None: ...
 
 
 class ExecutorClient:
@@ -146,15 +168,27 @@ class ExecutorClient:
         )
         return found if isinstance(found, dict) else {}
 
+    def not_cleared(self, proposal_id: int, reason: str) -> None:
+        self._call("POST", f"/proposals/{proposal_id}/not-cleared", json={"reason": reason})
+
     def close(self) -> None:
         self._http.close()
 
 
 class Remediator:
-    def __init__(self, store: Store, rules: Rules, executor: ExecutorApi) -> None:
+    def __init__(
+        self,
+        store: Store,
+        rules: Rules,
+        executor: ExecutorApi,
+        incidents: Incidents | None = None,
+    ) -> None:
+        """`incidents`: what re-checks an alert with its source, for `clear_minutes`. Set
+        later by the app (it is built after this); None, and an open incident is enough."""
         self._store = store
         self._rules = rules
         self._executor = executor
+        self.incidents = incidents
 
     # --- proposing ------------------------------------------------------------------------
 
@@ -249,9 +283,10 @@ class Remediator:
             handled += self.mirror()
         except ExecutorError as exc:
             log.warning("executor journal not read (%s)", exc)
-            return handled
-        self._cancel_resolved(now)
-        return handled
+        else:
+            self._cancel_resolved(now)
+        # Even with the executor away: a fix that did not work must not wait for it.
+        return handled + self._watch(now)
 
     def _runbooks(self, now: datetime) -> int:
         """Propose the plan of every runbook that matched, once its incident has settled."""
@@ -310,9 +345,17 @@ class Remediator:
             handled += 1
         return handled
 
-    def _fall_back(self, incident: Incident, reason: str, *, kind: str = "runbook.failed") -> None:
+    def _fall_back(
+        self,
+        incident: Incident,
+        reason: str,
+        *,
+        kind: str = "runbook.failed",
+        now: datetime | None = None,
+        **more: Any,
+    ) -> None:
         """A runbook that did not fix it hands the incident to the investigator."""
-        self._store.append(kind, {"reason": reason}, incident_id=incident.id)
+        self._store.append(kind, {"reason": reason, **more}, incident_id=incident.id, now=now)
         current = self._store.incident(incident.id)
         if (
             self._rules.investigation.enabled
@@ -356,11 +399,97 @@ class Remediator:
         incident = self._store.incident(incident_id)
         if incident is None:
             return
-        if payload.get("outcome") != "verified" and payload.get("origin") == "runbook":
-            self._fall_back(incident, "the runbook's fix did not verify")
+        if payload.get("origin") == "runbook":
+            if payload.get("outcome") != "verified":
+                self._fall_back(incident, "the runbook's fix did not verify")
+            elif (book := self._book_of(incident_id)) is not None and book.clear_minutes:
+                since = _when(payload.get("executor_at")) or incident.last_activity_at
+                self._store.append(
+                    WATCHING,
+                    {
+                        "runbook": book.name,
+                        "proposal": payload.get("proposal"),
+                        "minutes": book.clear_minutes,
+                        "until": (since + timedelta(minutes=book.clear_minutes)).isoformat(),
+                    },
+                    incident_id=incident_id,
+                )
         if self._rules.postmortems.enabled and incident.postmortem is StageState.OFF:
             # An incident Paeon acted on gets a postmortem, investigated or not.
             self._store.set_stage(incident_id, "postmortem", StageState.PENDING)
+
+    def _book_of(self, incident_id: int) -> Any:
+        """The runbook that matched this incident, as the rules say it now."""
+        for event in self._store.events(
+            incident_id=incident_id, kind="runbook.matched", newest_first=True, limit=1
+        ):
+            name = event.payload.get("runbook")
+            return next((b for b in self._rules.actions.runbooks if b.name == name), None)
+        return None
+
+    def _watch(self, now: datetime) -> int:
+        """Ask whether the alert of each watched runbook cleared, once its time is up."""
+        settled = 0
+        for watch in self._store.events(kind=WATCHING, recorded_since=now - timedelta(days=2)):
+            proposal = watch.payload.get("proposal")
+            incident = (
+                None if watch.incident_id is None else self._store.incident(watch.incident_id)
+            )
+            if incident is None or any(
+                event.payload.get("proposal") == proposal
+                for event in self._store.events(
+                    incident_id=incident.id, kinds=_WATCHED, after_id=watch.id
+                )
+            ):
+                continue
+            name = watch.payload.get("runbook")
+            if incident.status is IncidentStatus.RESOLVED:
+                self._cleared(incident, proposal, name, now)
+                settled += 1
+                continue
+            until = _when(watch.payload.get("until")) or now
+            if now < until:
+                continue
+            if self.incidents is not None:
+                with contextlib.suppress(OperationError):  # resolved in the meantime
+                    self.incidents.recheck(incident.id, by=f"runbook {name}")
+                incident = self._store.incident(incident.id) or incident
+            if incident.status is IncidentStatus.RESOLVED:
+                self._cleared(incident, proposal, name, now)
+                settled += 1
+                continue
+            reason = (
+                f"the alert still fires {watch.payload.get('minutes')} min after the fix"
+                f" of runbook {name}"
+            )
+            told = True
+            try:
+                if isinstance(proposal, int):
+                    self._executor.not_cleared(proposal, reason)
+            except ExecutorError:
+                if now - until < GIVE_UP:
+                    continue  # the executor may be restarting: try again
+                told = False
+            self._fall_back(
+                incident,
+                reason,
+                kind="runbook.not_cleared",
+                now=now,
+                proposal=proposal,
+                runbook=name,
+                executor_told=told,
+            )
+            log.info("incident %d: %s", incident.id, reason)
+            settled += 1
+        return settled
+
+    def _cleared(self, incident: Incident, proposal: Any, name: Any, now: datetime) -> None:
+        self._store.append(
+            "runbook.cleared",
+            {"proposal": proposal, "runbook": name},
+            incident_id=incident.id,
+            now=now,
+        )
 
     def _cancel_resolved(self, now: datetime) -> None:
         """An approval for an incident that resolved by itself is dead: say so to the executor."""

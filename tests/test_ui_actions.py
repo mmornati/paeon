@@ -49,6 +49,9 @@ class Switch:
     def vote_links(self, incident_id: int, about: str) -> dict[str, str]:  # pragma: no cover
         return {}
 
+    def not_cleared(self, proposal_id: int, reason: str) -> None:  # pragma: no cover
+        return None
+
     def answer(self, proposal_id: int, answer: str, by: str) -> dict[str, Any]:
         self.answers.append((proposal_id, answer, by))
         return {"ok": True, "message": "Approved. The plan is running; the result follows."}

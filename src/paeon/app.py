@@ -679,6 +679,8 @@ def create_app(
         return None
 
     operations = Incidents(store, recorder, checker, _now)
+    if remediator is not None:  # a runbook with `clear_minutes` asks the source the same way
+        remediator.incidents = operations
     # Held incidents wait for their maintenance window to end; this releases them.
     holds = Holds(store, rules, operations) if any(w.hold for w in rules.maintenance) else None
 
