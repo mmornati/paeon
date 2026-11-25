@@ -42,7 +42,7 @@ _TEXTS = ("title", "reason", "error")
 _SKIPPED = frozenset({"webhook.received"})
 _FAILED = frozenset(
     {"action.failed", "investigation.failed", "notification.failed", "postmortem.failed",
-     "plan.refused", "change.failed", "runbook.failed"}
+     "plan.refused", "change.failed", "runbook.failed", "runbook.not_cleared"}
 )  # fmt: skip
 
 

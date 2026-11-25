@@ -2,6 +2,21 @@
 
 Paeon is pre-1.0: anything may change between versions. Dates are the day of the change on `main`.
 
+## Unreleased
+
+A runbook can be asked to fix the alert, not only to bring its containers back.
+
+A rules file of 0.8.0 works unchanged: without `clear_minutes` a verified run is enough, as before.
+The core and the executor must be updated together (the core calls a new executor route).
+
+- `actions.runbooks[].clear_minutes`: after a verified run, the alert must clear within this many
+  minutes. When the time is up its source is asked (the console's re-check). Still firing: the
+  executor records `plan.not_cleared`, the run counts as failed, the `auto` tuples of the plan go
+  back to `approve`, the phone is told, and the incident goes to investigation.
+- Executor: `POST /proposals/{id}/not-cleared`, for the core only. It can only demote.
+- The core's watch of a runbook goes on while the executor cannot be reached; it asks again for
+  ten minutes before handing the incident over without the executor.
+
 ## 0.8.0
 
 Fewer investigations that tell you nothing new, and a triage that is told what fired.

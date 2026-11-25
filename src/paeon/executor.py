@@ -864,6 +864,44 @@ class Executor:
         )
         return True
 
+    def not_cleared(self, proposal_id: int, reason: str) -> bool:
+        """The core says a run that verified did not clear its alert (`clear_minutes`).
+
+        Only ever more careful: the run counts as failed and its `auto` tuples go back to
+        `approve`. Nothing is run. Returns whether it was recorded (once per plan).
+        """
+        found = self._store.proposals(proposal_id=proposal_id)
+        if not found or found[0].status != "done":
+            return False
+        plan = found[0]
+        if any(
+            event.payload.get("proposal") == plan.id
+            for event in self._store.events(kinds=("plan.not_cleared",))
+        ):
+            return False
+        why = reason.strip()[:200] or "the alert did not clear"
+        self._journal(
+            "plan.not_cleared",
+            {
+                "proposal": plan.id,
+                "reason": why,
+                "tuples": self._tuples(plan.proposal, plan.proposal.steps),
+            },
+            plan.incident_id,
+        )
+        self._demote(plan.proposal, plan.proposal.steps, why)
+        self._notify(
+            plan.incident_id,
+            "not_cleared",
+            title=f"Incident #{plan.incident_id}: the fix did not clear the alert",
+            message=f"{why[:1].upper()}{why[1:]}. Paeon looks into it; if these actions ran"
+            " on their own, they ask for approval from now on.",
+            actions=[],
+            priority=4,
+            tags=("warning",),
+        )
+        return True
+
     def expire(self, now: datetime) -> int:
         """Close the approvals nobody answered. Nothing happens; one reminder says so."""
         closed = 0

@@ -3,8 +3,8 @@
 Policy is written by a person in the rules file. This module never changes it. It reads the
 executor's events and answers three questions:
 
-- which tuples are demoted (one failed verification, one Undo or one "This was wrong" sends a
-  tuple back to `approve` until a person reinstates it);
+- which tuples are demoted (one failed verification, one run whose alert did not clear, one
+  Undo or one "This was wrong" sends a tuple back to `approve` until a person reinstates it);
 - what each tuple's track record is;
 - which tuples have earned a proposal: enough approved, verified runs in a row. The proposal is
   a line to add to the rules file, for a person to review like any other change.
@@ -28,6 +28,7 @@ Tuple = tuple[str, str, str]  # alert class (the alert's title), action, target
 RANK: dict[str, int] = {level: rank for rank, level in enumerate(LEVELS)}
 KINDS = (
     "plan.completed",
+    "plan.not_cleared",
     "action.undone",
     "feedback.recorded",
     "autonomy.demoted",
@@ -126,6 +127,13 @@ def matrix(events: Iterable[Event], actions: Actions, now: datetime) -> list[Rec
                 entry.verified += int(good)
                 entry.failed += int(not good)
                 entry.streak = entry.streak + 1 if good and recent else 0
+        elif event.kind == "plan.not_cleared":
+            # It verified, but the alert still fired: the run was a failure after all.
+            for key in tuples_of(payload):
+                entry = record(key)
+                entry.verified = max(entry.verified - 1, 0)
+                entry.failed += 1
+                entry.streak = 0
         elif event.kind == "action.undone":
             for key in tuples_of(payload):
                 entry = record(key)
@@ -189,6 +197,8 @@ def review(events: Sequence[Event], suggested: int) -> list[str]:
             + ("; undone on request" if "action.undone" in kinds else "")
             + "."
         )
+        if "plan.not_cleared" in kinds:
+            lines.append("- The alert still fired after the fix: the run counts as failed.")
     else:
         lines.append("- Nothing was executed.")
     lines.append(

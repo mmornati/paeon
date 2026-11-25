@@ -64,6 +64,12 @@ class Cancel(BaseModel):
     reason: str = Field(default="cancelled by the core", max_length=200)
 
 
+class NotCleared(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(default="the alert did not clear", max_length=200)
+
+
 class Answer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -220,6 +226,11 @@ def create_executor_app(settings: ExecutorSettings, executor: Executor) -> FastA
         """Engage only. Releasing takes `paeon resume`, next to the executor."""
         executor.engage_kill("core")
         return {"kill_switch": True}
+
+    @app.post("/proposals/{proposal_id}/not-cleared", dependencies=[Depends(core)])
+    def not_cleared(proposal_id: int, body: NotCleared) -> dict[str, bool]:
+        """A run that verified but left its alert firing. It can only demote."""
+        return {"recorded": executor.not_cleared(proposal_id, body.reason)}
 
     @app.post("/proposals/{proposal_id}/answer", dependencies=[Depends(core)])
     def answer(proposal_id: int, body: Answer) -> dict[str, Any]:

@@ -208,6 +208,37 @@ trust it. At `observe` or `suggest` the plan is recorded and nothing runs, so th
 handled: it goes to the investigator like any other, and the record shows what the runbook would
 have done.
 
+### When "up again" is not "fixed"
+
+A step verifies when its container runs and its health check passes. For some services that is
+not the alert's question: a VPN client can be healthy while the application behind it still has
+no incoming connection. Give such a runbook `clear_minutes`, and the alert itself must clear:
+
+```yaml
+    - name: qbittorrent-firewalled
+      match: { source: uptime-kuma, labels: { monitor_id: "76" } }
+      mode: sequence
+      clear_minutes: 15
+      steps:
+        - { action: restart_container, target: gluetun }
+        - { action: restart_container, target: qbittorrent }
+```
+
+After a verified run the incident is watched (`runbook.watching`). If its alert resolves in that
+time, the run is recorded as `runbook.cleared`. When the time is up, the alert's source is asked
+what it says now, as the console's **Re-check** does (uptime-kuma, Alertmanager and OpenObserve
+can answer; a recovery that was never sent is caught this way). An alert that still fires, or
+whose source cannot be asked, makes the run a failure:
+
+- the executor records `plan.not_cleared`: the run counts as failed in the record, and an `auto`
+  policy on its actions goes back to `approve` until you reinstate it;
+- a message says so on the actions channel;
+- the incident goes to the investigator (`runbook.not_cleared`), as for a step that failed.
+
+The core can only make the executor more careful this way: it cannot make anything run. Without
+`clear_minutes`, a verified run is enough, as before. Give a runbook `clear_minutes` before you
+move its policy to `auto`: it is what turns a restart that did not help into a question to you.
+
 ### Migrating a watchdog script
 
 If a script of yours already repairs a service (a soft fix, then a restart, then a restart of

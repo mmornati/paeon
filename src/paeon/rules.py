@@ -1056,6 +1056,17 @@ class Runbook(_Rule):
         default="escalate",
         description="escalate: stop at the first step that fixes it. sequence: run them all.",
     )
+    clear_minutes: int | None = Field(
+        default=None,
+        ge=1,
+        le=1440,
+        description=(
+            "After a verified run, the alert must clear within this many minutes, as its"
+            " source says when asked (the console's re-check). If it still fires, the runbook"
+            " counts as failed: the incident goes to investigation and an `auto` policy on its"
+            " actions goes back to `approve`. Unset: a container that is up again is enough."
+        ),
+    )
 
 
 class Actions(_Rule):

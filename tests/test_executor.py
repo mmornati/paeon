@@ -237,6 +237,32 @@ def test_auto_runs_then_notifies_and_this_was_wrong_demotes(tmp_path: Path) -> N
     )
 
 
+def test_a_run_whose_alert_did_not_clear_counts_as_failed_and_demotes(tmp_path: Path) -> None:
+    bench = Bench(tmp_path)
+    answer = bench.executor.propose(proposal(alert="worker_stalled", confidence=0.95), T0)
+    assert answer["level"] == "auto"
+    plan = answer["proposal"]
+    assert bench.executor.not_cleared(plan, "the alert still fires 10 min after the fix")
+    assert bench.last("plan.not_cleared") == {
+        "proposal": plan,
+        "reason": "the alert still fires 10 min after the fix",
+        "tuples": [["worker_stalled", "restart_container", "worker"]],
+    }
+    assert bench.last("autonomy.demoted")["reason"] == (
+        "the alert still fires 10 min after the fix"
+    )
+    assert bench.titles()[-1] == "Incident #1: the fix did not clear the alert"
+    assert not bench.executor.not_cleared(plan, "again")  # once per plan
+    (record,) = autonomy.matrix(bench.store.events(), bench.rules.actions, LATER)
+    assert (record.runs, record.verified, record.failed, record.streak) == (1, 0, 1, 0)
+    assert record.effective == "approve"
+    again = bench.executor.propose(proposal(alert="worker_stalled", incident=2), T0)
+    assert again["level"] == "approve"
+    # A plan that did not run cannot be marked: nothing to fail.
+    assert not bench.executor.not_cleared(again["proposal"], "not run")
+    assert not bench.executor.not_cleared(999, "unknown")
+
+
 @pytest.mark.parametrize(
     ("change", "reason"),
     [

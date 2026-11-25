@@ -124,6 +124,8 @@ _TIMELINE: dict[str, Callable[[dict[str, Any]], str]] = {
     "incident.resolved": lambda p: "Incident resolved",
     "feedback.recorded": lambda p: f"Feedback: {p.get('vote')}",
     "runbook.matched": lambda p: f"Runbook matched: {p.get('runbook')}",
+    "runbook.cleared": lambda p: "The alert cleared after the runbook",
+    "runbook.not_cleared": lambda p: f"The runbook did not fix it: {p.get('reason')}",
     "plan.proposed": lambda p: (
         f"Plan proposed at level {p.get('level')}: {', '.join(p.get('steps') or [])}"
     ),
